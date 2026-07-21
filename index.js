@@ -45,42 +45,15 @@ async function isAdmin(ctx) {
   return ['administrator', 'creator'].includes(member.status);
 }
 
-// ---------- Soft join prompt (skippable, shown once per user) ----------
-const promptedUsers = new Set();
+// ---------- Promo image shown once per /start ----------
 const PROMO_IMAGE = 'https://i.postimg.cc/d0Jpsvxc/download-(1).jpg';
 
 function joinPromptMarkup() {
   return Markup.inlineKeyboard([
     [Markup.button.url('📢 Join Channel', CHANNEL_LINK)],
     [Markup.button.url('👥 Join Group', GROUP_LINK)],
-    [Markup.button.callback('➡️ Skip', 'skip_join')],
   ]);
 }
-
-bot.use(async (ctx, next) => {
-  if (
-    ctx.chat &&
-    ctx.chat.type === 'private' &&
-    !promptedUsers.has(ctx.from.id) &&
-    ctx.updateType === 'message'
-  ) {
-    promptedUsers.add(ctx.from.id);
-    try {
-      await ctx.replyWithPhoto(PROMO_IMAGE, {
-        caption: '🎉 Join our channel & group for updates, tips, and more!\n\n(You can skip this anytime)',
-        ...joinPromptMarkup(),
-      });
-    } catch (err) {
-      console.error('Failed to send promo:', err.message);
-    }
-  }
-  return next();
-});
-
-bot.action('skip_join', async (ctx) => {
-  await ctx.answerCbQuery('👍');
-  await ctx.deleteMessage().catch(() => {});
-});
 
 // ---------- Utility: get chat ID (use this inside your group/channel to grab the ID) ----------
 bot.command('getid', (ctx) => {
@@ -90,8 +63,16 @@ bot.command('getid', (ctx) => {
 // (old hard force-join gate removed — replaced by the skippable soft prompt above)
 
 // ---------- Basic commands ----------
-bot.start((ctx) => {
+bot.start(async (ctx) => {
   users[ctx.from.id] = { name: ctx.from.first_name, joined: new Date() };
+  try {
+    await ctx.replyWithPhoto(PROMO_IMAGE, {
+      caption: '🎉 Join our channel & group for updates, tips, and more!',
+      ...joinPromptMarkup(),
+    });
+  } catch (err) {
+    console.error('Failed to send promo:', err.message);
+  }
   ctx.reply(
     `Welcome ${ctx.from.first_name}! 👋 I'm Nova, your AI-powered bot.\n\nUse /menu to see what I can do.`
   );

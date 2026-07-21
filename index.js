@@ -110,8 +110,6 @@ bot.command('getid', (ctx) => {
   ctx.reply(`This chat's ID is:\n\`${ctx.chat.id}\``, { parse_mode: 'Markdown' });
 });
 
-// (old hard force-join gate removed — replaced by the skippable soft prompt above)
-
 // ---------- Auto-moderation: bad word filter + anti-spam ----------
 bot.use(async (ctx, next) => {
   if (
@@ -144,7 +142,7 @@ bot.use(async (ctx, next) => {
           /* bot may lack ban permission */
         }
       }
-      return; // don't process further (e.g. AI reply) for filtered messages
+      return;
     }
 
     // Anti-spam
@@ -158,7 +156,7 @@ bot.use(async (ctx, next) => {
       try {
         await ctx.telegram.restrictChatMember(chatId, userId, {
           permissions: { can_send_messages: false },
-          until_date: Math.floor(Date.now() / 1000) + 60, // 1 min mute
+          until_date: Math.floor(Date.now() / 1000) + 60,
         });
         await ctx.reply(`🔇 ${ctx.from.first_name} was muted for 1 minute for spamming.`);
       } catch (err) {
@@ -281,7 +279,6 @@ bot.command('ai', async (ctx) => {
 
 // Trivia answer check + Free-form AI chat in DMs (no command needed)
 bot.on('text', async (ctx, next) => {
-  // Trivia answer check (works in groups)
   if (ctx.chat.type !== 'private' && activeTrivia[ctx.chat.id]) {
     const guess = ctx.message.text.trim().toLowerCase();
     if (guess === activeTrivia[ctx.chat.id].answer) {
@@ -382,7 +379,7 @@ bot.command('ban', async (ctx) => {
 
   const targetId = ctx.message.reply_to_message.from.id;
   try {
-    await ctx.telegram.banChatMember(ctx.chat.id, targetId, { until_date: 0 }); // permanent
+    await ctx.telegram.banChatMember(ctx.chat.id, targetId, { until_date: 0 });
     ctx.reply('User banned permanently. 🚫');
   } catch (err) {
     ctx.reply('Failed to ban — check my admin permissions.');
@@ -542,4 +539,124 @@ bot.command('translate', async (ctx) => {
 });
 
 bot.command('calc', (ctx) => {
-  const expression = ctx.message.text.split(' ').slice(1
+  const expression = ctx.message.text.split(' ').slice(1).join(' ');
+  if (!expression) return ctx.reply('Usage: /calc <expression>\nExample: /calc (5 + 3) * 2');
+
+  try {
+    const result = evaluate(expression);
+    ctx.reply(`🧮 ${expression} = ${result}`);
+  } catch (err) {
+    ctx.reply('Invalid expression.');
+  }
+});
+
+bot.command('define', async (ctx) => {
+  const word = ctx.message.text.split(' ')[1];
+  if (!word) return ctx.reply('Usage: /define <word>');
+
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if (!res.ok) return ctx.reply(`No definition found for "${word}".`);
+    const data = await res.json();
+    const meaning = data[0].meanings[0];
+    const definition = meaning.definitions[0].definition;
+    ctx.reply(`📖 *${word}* (${meaning.partOfSpeech})\n${definition}`, { parse_mode: 'Markdown' });
+  } catch (err) {
+    ctx.reply(`No definition found for "${word}".`);
+  }
+});
+
+bot.command('qr', async (ctx) => {
+  const text = ctx.message.text.split(' ').slice(1).join(' ');
+  if (!text) return ctx.reply('Usage: /qr <text or link>');
+
+  try {
+    const buffer = await QRCode.toBuffer(text);
+    await ctx.replyWithPhoto({ source: buffer }, { caption: `QR code for: ${text}` });
+  } catch (err) {
+    ctx.reply('Failed to generate QR code.');
+  }
+});
+
+// ---------- User stats: XP / Level / Leaderboard ----------
+bot.command(['profile', 'rank'], (ctx) => {
+  if (ctx.chat.type === 'private') return ctx.reply('This only works in groups.');
+  const target = ctx.message.reply_to_message ? ctx.message.reply_to_message.from : ctx.from;
+  const data = (xpData[ctx.chat.id] && xpData[ctx.chat.id][target.id]) || { xp: 0 };
+  const level = levelFromXp(data.xp);
+  const nextLevelXp = Math.pow(level, 2) * 20;
+
+  ctx.reply(
+    `👤 *${target.first_name}*\n` +
+    `🏆 Level: ${level}\n` +
+    `✨ XP: ${data.xp} / ${nextLevelXp}`,
+    { parse_mode: 'Markdown' }
+  );
+});
+
+bot.command('leaderboard', (ctx) => {
+  if (ctx.chat.type === 'private') return ctx.reply('This only works in groups.');
+  const chatXp = xpData[ctx.chat.id];
+  if (!chatXp || Object.keys(chatXp).length === 0) return ctx.reply('No activity yet in this group.');
+
+  const sorted = Object.values(chatXp)
+    .sort((a, b) => b.xp - a.xp)
+    .slice(0, 10);
+
+  const list = sorted
+    .map((u, i) => `${i + 1}. ${u.name} — ${u.xp} XP (Lv. ${levelFromXp(u.xp)})`)
+    .join('\n');
+
+  ctx.reply(`🏆 *Leaderboard*\n\n${list}`, { parse_mode: 'Markdown' });
+});
+
+// ---------- Fun extras ----------
+const eightBallAnswers = [
+  'Yes, definitely.', 'It is certain.', 'Without a doubt.', 'Ask again later.',
+  'Cannot predict now.', 'Don\'t count on it.', 'My reply is no.', 'Very doubtful.', 'Most likely.',
+];
+bot.command('8ball', (ctx) => {
+  const question = ctx.message.text.split(' ').slice(1).join(' ');
+  if (!question) return ctx.reply('Usage: /8ball <your question>');
+  const answer = eightBallAnswers[Math.floor(Math.random() * eightBallAnswers.length)];
+  ctx.reply(`🎱 ${answer}`);
+});
+
+const triviaQuestions = [
+  { q: 'What planet is known as the Red Planet?', a: 'mars' },
+  { q: 'What is the capital of Japan?', a: 'tokyo' },
+  { q: 'How many continents are there?', a: '7' },
+  { q: 'What language runs in a web browser?', a: 'javascript' },
+  { q: 'What is the largest ocean on Earth?', a: 'pacific' },
+];
+const activeTrivia = {}; // activeTrivia[chatId] = { answer }
+
+bot.command('trivia', (ctx) => {
+  const pick = triviaQuestions[Math.floor(Math.random() * triviaQuestions.length)];
+  activeTrivia[ctx.chat.id] = { answer: pick.a };
+  ctx.reply(`🧠 Trivia: ${pick.q}\n(Just type your answer in chat!)`);
+});
+
+bot.command('meme', async (ctx) => {
+  try {
+    const res = await fetch('https://meme-api.com/gimme');
+    const data = await res.json();
+    await ctx.replyWithPhoto(data.url, { caption: data.title });
+  } catch (err) {
+    ctx.reply('Could not fetch a meme right now.');
+  }
+});
+
+// Welcome new members
+bot.on('new_chat_members', (ctx) => {
+  ctx.message.new_chat_members.forEach((member) => {
+    ctx.reply(`👋 Welcome to the group, ${member.first_name}!`);
+  });
+});
+
+// ---------- Launch ----------
+bot.launch();
+console.log('Bot is running...');
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));

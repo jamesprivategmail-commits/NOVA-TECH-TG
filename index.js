@@ -44,6 +44,29 @@ function resetWarnings(chatId, userId) {
   if (warnings[chatId]) delete warnings[chatId][userId];
 }
 
+// ---------- XP / Level system ----------
+const xpData = {}; // xpData[chatId][userId] = { xp, name }
+const XP_PER_MESSAGE = 5;
+const XP_COOLDOWN_MS = 10000; // don't farm XP by spamming
+const xpCooldown = {}; // xpCooldown[chatId][userId] = lastTimestamp
+
+function levelFromXp(xp) {
+  return Math.floor(Math.sqrt(xp / 20)) + 1; // simple curve: more XP needed each level
+}
+
+function addXp(chatId, userId, name) {
+  if (!xpData[chatId]) xpData[chatId] = {};
+  if (!xpData[chatId][userId]) xpData[chatId][userId] = { xp: 0, name };
+
+  if (!xpCooldown[chatId]) xpCooldown[chatId] = {};
+  const now = Date.now();
+  if (xpCooldown[chatId][userId] && now - xpCooldown[chatId][userId] < XP_COOLDOWN_MS) return;
+  xpCooldown[chatId][userId] = now;
+
+  xpData[chatId][userId].xp += XP_PER_MESSAGE;
+  xpData[chatId][userId].name = name; // keep name fresh
+}
+
 // ---------- Helpers ----------
 async function askAI(chatId, prompt) {
   if (!chatHistory[chatId]) chatHistory[chatId] = [];
@@ -143,6 +166,9 @@ bot.use(async (ctx, next) => {
       spamTracker[chatId][userId] = [];
       return;
     }
+
+    // XP gain for normal messages
+    addXp(chatId, userId, ctx.from.first_name);
   }
   return next();
 });
@@ -212,6 +238,12 @@ bot.help((ctx) => {
     `/calc <expression> - calculator\n` +
     `/define <word> - dictionary definition\n` +
     `/qr <text> - generate a QR code\n\n` +
+    `*Stats & Fun:*\n` +
+    `/profile (or /rank) - your level & XP\n` +
+    `/leaderboard - top 10 in this group\n` +
+    `/8ball <question> - magic 8 ball\n` +
+    `/trivia - random trivia question\n` +
+    `/meme - random meme\n\n` +
     `*Group admin only:*\n` +
     `/tagall - mention all admins\n` +
     `/kick - remove a user (reply)\n` +
@@ -245,8 +277,19 @@ bot.command('ai', async (ctx) => {
   }
 });
 
-// Free-form AI chat in DMs (no command needed)
+// Trivia answer check + Free-form AI chat in DMs (no command needed)
 bot.on('text', async (ctx, next) => {
+  // Trivia answer check (works in groups)
+  if (ctx.chat.type !== 'private' && activeTrivia[ctx.chat.id]) {
+    const guess = ctx.message.text.trim().toLowerCase();
+    if (guess === activeTrivia[ctx.chat.id].answer) {
+      addXp(ctx.chat.id, ctx.from.id, ctx.from.first_name);
+      await ctx.reply(`✅ Correct, ${ctx.from.first_name}! +5 bonus XP 🎉`);
+      delete activeTrivia[ctx.chat.id];
+      return;
+    }
+  }
+
   if (ctx.chat.type === 'private' && !ctx.message.text.startsWith('/')) {
     try {
       const reply = await askAI(ctx.chat.id, ctx.message.text);
@@ -504,48 +547,3 @@ bot.command('calc', (ctx) => {
     const result = evaluate(expression);
     ctx.reply(`🧮 ${expression} = ${result}`);
   } catch (err) {
-    ctx.reply('Invalid expression.');
-  }
-});
-
-bot.command('define', async (ctx) => {
-  const word = ctx.message.text.split(' ')[1];
-  if (!word) return ctx.reply('Usage: /define <word>');
-
-  try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-    if (!res.ok) return ctx.reply(`No definition found for "${word}".`);
-    const data = await res.json();
-    const meaning = data[0].meanings[0];
-    const definition = meaning.definitions[0].definition;
-    ctx.reply(`📖 *${word}* (${meaning.partOfSpeech})\n${definition}`, { parse_mode: 'Markdown' });
-  } catch (err) {
-    ctx.reply(`No definition found for "${word}".`);
-  }
-});
-
-bot.command('qr', async (ctx) => {
-  const text = ctx.message.text.split(' ').slice(1).join(' ');
-  if (!text) return ctx.reply('Usage: /qr <text or link>');
-
-  try {
-    const buffer = await QRCode.toBuffer(text);
-    await ctx.replyWithPhoto({ source: buffer }, { caption: `QR code for: ${text}` });
-  } catch (err) {
-    ctx.reply('Failed to generate QR code.');
-  }
-});
-
-// Welcome new members
-bot.on('new_chat_members', (ctx) => {
-  ctx.message.new_chat_members.forEach((member) => {
-    ctx.reply(`👋 Welcome to the group, ${member.first_name}!`);
-  });
-});
-
-// ---------- Launch ----------
-bot.launch();
-console.log('Bot is running...');
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));

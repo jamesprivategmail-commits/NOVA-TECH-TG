@@ -97,10 +97,11 @@ async function isAdmin(ctx) {
 // ---------- Promo image shown once per /start ----------
 const PROMO_IMAGE = 'https://i.postimg.cc/d0Jpsvxc/download-(1).jpg';
 
-function joinPromptMarkup() {
+function joinPromptMarkup(ctx) {
   return Markup.inlineKeyboard([
     [Markup.button.url('📢 Join Channel', CHANNEL_LINK)],
     [Markup.button.url('👥 Join Group', GROUP_LINK)],
+    [Markup.button.url('➕ Add me to your Group', `https://t.me/${ctx.botInfo.username}?startgroup=true`)],
   ]);
 }
 
@@ -179,7 +180,7 @@ bot.start(async (ctx) => {
   try {
     await ctx.replyWithPhoto(PROMO_IMAGE, {
       caption: '🎉 Join our channel & group for updates, tips, and more!',
-      ...joinPromptMarkup(),
+      ...joinPromptMarkup(ctx),
     });
   } catch (err) {
     console.error('Failed to send promo:', err.message);
@@ -196,6 +197,7 @@ bot.command('menu', (ctx) => {
       [Markup.button.callback('🤖 Ask AI', 'menu_ai')],
       [Markup.button.callback('🎲 Fun', 'menu_fun')],
       [Markup.button.callback('👥 Group Tools', 'menu_group')],
+      [Markup.button.url('➕ Add me to your Group', `https://t.me/${ctx.botInfo.username}?startgroup=true`)],
       [Markup.button.callback('ℹ️ Help', 'menu_help')],
     ])
   );
@@ -540,10 +542,4 @@ bot.command('translate', async (ctx) => {
 });
 
 bot.command('calc', (ctx) => {
-  const expression = ctx.message.text.split(' ').slice(1).join(' ');
-  if (!expression) return ctx.reply('Usage: /calc <expression>\nExample: /calc (5 + 3) * 2');
-
-  try {
-    const result = evaluate(expression);
-    ctx.reply(`🧮 ${expression} = ${result}`);
-  } catch (err) {
+  const expression = ctx.message.text.split(' ').slice(1

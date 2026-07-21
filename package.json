@@ -9,6 +9,8 @@
     "telegraf": "^4.16.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "groq-sdk": "^0.7.0"
+    "groq-sdk": "^0.7.0",
+    "mathjs": "^13.0.0",
+    "qrcode": "^1.5.4"
   }
 }

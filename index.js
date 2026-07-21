@@ -14,11 +14,7 @@ app.listen(process.env.PORT || 3000, () => console.log('Web server running'));
 // ---------- In-memory storage (swap for a real DB later) ----------
 const users = {};
 const chatHistory = {}; // per-chat AI conversation memory
-const verifiedUsers = new Set(); // users who passed the join check this session
 
-// IDs of your channel/group the user must join before DM'ing the bot
-const REQUIRED_CHANNEL_ID = process.env.REQUIRED_CHANNEL_ID; // e.g. -1001234567890
-const REQUIRED_GROUP_ID = process.env.REQUIRED_GROUP_ID;
 const CHANNEL_LINK = 'https://t.me/+dXp9U3RUO8U0ZmY8';
 const GROUP_LINK = 'https://t.me/+OWupog-mnfVkYTg0';
 
@@ -49,64 +45,49 @@ async function isAdmin(ctx) {
   return ['administrator', 'creator'].includes(member.status);
 }
 
-async function hasJoinedRequired(ctx) {
-  if (!REQUIRED_CHANNEL_ID || !REQUIRED_GROUP_ID) return true; // not configured yet, skip check
-  try {
-    const [channelMember, groupMember] = await Promise.all([
-      ctx.telegram.getChatMember(REQUIRED_CHANNEL_ID, ctx.from.id),
-      ctx.telegram.getChatMember(REQUIRED_GROUP_ID, ctx.from.id),
-    ]);
-    const inChannel = !['left', 'kicked'].includes(channelMember.status);
-    const inGroup = !['left', 'kicked'].includes(groupMember.status);
-    return inChannel && inGroup;
-  } catch (err) {
-    console.error('Join check failed:', err.message);
-    return false;
-  }
-}
+// ---------- Soft join prompt (skippable, shown once per user) ----------
+const promptedUsers = new Set();
+const PROMO_IMAGE = 'https://i.postimg.cc/d0Jpsvxc/download-(1).jpg';
 
 function joinPromptMarkup() {
   return Markup.inlineKeyboard([
     [Markup.button.url('📢 Join Channel', CHANNEL_LINK)],
     [Markup.button.url('👥 Join Group', GROUP_LINK)],
-    [Markup.button.callback('✅ I\'ve Joined', 'check_join')],
+    [Markup.button.callback('➡️ Skip', 'skip_join')],
   ]);
 }
+
+bot.use(async (ctx, next) => {
+  if (
+    ctx.chat &&
+    ctx.chat.type === 'private' &&
+    !promptedUsers.has(ctx.from.id) &&
+    ctx.updateType === 'message'
+  ) {
+    promptedUsers.add(ctx.from.id);
+    try {
+      await ctx.replyWithPhoto(PROMO_IMAGE, {
+        caption: '🎉 Join our channel & group for updates, tips, and more!\n\n(You can skip this anytime)',
+        ...joinPromptMarkup(),
+      });
+    } catch (err) {
+      console.error('Failed to send promo:', err.message);
+    }
+  }
+  return next();
+});
+
+bot.action('skip_join', async (ctx) => {
+  await ctx.answerCbQuery('👍');
+  await ctx.deleteMessage().catch(() => {});
+});
 
 // ---------- Utility: get chat ID (use this inside your group/channel to grab the ID) ----------
 bot.command('getid', (ctx) => {
   ctx.reply(`This chat's ID is:\n\`${ctx.chat.id}\``, { parse_mode: 'Markdown' });
 });
 
-// ---------- Force-join gate (private chats only) ----------
-bot.use(async (ctx, next) => {
-  if (ctx.chat && ctx.chat.type === 'private') {
-    if (ctx.message && ctx.message.text && ctx.message.text.startsWith('/getid')) return next();
-    if (!verifiedUsers.has(ctx.from.id)) {
-      const joined = await hasJoinedRequired(ctx);
-      if (joined) {
-        verifiedUsers.add(ctx.from.id);
-      } else {
-        return ctx.reply(
-          '🔒 To use this bot, please join our channel and group first, then tap "I\'ve Joined".',
-          joinPromptMarkup()
-        );
-      }
-    }
-  }
-  return next();
-});
-
-bot.action('check_join', async (ctx) => {
-  const joined = await hasJoinedRequired(ctx);
-  if (joined) {
-    verifiedUsers.add(ctx.from.id);
-    await ctx.answerCbQuery('✅ Verified!');
-    await ctx.editMessageText('✅ Thanks for joining! You can now use the bot. Send /start to begin.');
-  } else {
-    await ctx.answerCbQuery('❌ You haven\'t joined both yet.', { show_alert: true });
-  }
-});
+// (old hard force-join gate removed — replaced by the skippable soft prompt above)
 
 // ---------- Basic commands ----------
 bot.start((ctx) => {

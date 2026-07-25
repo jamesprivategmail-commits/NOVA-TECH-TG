@@ -496,7 +496,6 @@
   });
 
   $('#manage-leave-btn').addEventListener('click', async () => {
-    if (!confirm('Leave this group?'))   $('#manage-leave-btn').addEventListener('click', async () => {
     if (!confirm('Leave this group?')) return;
     try {
       await api(`/conversations/${state.activeConv.id}/members/${state.me.id}`, { method: 'DELETE' });
@@ -570,7 +569,7 @@
   $('#close-new-status').addEventListener('click', () => $('#new-status-modal').classList.add('hidden'));
 
   async function loadStatuses() {
-    const { statuses } = await api('//status/feed');
+    const { statuses } = await api('/status/feed');
     const list = $('#status-list');
     const mine = statuses.filter(s => s.user_id === state.me.id);
     const others = statuses.filter(s => s.user_id !== state.me.id);
@@ -637,7 +636,7 @@
         </div>
         <button class="status-viewer-close" id="status-viewer-close">✕</button>
         <div>${escapeHtml(status.content)}</div>
-       </div>`;
+      </div>`;
     backdrop.classList.remove('hidden');
     const close = () => backdrop.classList.add('hidden');
     $('#status-viewer-close').addEventListener('click', close);

@@ -5,9 +5,11 @@
     me: JSON.parse(localStorage.getItem('nova_me') || 'null'),
     conversations: [],
     activeConvId: null,
+    activeConv: null,
     messages: {}, // convId -> [messages]
     socket: null,
     typingTimeout: null,
+    myStatuses: [],
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -45,6 +47,12 @@
 
   function clockTime(dateStr) {
     return new Date(dateStr).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
+    return div.innerHTML;
   }
 
   // ---------------- AUTH ----------------
@@ -190,6 +198,9 @@
     const { conversations } = await api('/conversations');
     state.conversations = conversations;
     renderConvList();
+    if (state.activeConvId) {
+      state.activeConv = state.conversations.find(c => c.id === state.activeConvId) || state.activeConv;
+    }
   }
 
   function renderConvList() {
@@ -230,10 +241,14 @@
     renderConvList();
 
     const conv = state.conversations.find(c => c.id === id);
+    state.activeConv = conv;
     $('#chat-title').textContent = conv?.name || 'Chat';
     $('#chat-subtitle').textContent = conv?.type === 'channel' ? 'Channel' : conv?.type === 'group' ? 'Group' : conv?.other_user?.nova_id || '';
     $('#chat-avatar').style.background = conv?.avatar_color || '#8E8E93';
     $('#chat-avatar').textContent = initials(conv?.name || '?');
+
+    // Show the manage (⋮) button only for groups/channels, not DMs
+    $('#chat-manage-btn').classList.toggle('hidden', !conv || conv.type === 'dm');
 
     state.socket.emit('conversation:join', { conversationId: id });
 
@@ -275,12 +290,6 @@
 
     area.innerHTML = html || `<div class="empty-state"><div class="icon">✨</div><div class="title">No messages yet</div><div class="subtitle">Say something!</div></div>`;
     area.scrollTop = area.scrollHeight;
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str ?? '';
-    return div.innerHTML;
   }
 
   // ---------------- COMPOSER ----------------
@@ -385,129 +394,109 @@
     } catch (err) { showModalError(err.message); }
   });
 
-  // ---------------- STATUS ----------------
-  const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#FF375F'];
-  function initStatusColors() {
-    const wrap = $('#status-colors');
-    wrap.innerHTML = STATUS_COLORS.map((c, i) =>
-      `<button type="button" data-color="${c}" style="width:28px;height:28px;border-radius:50%;background:${c};border:${i === 0 ? '3px solid #333' : 'none'}"></button>`
-    ).join('');
-    let selected = STATUS_COLORS[0];
-    wrap.querySelectorAll('button').forEach(b => {
-      b.addEventListener('click', () => {
-        selected = b.dataset.color;
-        wrap.querySelectorAll('button').forEach(x => x.style.border = 'none');
-        b.style.border = '3px solid #333';
-      });
-    });
-    wrap.dataset.selected = selected;
-    $('#status-post-btn').onclick = async () => {
-      try {
-        const content = $('#status-text').value.trim();
-        if (!content) return showStatusError('Write something first');
-        await api('/status', { method: 'POST', body: { content, bgColor: wrap.querySelector('button[style*="3px"]')?.dataset.color || selected } });
-        $('#new-status-modal').classList.add('hidden');
-        $('#status-text').value = '';
-        loadStatuses();
-      } catch (err) { showStatusError(err.message); }
-    };
-  }
-  function showStatusError(msg) {
-    const el = $('#status-error');
+  // ---------------- MANAGE GROUP (add/remove members, rename, delete) ----------------
+  function showManageError(msg) {
+    const el = $('#manage-group-error');
     el.textContent = msg;
     el.classList.remove('hidden');
   }
-  $('#close-new-status').addEventListener('click', () => $('#new-status-modal').classList.add('hidden'));
+  function hideManageError() { $('#manage-group-error').classList.add('hidden'); }
 
-  async function loadStatuses() {
-    const { statuses } = await api('/status/feed');
-    const list = $('#status-list');
-    const mine = statuses.filter(s => s.user_id === state.me.id);
-    const others = statuses.filter(s => s.user_id !== state.me.id);
+  $('#chat-manage-btn').addEventListener('click', openManageGroup);
+  $('#close-manage-group').addEventListener('click', () => $('#manage-group-modal').classList.add('hidden'));
 
-    let html = `
-      <div class="add-status-row" id="add-status-row">
-        <div class="add-status-plus">+</div>
-        <div>
-          <div style="font-weight:600;">My Status</div>
-          <div style="font-size:12px;color:var(--text-secondary);">${mine.length ? `${mine.length} active` : 'Tap to add status update'}</div>
+  async function openManageGroup() {
+    hideManageError();
+    const conv = state.activeConv;
+    if (!conv) return;
+
+    $('#manage-group-title').textContent = conv.name || 'Manage';
+    $('#manage-group-name').value = conv.name || '';
+
+    const isOwner = conv.owner_id === state.me.id;
+    $('#manage-rename-group').classList.toggle('hidden', !isOwner);
+    $('#manage-add-group').classList.toggle('hidden', conv.type !== 'group');
+    $('#manage-delete-btn').classList.toggle('hidden', !isOwner);
+    $('#manage-leave-btn').classList.toggle('hidden', isOwner);
+
+    await renderManageMembers();
+    $('#manage-group-modal').classList.remove('hidden');
+  }
+
+  async function renderManageMembers() {
+    const conv = state.activeConv;
+    const { members } = await api(`/conversations/${conv.id}/members`);
+    const myRole = members.find(m => m.id === state.me.id)?.role;
+    const canModerate = ['owner', 'admin'].includes(myRole);
+
+    const list = $('#manage-members-list');
+    list.innerHTML = members.map(m => `
+      <div class="conv-item" data-userid="${m.id}" style="cursor:default;">
+        <div class="avatar sm profile-trigger" style="background:${m.avatar_color}; cursor:pointer;">${initials(m.display_name)}</div>
+        <div class="conv-info profile-trigger" style="cursor:pointer;">
+          <div class="top-row"><span class="name">${escapeHtml(m.display_name)} ${m.role !== 'member' ? `<span class="conv-badge group">${m.role}</span>` : ''}</span></div>
+          <div class="preview">${escapeHtml(m.nova_id)}</div>
         </div>
-      </div>`;
+        ${canModerate && m.id !== state.me.id && m.role !== 'owner' ? `<button class="modal-close remove-member-btn" data-userid="${m.id}" style="position:static;">Remove</button>` : ''}
+      </div>`).join('');
 
-    if (others.length === 0) {
-      html += `<div class="empty-state"><div class="icon">🌟</div><div class="title">No updates yet</div><div class="subtitle">When friends post a status, it'll show up here.</div></div>`;
-    } else {
-      html += others.map(s => `
-        <div class="status-item" data-id="${s.id}">
-          <div class="status-ring ${s.viewed ? 'viewed' : ''}">
-            <div class="avatar sm" style="background:${s.avatar_color}">${initials(s.display_name)}</div>
-          </div>
-          <div>
-            <div style="font-weight:600;">${escapeHtml(s.display_name)}</div>
-            <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(s.created_at)} ago</div>
-          </div>
-        </div>`).join('');
-    }
-    list.innerHTML = html;
+    list.querySelectorAll('.profile-trigger').forEach(el => {
+      el.addEventListener('click', () => {
+        const userId = parseInt(el.closest('[data-userid]').dataset.userid, 10);
+        const member = members.find(m => m.id === userId);
+        if (member) viewProfile(member);
+      });
+    });
 
-    $('#add-status-row').addEventListener('click', () => $('#new-status-modal').classList.remove('hidden'));
-    list.querySelectorAll('.status-item').forEach(item => {
-      item.addEventListener('click', () => viewStatus(others.find(s => s.id == item.dataset.id)));
+    list.querySelectorAll('.remove-member-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Remove this person from the group?')) return;
+        try {
+          await api(`/conversations/${conv.id}/members/${btn.dataset.userid}`, { method: 'DELETE' });
+          await renderManageMembers();
+        } catch (err) { showManageError(err.message); }
+      });
     });
   }
 
-  async function viewStatus(status) {
-    if (!status) return;
-    await api(`/status/${status.id}/view`, { method: 'POST' });
-    const backdrop = $('#status-viewer');
-    backdrop.innerHTML = `
-      <div class="status-viewer-card" style="background:${status.bg_color}">
-        <div class="status-viewer-progress"><div class="status-viewer-progress-fill"></div></div>
-        <div class="status-viewer-header">
-          <div class="avatar sm" style="background:rgba(255,255,255,0.3)">${initials(status.display_name)}</div>
-          <span>${escapeHtml(status.display_name)}</span>
-        </div>
-        <button class="status-viewer-close" id="status-viewer-close">✕</button>
-        <div>${escapeHtml(status.content)}</div>
-      </div>`;
-    backdrop.classList.remove('hidden');
-    const close = () => backdrop.classList.add('hidden');
-    $('#status-viewer-close').addEventListener('click', close);
-    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
-    setTimeout(close, 5000);
-  }
-
-  // ---------------- POSTS ----------------
-  $('#new-post-btn').addEventListener('click', async () => {
-    const caption = $('#new-post-text').value.trim();
-    if (!caption) return;
-    await api('/posts', { method: 'POST', body: { caption } });
-    $('#new-post-text').value = '';
-    loadPosts();
+  $('#manage-add-btn').addEventListener('click', async () => {
+    hideManageError();
+    try {
+      const novaId = $('#manage-add-novaid').value.trim();
+      await api(`/conversations/${state.activeConv.id}/members`, { method: 'POST', body: { novaId } });
+      $('#manage-add-novaid').value = '';
+      await renderManageMembers();
+    } catch (err) { showManageError(err.message); }
   });
 
-  async function loadPosts() {
-    const { posts } = await api('/posts');
-    const list = $('#posts-list');
-    if (posts.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="icon">📸</div><div class="title">No posts yet</div><div class="subtitle">Be the first to share something.</div></div>`;
-      return;
-    }
-    list.innerHTML = posts.map(p => `
-      <div class="post-card" data-id="${p.id}">
-        <div class="post-header">
-          <div class="avatar sm" style="background:${p.avatar_color}">${initials(p.display_name)}</div>
-          <div>
-            <div style="font-weight:600;">${escapeHtml(p.display_name)}</div>
-            <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
-          </div>
-        </div>
-        <div class="post-caption">${escapeHtml(p.caption)}</div>
-      </div>`).join('');
-  }
+  $('#manage-rename-btn').addEventListener('click', async () => {
+    hideManageError();
+    try {
+      const name = $('#manage-group-name').value.trim();
+      const { conversation } = await api(`/conversations/${state.activeConv.id}`, { method: 'PUT', body: { name } });
+      $('#manage-group-title').textContent = conversation.name;
+      $('#chat-title').textContent = conversation.name;
+      await loadConversations();
+    } catch (err) { showManageError(err.message); }
+  });
 
-  // ---------------- INIT ----------------
-  if (state.token && state.me) {
-    boot();
-  }
-})();
+  $('#manage-delete-btn').addEventListener('click', async () => {
+    if (!confirm('Delete this group for everyone? This cannot be undone.')) return;
+    try {
+      await api(`/conversations/${state.activeConv.id}`, { method: 'DELETE' });
+      $('#manage-group-modal').classList.add('hidden');
+      appScreen.classList.remove('chat-open');
+      $('#chat-active').classList.add('hidden');
+      $('#chat-empty').classList.remove('hidden');
+      state.activeConvId = null;
+      state.activeConv = null;
+      await loadConversations();
+    } catch (err) { showManageError(err.message); }
+  });
+
+  $('#manage-leave-btn').addEventListener('click', async () => {
+    if (!confirm('Leave this group?')) return;
+    try {
+      await api(`/conversations/${state.activeConv.id}/members/${state.me.id}`, { method: 'DELETE' });
+      $('#manage-group-modal').classList.add('hidden');

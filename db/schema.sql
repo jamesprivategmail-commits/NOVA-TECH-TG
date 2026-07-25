@@ -7,6 +7,11 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   avatar_color VARCHAR(7) NOT NULL DEFAULT '#0A84FF',
   bio VARCHAR(160) DEFAULT '',
+  avatar_data TEXT,                          -- base64 profile picture (optional)
+  avatar_mime VARCHAR(40),
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+  ban_reason TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -34,7 +39,11 @@ CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
   conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
+  content TEXT,
+  media_type VARCHAR(10),                    -- image | voice | null
+  media_data TEXT,                           -- base64 payload
+  media_mime VARCHAR(60),
+  media_duration INTEGER,                    -- seconds, for voice notes
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   edited_at TIMESTAMP
 );
@@ -59,6 +68,8 @@ CREATE TABLE IF NOT EXISTS posts (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   caption TEXT,
+  image_data TEXT,                           -- base64 image payload (optional)
+  image_mime VARCHAR(60),
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

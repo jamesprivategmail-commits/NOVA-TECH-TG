@@ -134,6 +134,93 @@ router.get('/:id/members', async (req, res) => {
   res.json({ members: rows });
 });
 
+// POST /api/conversations/:id/members { novaId } - add someone to a group
+router.post('/:id/members', async (req, res) => {
+  const convId = req.params.id;
+  const { novaId } = req.body;
+
+  const me = await db.query(
+    'SELECT role FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
+    [convId, req.user.id]
+  );
+  if (!me.rows[0]) return res.status(403).json({ error: 'Not a member of this conversation' });
+  if (!['owner', 'admin'].includes(me.rows[0].role)) {
+    return res.status(403).json({ error: 'Only the owner or admins can add members' });
+  }
+
+  const convType = await db.query('SELECT type FROM conversations WHERE id=$1', [convId]);
+  if (convType.rows[0]?.type !== 'group') {
+    return res.status(400).json({ error: 'Can only add members to groups' });
+  }
+
+  const target = await db.query('SELECT id, display_name, avatar_color FROM users WHERE nova_id = $1', [(novaId || '').trim().toUpperCase()]);
+  if (!target.rows[0]) return res.status(404).json({ error: 'No one has that NOVA ID' });
+
+  const already = await db.query(
+    'SELECT 1 FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
+    [convId, target.rows[0].id]
+  );
+  if (already.rows[0]) return res.status(409).json({ error: 'Already in this group' });
+
+  await db.query(
+    `INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1,$2,'member')`,
+    [convId, target.rows[0].id]
+  );
+  res.json({ member: target.rows[0] });
+});
+
+// DELETE /api/conversations/:id/members/:userId - remove a member (owner/admin only, or leave yourself)
+router.delete('/:id/members/:userId', async (req, res) => {
+  const convId = req.params.id;
+  const targetUserId = req.params.userId;
+
+  const me = await db.query(
+    'SELECT role FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
+    [convId, req.user.id]
+  );
+  if (!me.rows[0]) return res.status(403).json({ error: 'Not a member of this conversation' });
+  if (!['owner', 'admin'].includes(me.rows[0].role) && String(req.user.id) !== targetUserId) {
+    return res.status(403).json({ error: 'Only the owner or admins can remove members' });
+  }
+
+  await db.query(
+    'DELETE FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
+    [convId, targetUserId]
+  );
+  res.json({ ok: true });
+});
+
+// PUT /api/conversations/:id { name } - rename group/channel (owner only)
+router.put('/:id', async (req, res) => {
+  const convId = req.params.id;
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+
+  const conv = await db.query('SELECT owner_id FROM conversations WHERE id=$1', [convId]);
+  if (!conv.rows[0]) return res.status(404).json({ error: 'Conversation not found' });
+  if (conv.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Only the owner can rename this' });
+
+  const { rows } = await db.query('UPDATE conversations SET name=$1 WHERE id=$2 RETURNING *', [name.trim(), convId]);
+  res.json({ conversation: rows[0] });
+});
+
+// DELETE /api/conversations/:id - delete a conversation (owner only, or either DM participant)
+router.delete('/:id', async (req, res) => {
+  const convId = req.params.id;
+  const conv = await db.query('SELECT owner_id, type FROM conversations WHERE id=$1', [convId]);
+  if (!conv.rows[0]) return res.status(404).json({ error: 'Conversation not found' });
+
+  if (conv.rows[0].type === 'dm') {
+    const check = await db.query('SELECT 1 FROM conversation_members WHERE conversation_id=$1 AND user_id=$2', [convId, req.user.id]);
+    if (!check.rows[0]) return res.status(403).json({ error: 'Not a member of this conversation' });
+  } else if (conv.rows[0].owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Only the owner can delete this' });
+  }
+
+  await db.query('DELETE FROM conversations WHERE id=$1', [convId]); // cascades to members/messages
+  res.json({ ok: true });
+});
+
 // GET /api/conversations/:id/messages?before=<messageId>
 router.get('/:id/messages', async (req, res) => {
   const check = await db.query('SELECT 1 FROM conversation_members WHERE conversation_id=$1 AND user_id=$2', [req.params.id, req.user.id]);

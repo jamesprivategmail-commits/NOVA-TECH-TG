@@ -496,7 +496,186 @@
   });
 
   $('#manage-leave-btn').addEventListener('click', async () => {
+    if (!confirm('Leave this group?'))   $('#manage-leave-btn').addEventListener('click', async () => {
     if (!confirm('Leave this group?')) return;
     try {
       await api(`/conversations/${state.activeConv.id}/members/${state.me.id}`, { method: 'DELETE' });
       $('#manage-group-modal').classList.add('hidden');
+      appScreen.classList.remove('chat-open');
+      $('#chat-active').classList.add('hidden');
+      $('#chat-empty').classList.remove('hidden');
+      state.activeConvId = null;
+      state.activeConv = null;
+      await loadConversations();
+    } catch (err) { showManageError(err.message); }
+  });
+
+  // ---------------- PROFILE VIEW ----------------
+  $('#profile-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'profile-modal') $('#profile-modal').classList.add('hidden');
+  });
+
+  async function viewProfile(member) {
+    const card = $('#profile-card');
+    card.innerHTML = `<div style="text-align:center;padding:16px;">Loading...</div>`;
+    $('#profile-modal').classList.remove('hidden');
+    try {
+      const { user } = await api(`/auth/lookup/${encodeURIComponent(member.nova_id)}`);
+      card.innerHTML = `
+        <button class="modal-close" id="profile-close-btn">Close</button>
+        <div style="text-align:center; padding:24px 16px;">
+          <div class="avatar" style="background:${user.avatarColor}; width:72px; height:72px; font-size:28px; margin:0 auto 12px;">${initials(user.displayName)}</div>
+          <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)}</div>
+          <div style="color:var(--text-secondary); margin-bottom:12px;">${escapeHtml(user.novaId)}</div>
+          ${user.bio ? `<div style="padding:12px; background:rgba(255,255,255,0.05); border-radius:10px;">${escapeHtml(user.bio)}</div>` : ''}
+        </div>`;
+      $('#profile-close-btn').addEventListener('click', () => $('#profile-modal').classList.add('hidden'));
+    } catch (err) {
+      card.innerHTML = `<div style="text-align:center;padding:16px;">Couldn't load profile.</div>`;
+    }
+  }
+
+  // ---------------- STATUS ----------------
+  const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#FF375F'];
+  function initStatusColors() {
+    const wrap = $('#status-colors');
+    wrap.innerHTML = STATUS_COLORS.map((c, i) =>
+      `<button type="button" data-color="${c}" style="width:28px;height:28px;border-radius:50%;background:${c};border:${i === 0 ? '3px solid #333' : 'none'}"></button>`
+    ).join('');
+    let selected = STATUS_COLORS[0];
+    wrap.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        selected = b.dataset.color;
+        wrap.querySelectorAll('button').forEach(x => x.style.border = 'none');
+        b.style.border = '3px solid #333';
+      });
+    });
+    wrap.dataset.selected = selected;
+    $('#status-post-btn').onclick = async () => {
+      try {
+        const content = $('#status-text').value.trim();
+        if (!content) return showStatusError('Write something first');
+        await api('/status', { method: 'POST', body: { content, bgColor: wrap.querySelector('button[style*="3px"]')?.dataset.color || selected } });
+        $('#new-status-modal').classList.add('hidden');
+        $('#status-text').value = '';
+        loadStatuses();
+      } catch (err) { showStatusError(err.message); }
+    };
+  }
+  function showStatusError(msg) {
+    const el = $('#status-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+  $('#close-new-status').addEventListener('click', () => $('#new-status-modal').classList.add('hidden'));
+
+  async function loadStatuses() {
+    const { statuses } = await api('//status/feed');
+    const list = $('#status-list');
+    const mine = statuses.filter(s => s.user_id === state.me.id);
+    const others = statuses.filter(s => s.user_id !== state.me.id);
+    state.myStatuses = mine;
+
+    let html = `
+      <div class="status-item" id="add-status-row">
+        <div class="status-ring">
+          <div class="avatar sm" style="background:${state.me.avatarColor}">${mine.length ? initials(state.me.displayName) : '+'}</div>
+        </div>
+        <div>
+          <div style="font-weight:600;">My Status</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${mine.length ? `${mine.length} active — tap to view` : 'Tap to add status update'}</div>
+        </div>
+        <button class="modal-close" id="add-status-plus-btn" style="position:static; margin-left:auto;">+</button>
+      </div>`;
+
+    if (others.length === 0) {
+      html += `<div class="empty-state"><div class="icon">🌟</div><div class="title">No updates yet</div><div class="subtitle">When friends post a status, it'll show up here.</div></div>`;
+    } else {
+      html += others.map(s => `
+        <div class="status-item" data-id="${s.id}">
+          <div class="status-ring ${s.viewed ? 'viewed' : ''}">
+            <div class="avatar sm" style="background:${s.avatar_color}">${initials(s.display_name)}</div>
+          </div>
+          <div>
+            <div style="font-weight:600;">${escapeHtml(s.display_name)}</div>
+            <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(s.created_at)} ago</div>
+          </div>
+        </div>`).join('');
+    }
+    list.innerHTML = html;
+
+    // Tapping the row: view your own status if you have one, else open the composer.
+    // Tapping the + button always opens the composer to add another status.
+    $('#add-status-row').addEventListener('click', (e) => {
+      if (e.target.id === 'add-status-plus-btn') return;
+      if (mine.length > 0) {
+        viewStatus(mine[0], true);
+      } else {
+        $('#new-status-modal').classList.remove('hidden');
+      }
+    });
+    $('#add-status-plus-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      $('#new-status-modal').classList.remove('hidden');
+    });
+
+    list.querySelectorAll('.status-item[data-id]').forEach(item => {
+      item.addEventListener('click', () => viewStatus(others.find(s => s.id == item.dataset.id)));
+    });
+  }
+
+  async function viewStatus(status, isMine) {
+    if (!status) return;
+    if (!isMine) await api(`/status/${status.id}/view`, { method: 'POST' });
+    const backdrop = $('#status-viewer');
+    backdrop.innerHTML = `
+      <div class="status-viewer-card" style="background:${status.bg_color}">
+        <div class="status-viewer-progress"><div class="status-viewer-progress-fill"></div></div>
+        <div class="status-viewer-header">
+          <div class="avatar sm" style="background:rgba(255,255,255,0.3)">${initials(status.display_name)}</div>
+          <span>${escapeHtml(status.display_name)}${isMine ? ' (you)' : ''}</span>
+        </div>
+        <button class="status-viewer-close" id="status-viewer-close">✕</button>
+        <div>${escapeHtml(status.content)}</div>
+       </div>`;
+    backdrop.classList.remove('hidden');
+    const close = () => backdrop.classList.add('hidden');
+    $('#status-viewer-close').addEventListener('click', close);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+    setTimeout(close, 5000);
+  }
+
+  // ---------------- POSTS ----------------
+  $('#new-post-btn').addEventListener('click', async () => {
+    const caption = $('#new-post-text').value.trim();
+    if (!caption) return;
+    await api('/posts', { method: 'POST', body: { caption } });
+    $('#new-post-text').value = '';
+    loadPosts();
+  });
+
+  async function loadPosts() {
+    const { posts } = await api('/posts');
+    const list = $('#posts-list');
+    if (posts.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">📸</div><div class="title">No posts yet</div><div class="subtitle">Be the first to share something.</div></div>`;
+      return;
+    }
+    list.innerHTML = posts.map(p => `
+      <div class="post-card" data-id="${p.id}">
+        <div class="post-header">
+          <div class="avatar sm" style="background:${p.avatar_color}">${initials(p.display_name)}</div>
+          <div>
+            <div style="font-weight:600;">${escapeHtml(p.display_name)}</div>
+            <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
+          </div>
+        </div>
+        <div class="post-caption">${escapeHtml(p.caption)}</div>
+      </div>`).join('');
+  }
+
+  // ---------------- INIT ----------------
+  if (state.token && state.me) {
+    boot();
+  }
+})();

@@ -8,8 +8,8 @@ router.use(requireAuth);
 // GET /api/posts - feed, newest first
 router.get('/', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT p.id, p.caption, p.created_at,
-            u.id AS user_id, u.nova_id, u.display_name, u.avatar_color,
+    `SELECT p.id, p.caption, p.image_data, p.image_mime, p.created_at,
+            u.id AS user_id, u.nova_id, u.display_name, u.avatar_color, u.is_verified,
             (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id)::int AS like_count,
             EXISTS(SELECT 1 FROM post_likes l WHERE l.post_id = p.id AND l.user_id = $1) AS liked_by_me,
             (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id)::int AS comment_count
@@ -20,15 +20,22 @@ router.get('/', async (req, res) => {
   res.json({ posts: rows });
 });
 
-// POST /api/posts { caption }
+// POST /api/posts { caption, imageData, imageMime }
 router.post('/', async (req, res) => {
-  const { caption } = req.body;
-  if (!caption || !caption.trim()) return res.status(400).json({ error: 'Caption is required' });
+  const { caption, imageData, imageMime } = req.body;
+  if ((!caption || !caption.trim()) && !imageData) return res.status(400).json({ error: 'Add a caption or an image' });
   const { rows } = await db.query(
-    `INSERT INTO posts (user_id, caption) VALUES ($1, $2) RETURNING *`,
-    [req.user.id, caption.trim().slice(0, 500)]
+    `INSERT INTO posts (user_id, caption, image_data, image_mime) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [req.user.id, caption ? caption.trim().slice(0, 500) : null, imageData || null, imageData ? (imageMime || 'image/jpeg') : null]
   );
   res.json({ post: rows[0] });
+});
+
+// DELETE /api/posts/:id - only your own post
+router.delete('/:id', async (req, res) => {
+  const { rows } = await db.query('DELETE FROM posts WHERE id=$1 AND user_id=$2 RETURNING id', [req.params.id, req.user.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Post not found' });
+  res.json({ ok: true });
 });
 
 // POST /api/posts/:id/like (toggle)
@@ -45,7 +52,7 @@ router.post('/:id/like', async (req, res) => {
 // GET /api/posts/:id/comments
 router.get('/:id/comments', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT c.id, c.content, c.created_at, u.display_name, u.avatar_color
+    `SELECT c.id, c.content, c.created_at, u.display_name, u.avatar_color, u.is_verified
      FROM post_comments c JOIN users u ON u.id = c.user_id
      WHERE c.post_id = $1 ORDER BY c.created_at ASC`,
     [req.params.id]

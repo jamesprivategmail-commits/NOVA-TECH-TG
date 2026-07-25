@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
   for (const conv of rows) {
     if (conv.type === 'dm') {
       const other = await db.query(
-        `SELECT u.id, u.nova_id, u.display_name, u.avatar_color FROM conversation_members m
+        `SELECT u.id, u.nova_id, u.display_name, u.avatar_color, u.is_verified FROM conversation_members m
          JOIN users u ON u.id = m.user_id
          WHERE m.conversation_id = $1 AND m.user_id != $2`,
         [conv.id, req.user.id]
@@ -126,7 +126,7 @@ router.get('/:id/members', async (req, res) => {
   if (!check.rows[0]) return res.status(403).json({ error: 'Not a member of this conversation' });
 
   const { rows } = await db.query(
-    `SELECT u.id, u.nova_id, u.display_name, u.avatar_color, m.role
+    `SELECT u.id, u.nova_id, u.display_name, u.avatar_color, u.is_verified, m.role
      FROM conversation_members m JOIN users u ON u.id = m.user_id
      WHERE m.conversation_id = $1 ORDER BY m.role, u.display_name`,
     [req.params.id]
@@ -229,7 +229,8 @@ router.get('/:id/messages', async (req, res) => {
   const before = req.query.before ? parseInt(req.query.before, 10) : null;
   const params = before ? [req.params.id, before] : [req.params.id];
   const { rows } = await db.query(
-    `SELECT msg.id, msg.content, msg.created_at, msg.sender_id, u.display_name, u.avatar_color
+    `SELECT msg.id, msg.content, msg.media_type, msg.media_data, msg.media_mime, msg.media_duration,
+            msg.created_at, msg.sender_id, u.display_name, u.avatar_color, u.is_verified
      FROM messages msg JOIN users u ON u.id = msg.sender_id
      WHERE msg.conversation_id = $1 ${before ? 'AND msg.id < $2' : ''}
      ORDER BY msg.created_at DESC LIMIT 50`,

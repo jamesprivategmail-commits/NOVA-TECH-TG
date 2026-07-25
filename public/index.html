@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-<title>NOVA Chat</title>
+<title>NOVA</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0A84FF">
+<meta name="theme-color" content="#0B0C14">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -63,7 +63,10 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <h1>NOVA</h1>
-      <button class="me-avatar-btn" id="me-avatar" title="You"></button>
+      <div class="header-actions">
+        <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
+        <button class="me-avatar-btn" id="me-avatar" title="You"></button>
+      </div>
     </div>
 
     <div class="tabbar">
@@ -86,8 +89,13 @@
     <!-- POSTS TAB -->
     <div id="tab-posts" class="hidden" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
       <div class="new-post-box">
-        <textarea id="new-post-text" rows="2" placeholder="Share something with the group..." maxlength="500"></textarea>
-        <button class="btn-primary" id="new-post-btn">Post</button>
+        <textarea id="new-post-text" rows="2" placeholder="Share something..." maxlength="500"></textarea>
+        <img id="post-image-preview" class="post-image-preview">
+        <div class="post-toolbar">
+          <input type="file" id="post-image-input" accept="image/*" class="hidden">
+          <button class="composer-icon-btn" id="post-image-btn" title="Add image">🖼</button>
+          <button class="btn-primary" id="new-post-btn">Post</button>
+        </div>
       </div>
       <div class="posts-list" id="posts-list"></div>
     </div>
@@ -104,7 +112,7 @@
       <div class="chat-header">
         <button class="back-btn" id="chat-back">‹</button>
         <div class="avatar sm" id="chat-avatar"></div>
-        <div style="flex:1;">
+        <div style="flex:1;" id="chat-header-info">
           <div class="title" id="chat-title"></div>
           <div class="subtitle" id="chat-subtitle"></div>
         </div>
@@ -112,7 +120,10 @@
       </div>
       <div class="messages-area" id="messages-area"></div>
       <div class="composer">
-        <textarea id="composer-input" rows="1" placeholder="iMessage"></textarea>
+        <input type="file" id="image-input" accept="image/*" class="hidden">
+        <button class="composer-icon-btn" id="image-btn" title="Send image">🖼</button>
+        <button class="composer-icon-btn" id="voice-btn" title="Record voice note">🎙</button>
+        <textarea id="composer-input" rows="1" placeholder="Message"></textarea>
         <button class="send-btn" id="send-btn">↑</button>
       </div>
     </div>
@@ -128,7 +139,7 @@
       <button data-newtab="dm" class="active">Direct Message</button>
       <button data-newtab="group">Group</button>
       <button data-newtab="channel">Channel</button>
-      <button data-newtab="join">Join</button>
+      <button data-newtab="join">Join Link</button>
     </div>
     <div id="modal-error" class="modal-error hidden"></div>
 
@@ -162,8 +173,8 @@
 
     <div id="newtab-join" class="hidden">
       <div class="field-group">
-        <label>Invite code</label>
-        <input type="text" id="join-code" placeholder="7-character code">
+        <label>NOVATECH link or code</label>
+        <input type="text" id="join-code" placeholder="Paste a nova.link/ or invite code">
       </div>
       <button class="btn-primary" id="join-btn">Join</button>
     </div>
@@ -177,16 +188,24 @@
     <h2 id="manage-group-title">Manage Group</h2>
     <div id="manage-group-error" class="modal-error hidden"></div>
 
+    <div class="field-group" id="manage-invite-link-group">
+      <label>NOVATECH Link</label>
+      <div class="invite-link-box">
+        <input type="text" id="manage-invite-link" readonly>
+        <button id="manage-copy-link-btn">Copy</button>
+      </div>
+    </div>
+
     <div class="field-group" id="manage-rename-group">
       <label>Group name</label>
       <input type="text" id="manage-group-name" placeholder="Group name">
-      <button class="btn-primary" id="manage-rename-btn">Rename</button>
+      <button class="btn-primary" id="manage-rename-btn" style="margin-top:8px;">Rename</button>
     </div>
 
     <div class="field-group" id="manage-add-group">
       <label>Add member (NOVA ID)</label>
       <input type="text" id="manage-add-novaid" placeholder="NOVA-123456">
-      <button class="btn-primary" id="manage-add-btn">Add</button>
+      <button class="btn-primary" id="manage-add-btn" style="margin-top:8px;">Add</button>
     </div>
 
     <div class="field-group">
@@ -194,14 +213,33 @@
       <div id="manage-members-list"></div>
     </div>
 
-    <button class="btn-primary" id="manage-leave-btn" style="background:#8E8E93;">Leave Group</button>
-    <button class="btn-primary hidden" id="manage-delete-btn" style="background:#FF453A;">Delete Group</button>
+    <button class="btn-ghost" id="manage-leave-btn">Leave Group</button>
+    <button class="btn-danger hidden" id="manage-delete-btn" style="margin-top:8px;">Delete Group</button>
   </div>
 </div>
 
-<!-- PROFILE MODAL -->
-<div id="profile-modal" class="modal-backdrop hidden">
-  <div class="modal-card" id="profile-card"></div>
+<!-- WHATSAPP-STYLE PROFILE PAGE -->
+<div id="profile-page" class="profile-page hidden">
+  <button class="profile-back" id="profile-back-btn">‹</button>
+  <div class="profile-hero">
+    <div class="avatar lg" id="profile-avatar"></div>
+    <div class="name" id="profile-name"></div>
+    <div class="novaid" id="profile-novaid"></div>
+  </div>
+  <div class="profile-body" id="profile-body"></div>
+</div>
+
+<!-- ADMIN PANEL MODAL -->
+<div id="admin-modal" class="modal-backdrop hidden">
+  <div class="modal-card" style="max-width:480px;">
+    <button class="modal-close" id="close-admin-panel">Done</button>
+    <h2>Admin Panel</h2>
+    <div id="admin-error" class="modal-error hidden"></div>
+    <div class="field-group">
+      <input type="text" id="admin-search" placeholder="Search by NOVA ID or name">
+    </div>
+    <div id="admin-users-list"></div>
+  </div>
 </div>
 
 <!-- ADD STATUS MODAL -->

@@ -1,16 +1,22 @@
 {
-  "name": "my-telegram-bot",
+  "name": "nova-chat",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "NOVA Chat - real-time messaging platform (DMs, groups, channels)",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "start": "node index.js"
+    "start": "node server.js",
+    "migrate": "node db/migrate.js"
   },
   "dependencies": {
-    "telegraf": "^4.16.3",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "groq-sdk": "^0.7.0",
-    "mathjs": "^13.0.0",
-    "qrcode": "^1.5.4"
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "socket.io": "^4.7.5"
   }
 }

@@ -497,4 +497,17 @@
       <div class="post-card" data-id="${p.id}">
         <div class="post-header">
           <div class="avatar sm" style="background:${p.avatar_color}">${initials(p.display_name)}</div>
-       
+          <div>
+            <div style="font-weight:600;">${escapeHtml(p.display_name)}</div>
+            <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
+          </div>
+        </div>
+        <div class="post-caption">${escapeHtml(p.caption)}</div>
+      </div>`).join('');
+  }
+
+  // ---------------- INIT ----------------
+  if (state.token && state.me) {
+    boot();
+  }
+})();

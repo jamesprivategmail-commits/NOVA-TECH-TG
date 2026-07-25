@@ -3,11 +3,13 @@ const db = require('../db');
 
 function initSockets(io) {
   // Auth middleware for socket connections
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('No token provided'));
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const { rows } = await db.query('SELECT is_banned FROM users WHERE id = $1', [payload.id]);
+      if (rows[0]?.is_banned) return next(new Error('Account banned'));
       socket.user = payload;
       next();
     } catch (err) {
@@ -28,9 +30,12 @@ function initSockets(io) {
 
     io.emit('presence', { userId, online: true });
 
-    socket.on('message:send', async ({ conversationId, content }, ack) => {
+    // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
+    socket.on('message:send', async ({ conversationId, content, media }, ack) => {
       try {
-        if (!content || !content.trim()) return ack?.({ error: 'Empty message' });
+        const hasText = content && content.trim();
+        const hasMedia = media && media.data && media.type;
+        if (!hasText && !hasMedia) return ack?.({ error: 'Empty message' });
 
         const member = await db.query(
           'SELECT role FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
@@ -45,20 +50,34 @@ function initSockets(io) {
         }
 
         const { rows } = await db.query(
-          `INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1,$2,$3) RETURNING *`,
-          [conversationId, userId, content.trim().slice(0, 4000)]
+          `INSERT INTO messages (conversation_id, sender_id, content, media_type, media_data, media_mime, media_duration)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+          [
+            conversationId,
+            userId,
+            hasText ? content.trim().slice(0, 4000) : null,
+            hasMedia ? media.type : null,
+            hasMedia ? media.data : null,
+            hasMedia ? (media.mime || null) : null,
+            hasMedia ? (media.duration || null) : null
+          ]
         );
         const msg = rows[0];
-        const senderInfo = await db.query('SELECT display_name, avatar_color FROM users WHERE id=$1', [userId]);
+        const senderInfo = await db.query('SELECT display_name, avatar_color, is_verified FROM users WHERE id=$1', [userId]);
 
         const payload = {
           id: msg.id,
           conversation_id: conversationId,
           sender_id: userId,
           content: msg.content,
+          media_type: msg.media_type,
+          media_data: msg.media_data,
+          media_mime: msg.media_mime,
+          media_duration: msg.media_duration,
           created_at: msg.created_at,
           display_name: senderInfo.rows[0].display_name,
-          avatar_color: senderInfo.rows[0].avatar_color
+          avatar_color: senderInfo.rows[0].avatar_color,
+          is_verified: senderInfo.rows[0].is_verified
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);

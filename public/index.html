@@ -101,10 +101,11 @@
       <div class="chat-header">
         <button class="back-btn" id="chat-back">‹</button>
         <div class="avatar sm" id="chat-avatar"></div>
-        <div>
+        <div style="flex:1;">
           <div class="title" id="chat-title"></div>
           <div class="subtitle" id="chat-subtitle"></div>
         </div>
+        <button class="back-btn hidden" id="chat-manage-btn" title="Manage">⋮</button>
       </div>
       <div class="messages-area" id="messages-area"></div>
       <div class="composer">
@@ -164,6 +165,40 @@
       <button class="btn-primary" id="join-btn">Join</button>
     </div>
   </div>
+</div>
+
+<!-- MANAGE GROUP MODAL -->
+<div id="manage-group-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="close-manage-group">Done</button>
+    <h2 id="manage-group-title">Manage Group</h2>
+    <div id="manage-group-error" class="modal-error hidden"></div>
+
+    <div class="field-group" id="manage-rename-group">
+      <label>Group name</label>
+      <input type="text" id="manage-group-name" placeholder="Group name">
+      <button class="btn-primary" id="manage-rename-btn">Rename</button>
+    </div>
+
+    <div class="field-group" id="manage-add-group">
+      <label>Add member (NOVA ID)</label>
+      <input type="text" id="manage-add-novaid" placeholder="NOVA-123456">
+      <button class="btn-primary" id="manage-add-btn">Add</button>
+    </div>
+
+    <div class="field-group">
+      <label>Members</label>
+      <div id="manage-members-list"></div>
+    </div>
+
+    <button class="btn-primary" id="manage-leave-btn" style="background:#8E8E93;">Leave Group</button>
+    <button class="btn-primary hidden" id="manage-delete-btn" style="background:#FF453A;">Delete Group</button>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div id="profile-modal" class="modal-backdrop hidden">
+  <div class="modal-card" id="profile-card"></div>
 </div>
 
 <!-- ADD STATUS MODAL -->

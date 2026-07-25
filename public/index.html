@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>NOVA Chat</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">N</div>
+    <div class="auth-title" id="auth-title">Welcome to NOVA</div>
+    <div class="auth-subtitle" id="auth-subtitle">Message your people, your way.</div>
+
+    <div id="auth-error" class="auth-error hidden"></div>
+
+    <!-- signup success reveal -->
+    <div id="nova-id-reveal" class="nova-id-reveal hidden">
+      <div class="label">Your NOVA ID</div>
+      <div class="id" id="revealed-nova-id"></div>
+      <div class="hint">Save this — it's how friends find you. Keep your password safe, it's the only lock on your account.</div>
+    </div>
+
+    <form id="signup-form">
+      <div class="field-group">
+        <label>Display name</label>
+        <input type="text" id="signup-name" placeholder="What should people call you?" maxlength="60" required autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="At least 6 characters" minlength="6" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn-primary">Create my NOVA ID</button>
+    </form>
+
+    <form id="login-form" class="hidden">
+      <div class="field-group">
+        <label>NOVA ID</label>
+        <input type="text" id="login-novaid" placeholder="NOVA-123456" required autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary">Log in</button>
+    </form>
+
+    <div class="auth-toggle">
+      <span id="toggle-to-login">Already have a NOVA ID? <a href="#">Log in</a></span>
+      <span id="toggle-to-signup" class="hidden">New here? <a href="#">Create an account</a></span>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" class="hidden">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>NOVA</h1>
+      <button class="me-avatar-btn" id="me-avatar" title="You"></button>
+    </div>
+
+    <div class="tabbar">
+      <button data-tab="chats" class="active">Chats</button>
+      <button data-tab="status">Status</button>
+      <button data-tab="posts">Posts</button>
+    </div>
+
+    <!-- CHATS TAB -->
+    <div id="tab-chats">
+      <button class="new-chat-btn" id="new-chat-btn">+ New Chat</button>
+      <div class="conv-list" id="conv-list"></div>
+    </div>
+
+    <!-- STATUS TAB -->
+    <div id="tab-status" class="hidden">
+      <div class="status-list" id="status-list"></div>
+    </div>
+
+    <!-- POSTS TAB -->
+    <div id="tab-posts" class="hidden" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+      <div class="new-post-box">
+        <textarea id="new-post-text" rows="2" placeholder="Share something with the group..." maxlength="500"></textarea>
+        <button class="btn-primary" id="new-post-btn">Post</button>
+      </div>
+      <div class="posts-list" id="posts-list"></div>
+    </div>
+  </div>
+
+  <div class="chat-view" id="chat-view">
+    <div class="empty-state" id="chat-empty">
+      <div class="icon">💬</div>
+      <div class="title">Select a conversation</div>
+      <div class="subtitle">Pick a chat, or start a new one with a friend's NOVA ID.</div>
+    </div>
+
+    <div id="chat-active" class="hidden" style="display:flex; flex-direction:column; height:100%;">
+      <div class="chat-header">
+        <button class="back-btn" id="chat-back">‹</button>
+        <div class="avatar sm" id="chat-avatar"></div>
+        <div>
+          <div class="title" id="chat-title"></div>
+          <div class="subtitle" id="chat-subtitle"></div>
+        </div>
+      </div>
+      <div class="messages-area" id="messages-area"></div>
+      <div class="composer">
+        <textarea id="composer-input" rows="1" placeholder="iMessage"></textarea>
+        <button class="send-btn" id="send-btn">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW CHAT MODAL -->
+<div id="new-chat-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="close-new-chat">Done</button>
+    <h2>New</h2>
+    <div class="modal-tabs">
+      <button data-newtab="dm" class="active">Direct Message</button>
+      <button data-newtab="group">Group</button>
+      <button data-newtab="channel">Channel</button>
+      <button data-newtab="join">Join</button>
+    </div>
+    <div id="modal-error" class="modal-error hidden"></div>
+
+    <div id="newtab-dm">
+      <div class="field-group">
+        <label>Friend's NOVA ID</label>
+        <input type="text" id="dm-novaid" placeholder="NOVA-123456">
+      </div>
+      <button class="btn-primary" id="dm-start-btn">Start Chat</button>
+    </div>
+
+    <div id="newtab-group" class="hidden">
+      <div class="field-group">
+        <label>Group name</label>
+        <input type="text" id="group-name" placeholder="Weekend Squad">
+      </div>
+      <div class="field-group">
+        <label>Members (NOVA IDs, comma separated)</label>
+        <input type="text" id="group-members" placeholder="NOVA-111111, NOVA-222222">
+      </div>
+      <button class="btn-primary" id="group-create-btn">Create Group</button>
+    </div>
+
+    <div id="newtab-channel" class="hidden">
+      <div class="field-group">
+        <label>Channel name</label>
+        <input type="text" id="channel-name" placeholder="Announcements">
+      </div>
+      <button class="btn-primary" id="channel-create-btn">Create Channel</button>
+    </div>
+
+    <div id="newtab-join" class="hidden">
+      <div class="field-group">
+        <label>Invite code</label>
+        <input type="text" id="join-code" placeholder="7-character code">
+      </div>
+      <button class="btn-primary" id="join-btn">Join</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD STATUS MODAL -->
+<div id="new-status-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="close-new-status">Cancel</button>
+    <h2>New Status</h2>
+    <div id="status-error" class="modal-error hidden"></div>
+    <div class="field-group">
+      <label>What's up?</label>
+      <input type="text" id="status-text" placeholder="Feeling good today..." maxlength="300">
+    </div>
+    <div class="field-group">
+      <label>Color</label>
+      <div id="status-colors" style="display:flex; gap:8px;"></div>
+    </div>
+    <button class="btn-primary" id="status-post-btn">Post Status (24h)</button>
+  </div>
+</div>
+
+<!-- STATUS VIEWER -->
+<div id="status-viewer" class="status-viewer-backdrop hidden"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

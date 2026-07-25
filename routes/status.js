@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
 router.get('/feed', async (req, res) => {
   const { rows } = await db.query(
     `SELECT s.id, s.content, s.bg_color, s.created_at, s.expires_at,
-            u.id as user_id, u.nova_id, u.display_name, u.avatar_color,
+            u.id as user_id, u.nova_id, u.display_name, u.avatar_color, u.is_verified,
             EXISTS(SELECT 1 FROM status_views v WHERE v.status_id = s.id AND v.viewer_id = $1) AS viewed
      FROM statuses s JOIN users u ON u.id = s.user_id
      WHERE s.expires_at > NOW()

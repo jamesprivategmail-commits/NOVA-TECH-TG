@@ -56,6 +56,7 @@ body { background: radial-gradient(circle at 10% 0%, rgba(255,49,49,.08), transp
 .reply-preview strong { color:#ff8888; font-size:10px; }
 .message-reactions { display:flex; gap:4px; margin-top:6px; }
 .message-reaction { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.08); border-radius:999px; padding:2px 6px; font-size:12px; }
+.message-file { display:inline-flex; margin-top:7px; padding:8px 10px; border-radius:9px; background:rgba(255,255,255,.08); color:#ff8585; font-size:12px; text-decoration:none; }
 .call-bar { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:20; display:flex; gap:16px; align-items:center; padding:12px 14px; border-radius:16px; background:rgba(20,20,20,.94); border:1px solid rgba(255,49,49,.35); box-shadow:0 16px 40px rgba(0,0,0,.45); }
 .call-bar button { border:0; border-radius:10px; padding:7px 12px; color:#fff; background:#9e0b0b; }
 .post-actions-row { display:flex; gap:12px; margin-top:10px; }
@@ -88,6 +89,17 @@ body { background: radial-gradient(circle at 10% 0%, rgba(255,49,49,.08), transp
 .setting-toggle input:checked + i::after { transform:translateX(16px); background:#fff; }
 .profile-logout-btn { width:100%; margin-top:12px; padding:11px; border:1px solid rgba(255,69,58,.3); border-radius:12px; background:rgba(255,69,58,.12); color:#ff8a82; }
 .status-viewer-delete { position:absolute; right:48px; top:15px; padding:6px 9px; border-radius:8px; background:rgba(0,0,0,.24); color:#fff; font-size:11px; }
+.notifications-card { max-width:440px; max-height:min(680px, calc(100dvh - 32px)); overflow:auto; }
+.notifications-list { min-height:120px; }
+.notification-item { display:flex; align-items:flex-start; gap:10px; padding:12px 2px; border-bottom:1px solid rgba(255,255,255,.06); }
+.notification-item.unread { background:rgba(255,49,49,.05); }
+.notification-dot { width:8px; height:8px; margin-top:5px; flex:none; border-radius:50%; background:#555; }
+.notification-item.unread .notification-dot { background:#ff4d4d; box-shadow:0 0 10px rgba(255,49,49,.55); }
+.notification-text { color:#ddd; font-size:13px; line-height:1.4; }
+.notification-time, .notification-loading, .notification-empty { color:#888; font-size:12px; }
+.notification-loading, .notification-empty { padding:30px 10px; text-align:center; }
+.notifications-read-btn { width:100%; margin-top:14px; padding:10px; border-radius:10px; color:#ddd; background:rgba(255,255,255,.06); }
+#notifications-btn.has-unread { color:#ff6565; box-shadow:inset 0 0 0 1px rgba(255,49,49,.4); }
 .mobile-nav { display:none; }
 
 @media (max-width: 720px) {

@@ -16,7 +16,8 @@ let state = {
   postImageData: null,
   postImageMime: null,
   conversationFilter: '',
-  openMessageId: null
+  openMessageId: null,
+  presence: {}
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -214,6 +215,43 @@ function updateCurrentUserAvatar() {
   }
 }
 
+function formatNotification(notification) {
+  const kind = notification.type || notification.kind || 'activity';
+  const text = notification.message || notification.content || `${kind} notification`;
+  return `<div class="notification-item ${notification.read_at ? '' : 'unread'}"><div class="notification-dot"></div><div><div class="notification-text">${escapeHtml(text)}</div><div class="notification-time">${timeAgo(notification.created_at || notification.createdAt)}</div></div></div>`;
+}
+
+async function loadNotifications() {
+  const list = $('#notifications-list');
+  if (!list) return;
+  list.innerHTML = '<div class="notification-loading">Loading notifications…</div>';
+  try {
+    const result = await api('/notifications');
+    const notifications = result.notifications || [];
+    list.innerHTML = notifications.length ? notifications.map(formatNotification).join('') : '<div class="notification-empty">You are all caught up.</div>';
+    const unread = notifications.filter(n => !n.read_at).length;
+    $('#notifications-btn')?.classList.toggle('has-unread', unread > 0);
+  } catch (err) {
+    list.innerHTML = `<div class="notification-empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function initNotifications() {
+  const modal = $('#notifications-modal');
+  if (!modal || modal.dataset.initialized === '1') return;
+  modal.dataset.initialized = '1';
+  $('#notifications-btn')?.addEventListener('click', async () => {
+    modal.classList.remove('hidden');
+    await loadNotifications();
+  });
+  $('#notifications-close-btn')?.addEventListener('click', () => modal.classList.add('hidden'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+  $('#notifications-read-btn')?.addEventListener('click', async () => {
+    await api('/notifications/read', { method: 'POST', body: {} });
+    await loadNotifications();
+  });
+}
+
 function selectTab(tab) {
   $$('.tabbar button, .mobile-nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
@@ -245,6 +283,7 @@ async function boot() {
   initCallControls();
   initChatHeaderActions();
   initProfileSettings();
+  initNotifications();
 }
 
 function connectSocket() {
@@ -277,6 +316,14 @@ function connectSocket() {
       }
     } else if (indicator) {
       indicator.remove();
+    }
+  });
+
+  state.socket.on('presence', ({ userId, online }) => {
+    state.presence[String(userId)] = Boolean(online);
+    if (state.activeConv?.type !== 'dm') return;
+    if (String(state.activeConv.other_user?.id) === String(userId)) {
+      $('#chat-subtitle').textContent = online ? 'online' : 'last seen recently';
     }
   });
 }
@@ -348,7 +395,8 @@ async function openConversation(id) {
   const conv = state.conversations.find(c => String(c.id) === String(id));
   state.activeConv = conv;
   $('#chat-title').textContent = conv?.name || 'Chat';
-  $('#chat-subtitle').textContent = conv?.type === 'channel' ? 'Channel' : conv?.type === 'group' ? 'Group' : conv?.other_user?.nova_id || '';
+  const otherOnline = conv?.other_user?.id && state.presence[String(conv.other_user.id)];
+  $('#chat-subtitle').textContent = conv?.type === 'channel' ? 'Channel' : conv?.type === 'group' ? 'Group' : otherOnline ? 'online' : conv?.other_user?.nova_id || '';
   $('#chat-avatar').style.background = conv?.avatar_color || '#8E8E93';
   $('#chat-avatar').textContent = initials(conv?.name || '?');
 
@@ -360,6 +408,8 @@ async function openConversation(id) {
     const { messages } = await api(`/conversations/${id}/messages`);
     state.messages[id] = messages;
   }
+  composerInput.value = localStorage.getItem(`nova_draft_${id}`) || '';
+  composerInput.dispatchEvent(new Event('input'));
   renderMessages(id);
 }
 
@@ -391,7 +441,8 @@ function renderMessages(convId) {
     const mediaSrc = m.media_url || m.media_data;
     const media = mediaSrc && m.media_type === 'image' ? `<img class="message-media" src="${mediaSrc}" alt="Attachment" style="max-width:240px;border-radius:10px;margin-top:6px;display:block;">`
       : mediaSrc && m.media_type === 'video' ? `<video class="message-media" controls src="${mediaSrc}" style="max-width:240px;border-radius:10px;margin-top:6px;display:block;"></video>`
-      : mediaSrc && (m.media_type === 'audio' || m.media_type === 'voice') ? `<audio controls src="${mediaSrc}" style="max-width:240px;margin-top:6px;display:block;"></audio>` : '';
+      : mediaSrc && (m.media_type === 'audio' || m.media_type === 'voice') ? `<audio controls src="${mediaSrc}" style="max-width:240px;margin-top:6px;display:block;"></audio>`
+      : mediaSrc && m.media_type === 'file' ? `<a class="message-file" href="${mediaSrc}" target="_blank" rel="noopener">Open attachment</a>` : '';
 
     const body = m.deleted_for_everyone ? '<em>This message was deleted</em>' : `${escapeHtml(m.content || '')}${media}`;
     const reactions = (m.reactions || []).map(r => `<span class="message-reaction">${escapeHtml(r.reaction)}</span>`).join('');
@@ -492,10 +543,11 @@ function initChatHeaderActions() {
   $('#chat-search-btn')?.addEventListener('click', () => {
     const query = prompt('Search this conversation');
     if (!query?.trim() || !state.activeConvId) return;
-    const needle = query.trim().toLowerCase();
-    const hit = (state.messages[state.activeConvId] || []).find(m => (m.content || '').toLowerCase().includes(needle));
-    if (!hit) return alert('No matching messages in this chat.');
-    document.querySelector(`[data-message-id="${hit.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    api(`/conversations/${state.activeConvId}/search?q=${encodeURIComponent(query.trim())}`).then(result => {
+      const hit = (result.messages || [])[0];
+      if (!hit) return alert('No matching messages in this chat.');
+      document.querySelector(`[data-message-id="${hit.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }).catch(err => alert(err.message));
   });
   $('#chat-more-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -534,6 +586,7 @@ composerInput.addEventListener('input', () => {
   composerInput.style.height = 'auto';
   composerInput.style.height = Math.min(composerInput.scrollHeight, 100) + 'px';
   $('#send-btn').disabled = !composerInput.value.trim();
+  if (state.activeConvId) localStorage.setItem(`nova_draft_${state.activeConvId}`, composerInput.value);
 
   if (state.activeConvId) {
     state.socket.emit('typing', { conversationId: state.activeConvId, isTyping: true });
@@ -566,6 +619,7 @@ function sendMessage() {
   });
 
   composerInput.value = '';
+  localStorage.removeItem(`nova_draft_${state.activeConvId}`);
   state.replyToId = null;
   composerInput.placeholder = 'Message';
   composerInput.style.height = 'auto';
@@ -581,6 +635,8 @@ let isRecordingVoice = false;
 function initMediaButtons() {
   const imageBtn = $('#image-btn');
   const imageInput = $('#image-input');
+  const fileBtn = $('#file-btn');
+  const fileInput = $('#file-input');
   const voiceBtn = $('#voice-btn');
 
   if (imageBtn && imageInput) {
@@ -611,6 +667,30 @@ function initMediaButtons() {
         composerInput.value = '';
         state.replyToId = null;
         imageInput.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (fileBtn && fileInput) {
+    fileBtn.addEventListener('click', () => {
+      if (!state.activeConvId) return alert('Open a chat first');
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file || !state.activeConvId) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'file';
+        state.socket.emit('message:send', {
+          conversationId: state.activeConvId,
+          content: file.name,
+          media: { type, data: reader.result, mime: file.type || 'application/octet-stream' },
+          replyToId: state.replyToId || null
+        }, res => { if (res?.error) alert(res.error); });
+        fileInput.value = '';
+        state.replyToId = null;
       };
       reader.readAsDataURL(file);
     });

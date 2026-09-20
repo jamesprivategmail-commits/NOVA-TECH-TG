@@ -79,6 +79,7 @@
       </div>
       <div class="header-actions">
         <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
+        <button class="icon-btn" id="notifications-btn" title="Notifications" aria-label="Notifications">◌</button>
         <button class="me-avatar-btn" id="me-avatar" title="You"></button>
       </div>
     </div>
@@ -153,6 +154,8 @@
       <div class="messages-area" id="messages-area"></div>
       <div class="composer">
         <input type="file" id="image-input" accept="image/*" class="hidden">
+        <input type="file" id="file-input" accept="image/*,video/*,audio/*,.pdf,.zip,.txt,.doc,.docx" class="hidden">
+        <button class="composer-icon-btn" id="file-btn" title="Attach file">＋</button>
         <button class="composer-icon-btn" id="image-btn" title="Send image">🖼</button>
         <button class="composer-icon-btn" id="voice-btn" title="Record voice note">🎙</button>
         <textarea id="composer-input" rows="1" placeholder="Message"></textarea>
@@ -291,6 +294,15 @@
       <button class="btn-primary" id="profile-save-btn" type="submit">Save changes</button>
     </form>
     <button class="btn-danger profile-logout-btn" id="profile-logout-btn" type="button">Log out</button>
+  </div>
+</div>
+
+<div id="notifications-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card notifications-card">
+    <button class="modal-close" id="notifications-close-btn" type="button">Close</button>
+    <h2>Notifications</h2>
+    <div id="notifications-list" class="notifications-list"></div>
+    <button class="btn-ghost notifications-read-btn" id="notifications-read-btn" type="button">Mark all as read</button>
   </div>
 </div>
 

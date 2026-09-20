@@ -80,8 +80,9 @@ function initSockets(io) {
         let mediaMime = media?.mime || null;
         if (hasMedia) {
           // Upload media to Firebase Storage
-          const fallbackMime = media.type === 'voice' ? 'audio/webm' : 'image/jpeg';
-          const filename = media.type === 'voice' ? `voice_${Date.now()}.webm` : `photo_${Date.now()}.jpg`;
+          const fallbackMime = media.type === 'voice' ? 'audio/webm' : media.type === 'video' ? 'video/mp4' : media.type === 'audio' ? 'audio/mpeg' : 'application/octet-stream';
+          const extension = (media.mime || fallbackMime).split('/')[1]?.split(';')[0] || 'bin';
+          const filename = `${media.type || 'file'}_${Date.now()}.${extension}`;
           const uploadResult = await uploadToStorage({
             data: media.data,
             mimeType: mediaMime || fallbackMime,

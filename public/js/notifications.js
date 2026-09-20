@@ -9,7 +9,7 @@ export function initNotifications() {
   els = { badge: $('#notif-badge'), btn: $('#notifications-btn') };
   els.btn?.addEventListener('click', openNotifications);
   on('auth:signed-in', () => refreshUnread());
-  refreshUnread();
+  if (state.token) refreshUnread();
 }
 
 export async function refreshUnread() {

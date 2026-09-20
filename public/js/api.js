@@ -36,7 +36,9 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
 
   if (!res.ok) {
     const message = (data && data.error) || `Request failed (${res.status})`;
-    if (res.status === 401 && auth) emit('auth:expired');
+    // Only treat a 401 as an expired session when a token was actually sent.
+    // Anonymous startup calls and failed logins must never wipe the session.
+    if (res.status === 401 && auth && state.token) emit('auth:expired');
     throw new ApiError(message, res.status, data);
   }
   return data;

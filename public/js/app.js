@@ -129,6 +129,15 @@ async function boot() {
   wireChrome();
   wireEvents();
   initAuth();
+
+  // Load the session BEFORE wiring up modules that fetch, so nothing ever
+  // fires an authenticated request without a token attached.
+  const token = loadToken();
+  if (!token) {
+    showAuth();
+    return;
+  }
+
   initChats();
   initChat();
   initStatus();
@@ -140,11 +149,6 @@ async function boot() {
   initNotifications();
   initCalls();
 
-  const token = loadToken();
-  if (!token) {
-    showAuth();
-    return;
-  }
   try {
     const res = await api.me();
     state.me = res.user;

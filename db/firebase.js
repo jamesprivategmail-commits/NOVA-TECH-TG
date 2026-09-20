@@ -297,10 +297,14 @@ async function getDarkPairReply(content, userId) {
   }
   if (command === '/pair') {
     const novaId = (parts[1] || '').toUpperCase();
-    if (!novaId) return 'Use this format: /pair DARK-CHAT-ID';
+    const currentUser = await getUserById(userId);
+    if (!novaId) return `Use this format with your own ID: /pair ${currentUser?.nova_id || 'DARK-CHAT-ID'}`;
     const target = await getUserByNovaId(novaId);
     if (!target || target.is_banned || String(target.id) !== String(userId)) {
-      return 'That DARK CHAT ID does not match this account. Use your own ID and try again.';
+      return [
+        'That DARK CHAT ID does not match the account currently signed in.',
+        `Use your own ID: /pair ${currentUser?.nova_id || 'DARK-CHAT-ID'}`
+      ].join('\n');
     }
     const code = String(crypto.randomInt(100000, 1000000));
     await setDoc(doc(firestoreDb, 'dark_pair_codes', `code_${String(userId)}`), {

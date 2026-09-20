@@ -74,17 +74,17 @@ function telegramPairHtml() {
   const telegram = state.settings.telegram || {};
   if (telegram.linked) {
     return `<div class="telegram-pair" data-telegram-panel>
-      <div class="telegram-pair-title">Telegram bot linked</div>
+      <div class="telegram-pair-title">DARK CHAT assistant linked</div>
       <div class="telegram-pair-copy">${telegram.username ? `@${escapeHtml(telegram.username)}` : 'Your Telegram account is connected'}.</div>
       <div class="telegram-pair-hint">Use .ping to test the connection and .menu to see available commands.</div>
     </div>`;
   }
   return `<div class="telegram-pair" data-telegram-panel>
-    <div class="telegram-pair-title">Link Telegram bot</div>
-    <div class="telegram-pair-copy">In Telegram, send <b>/pair ${escapeHtml(state.me?.novaId || 'YOUR-DARK-CHAT-ID')}</b> to the DARK CHAT bot. Then enter the six-digit code here.</div>
+    <div class="telegram-pair-title">Link DARK CHAT assistant</div>
+    <div class="telegram-pair-copy">In Telegram, message the DARK CHAT assistant with <b>/pair ${escapeHtml(state.me?.novaId || 'YOUR-DARK-CHAT-ID')}</b>. Then enter the six-digit code here.</div>
     <div class="telegram-pair-form">
       <input class="input" data-telegram-code inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="Telegram pairing code">
-      <button class="btn btn-primary" type="button" data-telegram-pair>Link bot</button>
+      <button class="btn btn-primary" type="button" data-telegram-pair>Link assistant</button>
     </div>
     <div class="telegram-pair-hint" data-telegram-status>Code expires after 10 minutes.</div>
   </div>`;
@@ -128,10 +128,10 @@ export function wireSettingsGroup(root = document) {
         const res = await api.telegramPair(code);
         state.settings.telegram = res.telegram || { linked: true };
         if (panel) panel.outerHTML = telegramPairHtml();
-        toast('Telegram bot linked', 'success');
+        toast('DARK CHAT assistant linked', 'success');
       } catch (err) {
         const status = panel?.querySelector('[data-telegram-status]');
-        if (status) status.textContent = err.message || 'Could not link Telegram bot.';
+        if (status) status.textContent = err.message || 'Could not link DARK CHAT assistant.';
         setBusy(btn, false);
       }
     });

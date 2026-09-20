@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { telegramRequest } = require('../services/telegramBot');
 
 const webhookUrl = String(process.env.TELEGRAM_WEBHOOK_URL || '').trim();

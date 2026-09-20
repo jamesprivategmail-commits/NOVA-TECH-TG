@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const TELEGRAM_API = 'https://api.telegram.org';
 
 function getBotToken() {
@@ -15,7 +17,8 @@ async function telegramRequest(method, payload) {
   const response = await fetch(`${TELEGRAM_API}/bot${token}/${method}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(8000)
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data?.ok) {

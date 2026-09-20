@@ -18,12 +18,12 @@ router.post('/webhook', async (req, res) => {
   if (!isConfigured()) return res.status(503).json({ error: 'Telegram bot is not configured' });
   if (!hasValidSecret(req)) return res.status(401).json({ error: 'Invalid Telegram webhook secret' });
 
-  // Acknowledge quickly so Telegram does not retry the update while command work runs.
-  res.status(200).json({ ok: true });
   try {
     await handleUpdate(req.body || {});
+    res.status(200).json({ ok: true });
   } catch (err) {
     console.error('Telegram update error:', err);
+    res.status(500).json({ error: 'Telegram update could not be processed' });
   }
 });
 

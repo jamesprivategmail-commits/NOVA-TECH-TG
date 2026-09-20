@@ -6,10 +6,15 @@ import {
   $, avatar, icon, escapeHtml, conversationAvatarUser, toast, confirmSheet
 } from './ui.js';
 
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' }
+];
+let iceServersPromise = null;
 
 let els = {};
-let session = null; // { call, kind, targetUserId, pc, localStream, remoteStream, direction, muted, cameraOff, state }
+let session = null; // { call, kind, targetUserId, pc, localStream, remoteStream, pendingSignals, pendingIce, ... }
 
 export function initCalls() {
   els = {
@@ -54,7 +59,7 @@ async function startCall(conversation, kind) {
     const call = res.call;
     session = {
       call, kind, targetUserId: target.id, direction: 'outgoing',
-      pc: null, localStream: null, remoteStream: null, muted: false, cameraOff: kind !== 'video', state: 'ringing'
+      pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, cameraOff: kind !== 'video', state: 'ringing'
     };
     showCallUi(conversation, target, kind, 'Ringing...', 'outgoing');
     await setupPeer();
@@ -75,7 +80,7 @@ async function onIncoming({ call, fromUserId }) {
   const peer = conv?.other_user || { id: fromUserId, display_name: 'Incoming call' };
   session = {
     call, kind: call.kind, targetUserId: fromUserId, direction: 'incoming',
-    pc: null, localStream: null, remoteStream: null, muted: false, cameraOff: call.kind !== 'video', state: 'ringing'
+    pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, cameraOff: call.kind !== 'video', state: 'ringing'
   };
   showCallUi(conv || { name: peer.display_name }, peer, call.kind, 'Incoming call', 'incoming');
 }
@@ -102,11 +107,16 @@ async function setupPeer() {
   const constraints = kind === 'video' ? { audio: true, video: true } : { audio: true, video: false };
   try {
     session.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-  } catch {
-    session.localStream = null;
-    toast('Microphone/camera permission denied');
+  } catch (err) {
+    toast(kind === 'video' ? 'Camera and microphone permission is required' : 'Microphone permission is required');
+    throw err;
   }
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  let iceServers = ICE_SERVERS;
+  try {
+    iceServersPromise ||= api.iceServers();
+    iceServers = (await iceServersPromise).iceServers || ICE_SERVERS;
+  } catch { /* public STUN fallback remains usable */ }
+  const pc = new RTCPeerConnection({ iceServers });
   session.pc = pc;
   session.remoteStream = new MediaStream();
 
@@ -144,23 +154,47 @@ async function setupPeer() {
       endCall('ended');
     }
   };
+
+  const queuedSignals = session.pendingSignals.splice(0);
+  for (const signal of queuedSignals) await handleSignal(signal.fromUserId, signal.signal);
+  await flushPendingIce();
 }
 
 async function onSignal({ callId, signal, fromUserId }) {
   if (!session || session.call.id !== callId) return;
-  if (!session.pc) return;
+  if (!session.pc) {
+    session.pendingSignals.push({ fromUserId, signal });
+    return;
+  }
+  await handleSignal(fromUserId, signal);
+}
+
+async function handleSignal(fromUserId, signal) {
+  if (!session?.pc) return;
+  const pc = session.pc;
   try {
     if (signal.type === 'offer') {
-      await session.pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-      const answer = await session.pc.createAnswer();
-      await session.pc.setLocalDescription(answer);
-      signalCall(fromUserId, callId, { type: 'answer', sdp: session.pc.localDescription });
+      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      await flushPendingIce();
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      signalCall(fromUserId, session.call.id, { type: 'answer', sdp: session.pc.localDescription });
     } else if (signal.type === 'answer') {
-      await session.pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      await flushPendingIce();
     } else if (signal.type === 'ice' && signal.candidate) {
-      await session.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+      if (pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+      else session.pendingIce.push(signal.candidate);
     }
   } catch { /* ignore transient signalling errors */ }
+}
+
+async function flushPendingIce() {
+  if (!session?.pc?.remoteDescription) return;
+  const candidates = session.pendingIce.splice(0);
+  for (const candidate of candidates) {
+    try { await session.pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch { /* stale candidate */ }
+  }
 }
 
 function onCallState({ callId, state: callState, fromUserId }) {

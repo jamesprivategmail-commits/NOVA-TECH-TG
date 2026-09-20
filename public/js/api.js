@@ -112,6 +112,7 @@ export const api = {
   adminDelete: (id) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // calls
+  iceServers: () => request('/calls/ice-servers'),
   callHistory: (conversationId) => request(`/calls/history/${encodeURIComponent(conversationId)}`),
   startCall: (conversationId, kind) => request('/calls', { method: 'POST', body: { conversationId, kind } }),
   updateCall: (id, stateName) => request(`/calls/${encodeURIComponent(id)}`, { method: 'PATCH', body: { state: stateName } }),

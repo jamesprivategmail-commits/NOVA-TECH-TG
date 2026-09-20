@@ -12,6 +12,25 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+const BASE_ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' }
+];
+
+// GET /api/calls/ice-servers - returns public STUN plus optional server TURN
+router.get('/ice-servers', async (_req, res) => {
+  const iceServers = [...BASE_ICE_SERVERS];
+  if (process.env.TURN_URLS && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+    iceServers.push({
+      urls: process.env.TURN_URLS.split(',').map((url) => url.trim()).filter(Boolean),
+      username: process.env.TURN_USERNAME,
+      credential: process.env.TURN_CREDENTIAL
+    });
+  }
+  res.json({ iceServers });
+});
+
 // GET /api/calls/history/:conversationId
 router.get('/history/:conversationId', async (req, res) => {
   try {

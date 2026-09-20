@@ -1,7 +1,7 @@
 // chat.js - conversation screen: history, realtime, sending, media, actions
 import { api, ApiError } from './api.js';
 import { state, emit, on, markRead } from './state.js';
-import { joinConversation, sendMessage as socketSend, sendTyping } from './socket.js';
+import { joinConversation, sendMessage as socketSend, sendTyping, markMessagesRead as socketMarkRead } from './socket.js';
 import {
   $, avatar, icon, escapeHtml, formatTime, dayLabel, lastSeenLabel, conversationTitle,
   conversationAvatarUser, toast, openSheet, closeSheet, confirmSheet, promptSheet,
@@ -57,7 +57,9 @@ export function initChat() {
     attachCancel: $('#attachment-cancel')
   };
 
-  els.back?.addEventListener('click', closeConversation);
+  els.back?.addEventListener('click', () => {
+    import('./router.js').then(({ popOverlay }) => popOverlay());
+  });
   els.userBtn?.addEventListener('click', openConversationInfo);
   els.callBtn?.addEventListener('click', () => startCall('voice'));
   els.videoBtn?.addEventListener('click', () => startCall('video'));
@@ -85,6 +87,7 @@ export function initChat() {
   on('message:new', onIncomingMessage);
   on('typing', onTyping);
   on('presence', onPresence);
+  on('messages:read', onMessagesRead);
 }
 
 // ---------------- open / close ----------------
@@ -105,7 +108,25 @@ export async function openConversation(conv) {
     const res = await api.messages(conv.id);
     state.messages[conv.id] = res.messages || [];
     state.hasMore[conv.id] = (res.messages || []).length >= 50;
+    // Fetch read status for sender's messages
+    try {
+      const readRes = await api.readStatus(conv.id);
+      if (readRes.statuses) {
+        const statusMap = new Map(readRes.statuses.map((s) => [s.id, s]));
+        for (const msg of state.messages[conv.id]) {
+          if (msg.sender_id === state.me?.id && statusMap.has(msg.id)) {
+            const s = statusMap.get(msg.id);
+            msg.delivery_status = s.status;
+            msg.read_by = s.read_by;
+          }
+        }
+      }
+    } catch { /* non-fatal */ }
     renderMessages(true);
+    // Mark received messages as read via socket (only if we're actually viewing)
+    if (document.visibilityState === 'visible') {
+      socketMarkRead(conv.id).catch(() => {});
+    }
   } catch (err) {
     els.messages.innerHTML = errorState({ title: 'Could not load messages', subtitle: err.message, retryId: 'retry-messages' });
     $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
@@ -121,6 +142,7 @@ export function closeConversation() {
   stopTypingSignal();
   state.searchOpen = false;
   els.searchBar?.classList.add('hidden');
+  import('./router.js').then(({ clearOverlay }) => clearOverlay());
 }
 
 function renderHeader() {
@@ -265,11 +287,21 @@ function metaHtml(msg) {
     return `<div class="meta"><span class="failed">Failed</span> · <button class="retry" data-retry="${escapeHtml(msg.id)}">Retry</button></div>`;
   }
   const edited = msg.edited_at ? '<span class="edited">edited</span>' : '';
-  const ticking = msg._status === 'sending'
-    ? `<span style="opacity:.6">${icon('check')}</span>`
-    : `<span class="seen">${icon('check-check')}</span>`;
   const pin = msg.pinned_at ? `<span class="pin-flag" title="Pinned">${icon('pin')}</span>` : '';
-  return `<div class="meta">${edited}${pin}<span>${escapeHtml(formatTime(msg.created_at))}</span>${msg.sender_id === state.me?.id ? ticking : ''}</div>`;
+  let ticking = '';
+  if (msg.sender_id === state.me?.id) {
+    const status = msg.delivery_status || (msg._status === 'sending' ? 'sending' : 'sent');
+    if (status === 'sending') {
+      ticking = `<span class="tick-sending">${icon('check')}</span>`;
+    } else if (status === 'read') {
+      ticking = `<span class="tick-read">${icon('check-check')}</span>`;
+    } else if (status === 'delivered') {
+      ticking = `<span class="tick-delivered">${icon('check-check')}</span>`;
+    } else {
+      ticking = `<span class="tick-sent">${icon('check')}</span>`;
+    }
+  }
+  return `<div class="meta">${edited}${pin}<span>${escapeHtml(formatTime(msg.created_at))}</span>${ticking}</div>`;
 }
 
 function messageHtml(msg, index, list) {
@@ -380,9 +412,19 @@ export function onIncomingMessage(msg) {
   const convId = msg.conversation_id;
   if (!state.messages[convId]) state.messages[convId] = [];
   const list = state.messages[convId];
-  const idx = list.findIndex((m) => m.id === msg.id);
-  if (idx > -1) list[idx] = { ...list[idx], ...msg, _status: 'sent' };
-  else list.push({ ...msg, _status: 'sent' });
+
+  // Dedup: match by id, or by client_message_id (optimistic message replacement)
+  let idx = list.findIndex((m) => m.id === msg.id);
+  if (idx === -1 && msg.client_message_id) {
+    idx = list.findIndex((m) => m.client_message_id === msg.client_message_id || m._clientMessageId === msg.client_message_id);
+  }
+  if (idx > -1) {
+    list[idx] = { ...list[idx], ...msg, _status: 'sent' };
+  } else {
+    // Also check if we already have this message from a previous socket event
+    const existing = list.find((m) => m.id === msg.id);
+    if (!existing) list.push({ ...msg, _status: 'sent' });
+  }
 
   // refresh conversation preview
   const conv = state.conversations.find((c) => c.id === convId);
@@ -399,9 +441,27 @@ export function onIncomingMessage(msg) {
     const atBottom = els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight < 120;
     renderMessages(false);
     if (atBottom || msg.sender_id === state.me?.id) scrollToEnd();
-    if (document.visibilityState === 'visible') markRead(convId);
+    if (document.visibilityState === 'visible' && msg.sender_id !== state.me?.id) {
+      markRead(convId);
+    }
   } else {
     import('./state.js').then(({ bumpUnread }) => bumpUnread(convId));
+  }
+}
+
+function onMessagesRead({ conversationId, readerId, messageIds }) {
+  if (!conversationId || !messageIds?.length) return;
+  const list = state.messages[conversationId];
+  if (!list) return;
+  const idSet = new Set(messageIds);
+  for (const msg of list) {
+    if (idSet.has(msg.id) && msg.sender_id === state.me?.id) {
+      msg.delivery_status = 'read';
+      msg.read_by = { ...(msg.read_by || {}), [readerId]: new Date().toISOString() };
+    }
+  }
+  if (state.activeConv && state.activeConv.id === conversationId) {
+    renderMessages(false);
   }
 }
 
@@ -469,9 +529,12 @@ async function handleSend() {
   const currentReply = replyTo;
 
   // optimistic bubble
+  const clientMessageId = `cmid_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const temp = {
     id: tempId,
+    client_message_id: clientMessageId,
+    _clientMessageId: clientMessageId,
     conversation_id: conv.id,
     sender_id: state.me?.id,
     content: content || null,
@@ -484,8 +547,10 @@ async function handleSend() {
     created_at: new Date().toISOString(),
     display_name: state.me?.displayName,
     avatar_color: state.me?.avatarColor,
+    avatar_url: state.me?.avatarUrl || null,
     is_verified: state.me?.isVerified,
     reactions: [],
+    delivery_status: 'sending',
     _status: 'sending',
     _content: content,
     _attachment: currentAttachment,
@@ -534,17 +599,24 @@ async function deliverTemp(convId, temp) {
     conversationId: convId,
     content: temp._content || null,
     media: mediaData,
-    replyToId: temp._reply?.id || null
+    replyToId: temp._reply?.id || null,
+    clientMessageId: temp.client_message_id || temp._clientMessageId
   });
 
   const i = list.findIndex((m) => m.id === temp.id);
   if (i > -1) list.splice(i, 1);
 
   if (ack && ack.ok && ack.message) {
-    const real = { ...ack.message, _status: 'sent' };
+    const real = { ...ack.message, _status: 'sent', delivery_status: 'sent' };
+    // Check if the real message was already added by the socket event
     const exists = list.findIndex((m) => m.id === real.id);
     if (exists > -1) list[exists] = { ...list[exists], ...real };
-    else list.push(real);
+    else {
+      // Also check by client_message_id in case socket event already replaced it
+      const byClient = list.findIndex((m) => m.client_message_id === real.client_message_id || m._clientMessageId === real.client_message_id);
+      if (byClient > -1) list[byClient] = { ...list[byClient], ...real };
+      else list.push(real);
+    }
   } else {
     // keep optimistic bubble, mark failed for retry
     temp._status = 'failed';

@@ -5,7 +5,8 @@ const {
   getConversationById,
   getConversationsForUser,
   createMessage,
-  uploadToStorage
+  uploadToStorage,
+  markMessagesRead
 } = require('../db/firebase');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026';
@@ -41,6 +42,7 @@ function initSockets(io) {
     socket.join(`user:${userId}`);
 
     onlineSockets.set(userId, (onlineSockets.get(userId) || 0) + 1);
+    try { await updateUser(userId, { online: true, last_seen: new Date().toISOString() }); } catch { /* ignore */ }
     io.emit('presence', { userId, online: true, connections: onlineSockets.get(userId) });
 
     socket.on('call:invite', ({ targetUserId, call }) => {
@@ -56,7 +58,7 @@ function initSockets(io) {
     });
 
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
-    socket.on('message:send', async ({ conversationId, content, media, replyToId }, ack) => {
+    socket.on('message:send', async ({ conversationId, content, media, replyToId, clientMessageId }, ack) => {
       try {
         const hasText = content && content.trim();
         const hasMedia = media && media.data && media.type;
@@ -95,6 +97,7 @@ function initSockets(io) {
 
         const msg = await createMessage(conversationId, {
           senderId: userId,
+          clientMessageId: clientMessageId || null,
           content: hasText ? content.trim().slice(0, 4000) : null,
           mediaType: hasMedia ? media.type : null,
           mediaUrl: mediaUrl,
@@ -108,6 +111,7 @@ function initSockets(io) {
 
         const payload = {
           id: msg.id,
+          client_message_id: msg.client_message_id,
           conversation_id: conversationId,
           sender_id: userId,
           content: msg.content,
@@ -120,8 +124,11 @@ function initSockets(io) {
           edited_at: msg.edited_at,
           deleted_for_everyone: msg.deleted_for_everyone,
           created_at: msg.created_at,
+          read_by: msg.read_by || {},
+          delivery_status: 'sent',
           display_name: senderInfo?.display_name || 'User',
           avatar_color: senderInfo?.avatar_color || '#0A84FF',
+          avatar_url: senderInfo?.avatar_url || null,
           is_verified: senderInfo?.is_verified || false
         };
 
@@ -144,9 +151,32 @@ function initSockets(io) {
       }
     });
 
+    // Recipient marks messages as read when they open a conversation
+    socket.on('messages:read', async ({ conversationId }, ack) => {
+      try {
+        const conv = await getConversationById(conversationId);
+        if (!conv || !(conv.member_ids || []).includes(userId)) {
+          return ack?.({ error: 'Not a member' });
+        }
+        const updated = await markMessagesRead(conversationId, userId);
+        // Notify the conversation room that messages were read
+        if (updated.length) {
+          io.to(`conv:${conversationId}`).emit('messages:read', {
+            conversationId,
+            readerId: userId,
+            messageIds: updated.map((m) => m.id)
+          });
+        }
+        ack?.({ ok: true, count: updated.length });
+      } catch (err) {
+        console.error('Mark read error:', err);
+        ack?.({ error: 'Failed to mark read' });
+      }
+    });
+
     socket.on('disconnect', async () => {
       try {
-        await updateUser(userId, { last_seen: new Date().toISOString() });
+        await updateUser(userId, { online: false, last_seen: new Date().toISOString() });
       } catch (e) {
         // ignore
       }

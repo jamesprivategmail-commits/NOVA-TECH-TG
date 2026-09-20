@@ -177,56 +177,181 @@ function openViewerForUser(userId, focusId = null) {
   const viewer = els.viewer;
   viewer.hidden = false;
 
+  // Push history state for back button
+  import('./router.js').then(({ pushOverlay }) => pushOverlay('status'));
+
+  let paused = false;
+  let pauseStart = 0;
+  let elapsedBeforePause = 0;
+  let duration = 5000;
+
   const render = () => {
     const s = items[index];
     const canPrev = index > 0;
     const canNext = index < items.length - 1;
     let media = '';
-    if (s.media_url && s.media_type === 'video') media = `<video src="${escapeHtml(s.media_url)}" autoplay playsinline controls></video>`;
+    if (s.media_url && s.media_type === 'video') media = `<video src="${escapeHtml(s.media_url)}" autoplay playsinline></video>`;
     else if (s.media_url) media = `<img src="${escapeHtml(s.media_url)}" alt="">`;
     else media = `<div class="viewer-text" style="background:${escapeHtml(s.bg_color || '#1a1a1d')}">${escapeHtml(s.content || '')}</div>`;
 
+    const segCount = items.length;
+    let segHtml = '';
+    for (let i = 0; i < segCount; i++) {
+      segHtml += `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i < index ? '100%' : '0%'}"></span></div>`;
+    }
+
     viewer.innerHTML = `
-      <div class="viewer-progress">${items.map((_, i) => `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i === index ? '0%' : '0%'}"></span></div>`).join('')}</div>
+      <div class="viewer-progress">${segHtml}</div>
       <div class="viewer-head">
-        ${avatar({ displayName: s.display_name, avatarColor: s.avatar_color }, { size: 'sm' })}
-        <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
+        ${avatar({ displayName: s.display_name, avatarColor: s.avatar_color, avatarUrl: s.avatar_url }, { size: 'sm' })}
+        <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')} ${s.is_verified ? '<span class="verify-inline"></span>' : ''}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
+        ${isOwn ? `<button class="icon-btn" id="viewer-views" aria-label="Views">${icon('eye')}</button>` : ''}
         ${isOwn ? `<button class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
         <button class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
       </div>
-      <div class="viewer-stage">${media}</div>
+      <div class="viewer-stage" id="viewer-stage">${media}</div>
+      ${isOwn ? `<div class="viewer-view-count" id="viewer-view-count"></div>` : ''}
       <div class="viewer-foot">
-        <input class="input" id="viewer-reply" placeholder="Reply..." autocomplete="off">
-        <button class="btn btn-primary" id="viewer-send" aria-label="Send reply">${icon('send')}</button>
+        <input class="input" id="viewer-reply" placeholder="${isOwn ? 'No replies yet' : 'Reply...'}" autocomplete="off" ${isOwn ? 'disabled' : ''}>
+        ${!isOwn ? `<button class="btn btn-primary" id="viewer-send" aria-label="Send reply">${icon('send')}</button>` : ''}
       </div>
       ${canPrev ? '<button class="viewer-nav prev" id="viewer-prev" aria-label="Previous status"></button>' : ''}
       ${canNext ? '<button class="viewer-nav next" id="viewer-next" aria-label="Next status"></button>' : ''}
     `;
     viewer.querySelector('#viewer-close').addEventListener('click', closeViewer);
-    viewer.querySelector('#viewer-prev')?.addEventListener('click', () => { index--; render(); });
-    viewer.querySelector('#viewer-next')?.addEventListener('click', () => { index++; render(); });
+    viewer.querySelector('#viewer-prev')?.addEventListener('click', (e) => { e.stopPropagation(); index--; render(); });
+    viewer.querySelector('#viewer-next')?.addEventListener('click', (e) => { e.stopPropagation(); index++; render(); });
     viewer.querySelector('#viewer-delete')?.addEventListener('click', async () => {
       const ok = await confirmSheet({ title: 'Delete status', message: 'Delete this status?', confirmText: 'Delete', danger: true });
       if (!ok) return;
       try { await api.deleteStatus(s.id); toast('Deleted'); closeViewer(); loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
     });
-    viewer.querySelector('#viewer-send').addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
+    viewer.querySelector('#viewer-views')?.addEventListener('click', () => loadStatusViewers(s.id));
+    viewer.querySelector('#viewer-send')?.addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
+
+    // Wire hold-to-pause on the stage
+    wireHoldPause(viewer.querySelector('#viewer-stage'));
 
     if (!s.viewed && !isOwn) api.viewStatus(s.id).catch(() => {});
+
+    // Load view count for own statuses
+    if (isOwn) loadViewCount(s.id);
+
     startProgress(s);
   };
 
   function startProgress(s) {
     clearTimeout(viewerTimer);
+    paused = false;
+    elapsedBeforePause = 0;
+    duration = s.media_type === 'video' ? 15000 : 5000;
     const seg = viewer.querySelectorAll('.viewer-progress .seg span')[index];
-    const duration = s.media_type === 'video' ? 8000 : 5000;
     if (seg) {
       requestAnimationFrame(() => { seg.style.transition = `width ${duration}ms linear`; seg.style.width = '100%'; });
+    }
+    // For video, sync progress with actual playback
+    const video = viewer.querySelector('.viewer-stage video');
+    if (video && s.media_type === 'video') {
+      video.addEventListener('timeupdate', () => {
+        if (!paused && video.duration) {
+          const pct = (video.currentTime / video.duration) * 100;
+          if (seg) { seg.style.transition = 'none'; seg.style.width = pct + '%'; }
+        }
+      });
+      video.addEventListener('ended', () => {
+        if (index < items.length - 1) { index++; render(); }
+        else closeViewer();
+      });
+      return;
     }
     viewerTimer = setTimeout(() => {
       if (index < items.length - 1) { index++; render(); }
       else closeViewer();
     }, duration);
+  }
+
+  function wireHoldPause(stage) {
+    if (!stage) return;
+    let holdTimer = null;
+
+    const startHold = (e) => {
+      e.preventDefault();
+      holdTimer = setTimeout(() => {
+        paused = true;
+        pauseStart = Date.now();
+        // Pause progress
+        const seg = viewer.querySelectorAll('.viewer-progress .seg span')[index];
+        if (seg) {
+          const computed = window.getComputedStyle(seg);
+          const width = computed.width;
+          seg.style.transition = 'none';
+          seg.style.width = width;
+        }
+        // Pause video
+        const video = stage.querySelector('video');
+        if (video) video.pause();
+        // Prevent text selection
+        document.body.style.userSelect = 'none';
+      }, 200);
+    };
+
+    const endHold = () => {
+      clearTimeout(holdTimer);
+      if (paused) {
+        paused = false;
+        document.body.style.userSelect = '';
+        // Resume video
+        const video = stage.querySelector('video');
+        if (video) { video.play().catch(() => {}); return; }
+        // Resume timer with remaining time
+        const seg = viewer.querySelectorAll('.viewer-progress .seg span')[index];
+        if (seg) {
+          const currentWidth = parseFloat(seg.style.width) || 0;
+          const remainingPct = 100 - currentWidth;
+          const remainingMs = (remainingPct / 100) * duration;
+          seg.style.transition = `width ${remainingMs}ms linear`;
+          seg.style.width = '100%';
+        }
+        viewerTimer = setTimeout(() => {
+          if (index < items.length - 1) { index++; render(); }
+          else closeViewer();
+        }, duration - (Date.now() - pauseStart));
+      }
+    };
+
+    stage.addEventListener('touchstart', startHold, { passive: false });
+    stage.addEventListener('touchend', endHold);
+    stage.addEventListener('touchcancel', endHold);
+    stage.addEventListener('mousedown', startHold);
+    stage.addEventListener('mouseup', endHold);
+    stage.addEventListener('mouseleave', endHold);
+  }
+
+  async function loadViewCount(statusId) {
+    const el = viewer.querySelector('#viewer-view-count');
+    if (!el) return;
+    try {
+      const res = await api.statusViewers(statusId);
+      const count = (res.viewers || []).length;
+      el.textContent = `${count} ${count === 1 ? 'view' : 'views'}`;
+    } catch { el.textContent = ''; }
+  }
+
+  async function loadStatusViewers(statusId) {
+    try {
+      const res = await api.statusViewers(statusId);
+      const viewers = res.viewers || [];
+      openSheet({
+        title: 'Views',
+        body: viewers.length
+          ? `<div class="sheet-body">${viewers.map((v) => `<div class="option">
+              ${avatar({ displayName: v.display_name, avatarColor: v.avatar_color, avatarUrl: v.avatar_url }, { size: 'sm' })}
+              <span class="option-copy">${escapeHtml(v.display_name || 'User')}<small>${escapeHtml(v.nova_id || '')}</small></span>
+            </div>`).join('')}</div>`
+          : emptyState({ iconName: 'eye', title: 'No views yet', subtitle: 'Views will appear here.' }),
+        onMount() {}
+      });
+    } catch (err) { toast('Could not load views'); }
   }
 
   render();
@@ -236,6 +361,11 @@ function closeViewer() {
   clearTimeout(viewerTimer);
   els.viewer.hidden = true;
   els.viewer.innerHTML = '';
+  document.body.style.userSelect = '';
+  import('./router.js').then(({ clearOverlay, popOverlay }) => {
+    // If the viewer was opened via history push, go back
+    popOverlay();
+  });
 }
 
 async function replyToStatus(status, text) {

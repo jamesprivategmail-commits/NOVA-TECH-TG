@@ -15,6 +15,7 @@ import { initSettings, loadProfileSettings } from './settings.js';
 import { initAdmin, openAdminPanel } from './admin.js';
 import { initNotifications, refreshUnread } from './notifications.js';
 import { initCalls } from './calls.js';
+import { initRouter, setTab, pushOverlay, popOverlay, pushSheet, popSheet, clearSheet, clearOverlay, on as onRouter } from './router.js';
 
 const SCREENS = {
   chats: '#screen-chats',
@@ -31,6 +32,7 @@ const isDesktop = () => window.matchMedia('(min-width: 900px)').matches;
 export function showTab(name) {
   if (!SCREENS[name]) return;
   currentTab = name;
+  setTab(name);
   Object.entries(SCREENS).forEach(([key, sel]) => {
     const el = $(sel);
     if (!el) return;
@@ -103,6 +105,19 @@ function wireChrome() {
     btn.addEventListener('click', () => showTab(btn.dataset.tab));
   });
   window.addEventListener('resize', updateLayout);
+
+  // Mobile keyboard stability: adjust app height when visual viewport changes
+  if (window.visualViewport) {
+    const adjustHeight = () => {
+      const app = $('#app');
+      if (app) {
+        app.style.height = `${window.visualViewport.height}px`;
+      }
+    };
+    window.visualViewport.addEventListener('resize', adjustHeight);
+    window.visualViewport.addEventListener('scroll', adjustHeight);
+    adjustHeight();
+  }
 }
 
 function wireEvents() {
@@ -113,7 +128,7 @@ function wireEvents() {
   on('me:updated', () => { renderMeHeader(); renderProfile(); emit('conversations:changed'); });
   on('data:refresh-conversations', () => loadConversations());
   on('admin:open-panel', () => openAdminPanel());
-  on('chat:open', (conv) => { showTab(currentTab); openConversation(conv); });
+  on('chat:open', (conv) => { showTab(currentTab); import('./router.js').then(({ pushOverlay }) => pushOverlay('chat')); openConversation(conv); });
   on('chat:needs-send', async ({ conversationId, content }) => {
     try {
       await refreshConversations();
@@ -128,6 +143,14 @@ function wireEvents() {
 async function boot() {
   wireChrome();
   wireEvents();
+  initRouter();
+  onRouter((event, data) => {
+    if (event === 'overlay:close') closeConversation();
+    if (event === 'sheet:close') {
+      import('./ui.js').then(({ closeSheetFromRouter }) => closeSheetFromRouter());
+    }
+    if (event === 'tab:show') showTab(data);
+  });
   initAuth();
 
   // Load the session BEFORE wiring up modules that fetch, so nothing ever

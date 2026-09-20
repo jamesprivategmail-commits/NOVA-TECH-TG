@@ -22,13 +22,19 @@ export function renderProfile() {
   const myConvs = state.conversations.length;
   const myStatuses = state.statuses.filter((s) => String(s.user_id) === String(me.id)).length;
   const myPosts = state.posts.filter((p) => String(p.user_id) === String(me.id)).length;
+  const lastSeen = me.lastSeen || me.last_seen;
+  const isOnline = state.presence[me.id];
 
   content.innerHTML = `
     <div class="profile-cover"></div>
     <div class="profile-body">
-      <div class="profile-photo">${avatar(me, { size: 'lg' })}</div>
+      <div class="profile-photo-wrap">
+        <div class="profile-photo">${avatar(me, { size: 'lg' })}</div>
+        ${isOnline ? '<span class="profile-online-dot"></span>' : ''}
+      </div>
       <div class="profile-name">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)}</div>
       <div class="profile-handle truncate">${escapeHtml(me.novaId || '')}</div>
+      <div class="profile-presence ${isOnline ? 'online' : ''}">${escapeHtml(isOnline ? 'online' : (lastSeen ? 'last seen ' + timeAgoShort(lastSeen) : 'offline'))}</div>
       ${me.bio ? `<div class="profile-bio">${escapeHtml(me.bio)}</div>` : '<div class="profile-bio muted">No about yet.</div>'}
       <div class="profile-stats">
         <div class="stat"><b>${myConvs}</b><span>Chats</span></div>
@@ -45,6 +51,19 @@ export function renderProfile() {
   wireSettingsGroup(content);
   content.querySelector('#profile-edit-action').addEventListener('click', openEditProfileSheet);
   content.querySelector('#profile-share').addEventListener('click', shareId);
+}
+
+function timeAgoShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const diff = Date.now() - d.getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 async function shareId() {

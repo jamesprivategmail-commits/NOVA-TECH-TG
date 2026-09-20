@@ -3,10 +3,13 @@ const {
   createStatus,
   getActiveStatuses,
   markStatusViewed,
-  deleteStatus
+  deleteStatus,
+  adminDeleteStatus,
+  getStatusViewers
 } = require('../db/firebase');
 const { uploadToStorage } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
+const { isAdminNovaId } = require('../middleware/admin');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -65,16 +68,32 @@ router.post('/:id/view', async (req, res) => {
   }
 });
 
-// DELETE /api/status/:id
+// DELETE /api/status/:id - own status or admin
 router.delete('/:id', async (req, res) => {
   try {
     const ok = await deleteStatus(req.params.id, req.user.id);
-    if (!ok) return res.status(404).json({ error: 'Status not found or unauthorized' });
-    res.json({ ok: true });
+    if (ok) return res.json({ ok: true });
+    // Admin can delete any status
+    if (isAdminNovaId(req.user.novaId)) {
+      const adminOk = await adminDeleteStatus(req.params.id);
+      if (adminOk) return res.json({ ok: true });
+    }
+    return res.status(404).json({ error: 'Status not found or unauthorized' });
   } catch (err) {
     console.error('Delete status error:', err);
     res.status(500).json({ error: 'Failed to delete status' });
   }
 });
 
-module.exports = router;
+// GET /api/status/:id/viewers - for status owner to see who viewed
+router.get('/:id/viewers', async (req, res) => {
+  try {
+    const viewers = await getStatusViewers(req.params.id);
+    res.json({ viewers });
+  } catch (err) {
+    console.error('Get status viewers error:', err);
+    res.status(500).json({ error: 'Failed to load viewers' });
+  }
+});
+
+module.exports = router);

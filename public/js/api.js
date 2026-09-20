@@ -72,12 +72,15 @@ export const api = {
   react: (id, messageId, reaction) => request(`/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}/reactions`, { method: 'POST', body: { reaction } }),
   saveMessage: (id, messageId) => request(`/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}/save`, { method: 'POST', body: {} }),
   pinMessage: (id, messageId) => request(`/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}/pin`, { method: 'POST', body: {} }),
+  markRead: (id) => request(`/conversations/${encodeURIComponent(id)}/read`, { method: 'POST', body: {} }),
+  readStatus: (id) => request(`/conversations/${encodeURIComponent(id)}/read-status`),
 
   // status
   createStatus: (payload) => request('/status', { method: 'POST', body: payload }),
   statusFeed: () => request('/status/feed'),
   viewStatus: (id) => request(`/status/${encodeURIComponent(id)}/view`, { method: 'POST', body: {} }),
   deleteStatus: (id) => request(`/status/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  statusViewers: (id) => request(`/status/${encodeURIComponent(id)}/viewers`),
 
   // posts
   posts: () => request('/posts'),

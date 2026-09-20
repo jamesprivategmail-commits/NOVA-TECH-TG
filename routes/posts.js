@@ -3,12 +3,14 @@ const {
   getPosts,
   createPost,
   deletePost,
+  adminDeletePost,
   togglePostLike,
   getPostComments,
   addPostComment,
   uploadToStorage
 } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/admin');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -60,12 +62,19 @@ router.post('/', async (req, res) => {
   }
 });
 
-// DELETE /api/posts/:id - only your own post
+// DELETE /api/posts/:id - own post or admin
 router.delete('/:id', async (req, res) => {
   try {
+    // Try own delete first
     const ok = await deletePost(req.params.id, req.user.id);
-    if (!ok) return res.status(404).json({ error: 'Post not found or unauthorized' });
-    res.json({ ok: true });
+    if (ok) return res.json({ ok: true });
+    // If not owner, check admin
+    const { isAdminNovaId } = require('../middleware/admin');
+    if (isAdminNovaId(req.user.novaId)) {
+      const adminOk = await adminDeletePost(req.params.id);
+      if (adminOk) return res.json({ ok: true });
+    }
+    return res.status(404).json({ error: 'Post not found or unauthorized' });
   } catch (err) {
     console.error('Delete post error:', err);
     res.status(500).json({ error: 'Failed to delete post' });

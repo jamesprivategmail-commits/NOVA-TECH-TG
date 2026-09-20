@@ -429,6 +429,7 @@ async function createMessage(convId, msgData) {
   const now = new Date().toISOString();
   const message = {
     id,
+    client_message_id: msgData.clientMessageId || msgData.client_message_id || null,
     conversation_id: String(convId),
     sender_id: String(msgData.senderId || msgData.sender_id),
     content: msgData.content || null,
@@ -447,6 +448,8 @@ async function createMessage(convId, msgData) {
     reactions: [], // array of { reaction, user_id }
     saved_by: [], // array of userIds
     hidden_by: [], // array of userIds
+    read_by: {}, // map: { userId: readAtISO } — who has read this message
+    status: 'sent', // 'sent' | 'delivered' | 'read'
     created_at: now
   };
 
@@ -497,6 +500,11 @@ async function getMessages(convId, { limitCount = 50, beforeTime = null, userId 
     m.avatar_url = sender?.avatar_url || null;
     m.is_verified = sender?.is_verified || false;
     m.saved_by_me = userId ? (m.saved_by || []).includes(String(userId)) : false;
+    // Compute read status for sender's messages
+    const readBy = m.read_by || {};
+    const otherReaders = Object.keys(readBy).filter((uid) => uid !== String(m.sender_id));
+    m.read_by_others = otherReaders.length > 0;
+    m.delivery_status = m.status || (otherReaders.length > 0 ? 'read' : 'sent');
     // Map media_url to media_data if media_data is empty
     if (!m.media_data && m.media_url) {
       m.media_data = m.media_url;
@@ -519,6 +527,47 @@ async function updateMessage(convId, messageId, updates) {
   await updateDoc(ref, updates);
   const updated = await getDoc(ref);
   return updated.data();
+}
+
+// Mark messages as read by a user — only for messages sent by others, not already read
+async function markMessagesRead(convId, userId) {
+  await ensureInit();
+  const colRef = collection(firestoreDb, 'conversations', String(convId), 'messages');
+  const snap = await getDocs(colRef);
+  const now = new Date().toISOString();
+  const updated = [];
+  for (const docSnap of snap.docs) {
+    const m = docSnap.data();
+    if (m.sender_id === String(userId)) continue; // skip own messages
+    if (m.deleted_for_everyone) continue;
+    const readBy = m.read_by || {};
+    if (!readBy[String(userId)]) {
+      readBy[String(userId)] = now;
+      await updateDoc(docSnap.ref, { read_by: readBy, status: 'read' });
+      updated.push({ id: m.id, conversation_id: String(convId), sender_id: m.sender_id, read_by: readBy });
+    }
+  }
+  return updated;
+}
+
+// Get read status for messages in a conversation (for sender to see receipts)
+async function getMessageReadStatus(convId, userId) {
+  await ensureInit();
+  const colRef = collection(firestoreDb, 'conversations', String(convId), 'messages');
+  const snap = await getDocs(colRef);
+  const result = [];
+  for (const docSnap of snap.docs) {
+    const m = docSnap.data();
+    if (m.sender_id !== String(userId)) continue;
+    const readBy = m.read_by || {};
+    const otherReaders = Object.keys(readBy).filter((uid) => uid !== String(userId));
+    result.push({
+      id: m.id,
+      status: otherReaders.length > 0 ? 'read' : (m.status || 'sent'),
+      read_by: readBy
+    });
+  }
+  return result;
 }
 
 async function searchMessages(convId, queryText) {
@@ -607,9 +656,33 @@ async function markStatusViewed(statusId, viewerUserId) {
   if (!snap.exists()) return false;
   const viewers = snap.data().viewers || [];
   if (!viewers.includes(String(viewerUserId))) {
-    await updateDoc(ref, { viewers: arrayUnion(String(viewerUserId)) });
+    viewers.push(String(viewerUserId));
+    await updateDoc(ref, { viewers });
   }
   return true;
+}
+
+// Get unique viewer list for a status (for the owner to see who viewed)
+async function getStatusViewers(statusId) {
+  await ensureInit();
+  const snap = await getDoc(doc(firestoreDb, 'statuses', String(statusId)));
+  if (!snap.exists()) return [];
+  const viewerIds = snap.data().viewers || [];
+  const viewers = [];
+  for (const uid of viewerIds) {
+    const user = await getUserById(uid);
+    if (user) {
+      viewers.push({
+        id: user.id,
+        display_name: user.display_name,
+        avatar_color: user.avatar_color,
+        avatar_url: user.avatar_url,
+        nova_id: user.nova_id,
+        viewed_at: snap.data().created_at // approximate
+      });
+    }
+  }
+  return viewers;
 }
 
 async function deleteStatus(statusId, userId) {
@@ -618,6 +691,16 @@ async function deleteStatus(statusId, userId) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return false;
   if (snap.data().user_id !== String(userId)) return false;
+  await deleteDoc(ref);
+  return true;
+}
+
+// Admin can delete any status regardless of ownership
+async function adminDeleteStatus(statusId) {
+  await ensureInit();
+  const ref = doc(firestoreDb, 'statuses', String(statusId));
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return false;
   await deleteDoc(ref);
   return true;
 }
@@ -676,6 +759,25 @@ async function deletePost(postId, userId) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return false;
   if (snap.data().user_id !== String(userId)) return false;
+  // Delete subcollection comments
+  const commentSnap = await getDocs(collection(firestoreDb, 'posts', String(postId), 'comments'));
+  for (const cDoc of commentSnap.docs) {
+    await deleteDoc(cDoc.ref);
+  }
+  await deleteDoc(ref);
+  return true;
+}
+
+// Admin can delete any post regardless of ownership
+async function adminDeletePost(postId) {
+  await ensureInit();
+  const ref = doc(firestoreDb, 'posts', String(postId));
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return false;
+  const commentSnap = await getDocs(collection(firestoreDb, 'posts', String(postId), 'comments'));
+  for (const cDoc of commentSnap.docs) {
+    await deleteDoc(cDoc.ref);
+  }
   await deleteDoc(ref);
   return true;
 }
@@ -890,15 +992,20 @@ module.exports = {
   getMessageById,
   updateMessage,
   searchMessages,
+  markMessagesRead,
+  getMessageReadStatus,
   // Statuses
   createStatus,
   getActiveStatuses,
   markStatusViewed,
   deleteStatus,
+  adminDeleteStatus,
+  getStatusViewers,
   // Posts & Comments
   createPost,
   getPosts,
   deletePost,
+  adminDeletePost,
   togglePostLike,
   addPostComment,
   getPostComments,

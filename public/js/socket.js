@@ -24,6 +24,7 @@ export function connectSocket() {
     socket.on('message:new', (msg) => emit('message:new', msg));
     socket.on('typing', (payload) => emit('typing', payload));
     socket.on('presence', (payload) => emit('presence', payload));
+    socket.on('messages:read', (payload) => emit('messages:read', payload));
     socket.on('call:incoming', (payload) => emit('call:incoming', payload));
     socket.on('call:signal', (payload) => emit('call:signal', payload));
     socket.on('call:state', (payload) => emit('call:state', payload));
@@ -46,12 +47,12 @@ export function joinConversation(conversationId) {
   if (socket) socket.emit('conversation:join', { conversationId });
 }
 
-export function sendMessage({ conversationId, content, media, replyToId }) {
+export function sendMessage({ conversationId, content, media, replyToId, clientMessageId }) {
   return new Promise((resolve) => {
     if (!socket) return resolve({ error: 'Not connected' });
     let settled = false;
     const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 30000);
-    socket.emit('message:send', { conversationId, content, media, replyToId }, (ack) => {
+    socket.emit('message:send', { conversationId, content, media, replyToId, clientMessageId }, (ack) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -62,6 +63,20 @@ export function sendMessage({ conversationId, content, media, replyToId }) {
 
 export function sendTyping(conversationId, isTyping) {
   if (socket) socket.emit('typing', { conversationId, isTyping });
+}
+
+export function markMessagesRead(conversationId) {
+  return new Promise((resolve) => {
+    if (!socket) return resolve({ error: 'Not connected' });
+    let settled = false;
+    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'timeout' }); } }, 10000);
+    socket.emit('messages:read', { conversationId }, (ack) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(ack || { error: 'No response' });
+    });
+  });
 }
 
 export function inviteCall(targetUserId, call) {

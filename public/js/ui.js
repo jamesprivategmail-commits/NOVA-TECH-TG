@@ -57,7 +57,14 @@ export function avatar(user, { size = '', cls = '', id = '' } = {}) {
 }
 
 export function verifyBadge(isVerified) {
-  return isVerified ? `<span class="verify" title="Verified">${icon('badge-check')}</span>` : '';
+  if (!isVerified) return '';
+  // Premium verification badge — clean circular badge with crisp white check
+  return `<span class="verify-badge" title="Verified" aria-label="Verified">
+    <svg viewBox="0 0 24 24" class="verify-svg" aria-hidden="true">
+      <circle cx="12" cy="12" r="10.5" fill="#1d9bf0"/>
+      <path d="M7 12.2l3.2 3.2L17 8.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </span>`;
 }
 
 export function formatTime(iso) {
@@ -162,11 +169,21 @@ export function openSheet({ title = '', body = '', footer = '', onMount = null, 
   document.addEventListener('keydown', onKey);
   overlay._onKey = onKey;
   overlay._onClose = onClose;
+  // Push history state for back button
+  import('./router.js').then(({ pushSheet }) => pushSheet());
   if (typeof onMount === 'function') onMount(sheet);
   return sheet;
 }
 
 export function closeSheet() {
+  _closeSheet(false);
+}
+
+export function closeSheetFromRouter() {
+  _closeSheet(true);
+}
+
+function _closeSheet(fromRouter) {
   const overlay = $('#overlay');
   const sheet = $('#sheet');
   if (!overlay) return;
@@ -177,6 +194,15 @@ export function closeSheet() {
   const cb = overlay._onClose;
   overlay._onClose = null;
   overlayHandler = null;
+  // Pop history if we pushed a sheet state (but not if the router triggered this)
+  if (!fromRouter) {
+    import('./router.js').then(({ popSheet, clearSheet }) => {
+      clearSheet();
+      popSheet();
+    });
+  } else {
+    import('./router.js').then(({ clearSheet }) => clearSheet());
+  }
   if (typeof cb === 'function') cb();
 }
 

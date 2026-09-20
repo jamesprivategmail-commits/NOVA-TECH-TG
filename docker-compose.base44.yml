@@ -1,0 +1,23 @@
+# Base44 development environment for DARK CHAT.
+# Runs the app from the cloned source with live reload (nodemon).
+services:
+  web:
+    image: node:22
+    working_dir: /app
+    volumes:
+      - .:/app
+      # Anonymous volume keeps installed node_modules inside the container,
+      # preventing the host directory from shadowing it.
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env.base44-defaults   # repo-level placeholders — app boots without credentials
+      - /run/base44/app.env      # platform-managed secrets — LAST, always wins
+    environment:
+      # Passed through so server-side code can reference the public preview origin if needed.
+      - BASE44_PUBLIC_HOST_SUFFIX=${BASE44_PUBLIC_HOST_SUFFIX}
+    # Install deps, add nodemon for live reload, then watch source.
+    # -L enables polling (needed for bind-mounted volumes).
+    command: sh -c "npm install --no-audit --no-fund && npm install --no-save --no-audit --no-fund nodemon && ./node_modules/.bin/nodemon -L server.js"
+    restart: unless-stopped

@@ -1,4 +1,4 @@
-// admin.js - admin panel: real account state, ban/unban, verify/unverify
+// admin.js - admin panel: users, updates, and statuses moderation
 import { api } from './api.js';
 import { state } from './state.js';
 import {
@@ -17,26 +17,51 @@ export function openAdminPanel() {
   openSheet({
     title: 'Admin panel',
     body: `
+      <div class="tabs" id="admin-tabs">
+        <button data-atab="users" class="active">Users</button>
+        <button data-atab="updates">Updates</button>
+        <button data-atab="statuses">Statuses</button>
+      </div>
       <div class="sheet-pad">
         <div id="admin-error" class="alert alert-error hidden"></div>
-        <label class="field">
+        <label class="field" id="admin-search-field">
           <input class="input" id="admin-search" placeholder="Search by name or DARK CHAT ID" autocomplete="off">
         </label>
       </div>
-      <div class="sheet-body" id="admin-users"></div>`,
+      <div class="sheet-body" id="admin-content"></div>`,
     onMount(sheet) {
+      let currentAdminTab = 'users';
       let t;
+
+      const tabs = sheet.querySelector('#admin-tabs');
+      tabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-atab]');
+        if (!btn) return;
+        currentAdminTab = btn.dataset.atab;
+        tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b === btn));
+        // Show/hide search field (only for users)
+        sheet.querySelector('#admin-search-field').style.display = currentAdminTab === 'users' ? '' : 'none';
+        loadAdminContent(currentAdminTab, '');
+      });
+
       sheet.querySelector('#admin-search').addEventListener('input', (e) => {
         clearTimeout(t);
-        t = setTimeout(() => loadAdminUsers(e.target.value.trim()), 300);
+        t = setTimeout(() => loadAdminContent('users', e.target.value.trim()), 300);
       });
-      loadAdminUsers('');
+
+      loadAdminContent('users', '');
     }
   });
 }
 
+async function loadAdminContent(tab, search) {
+  if (tab === 'users') return loadAdminUsers(search);
+  if (tab === 'updates') return loadAdminUpdates();
+  if (tab === 'statuses') return loadAdminStatuses();
+}
+
 async function loadAdminUsers(search) {
-  const list = $('#admin-users');
+  const list = $('#admin-content');
   const err = $('#admin-error');
   if (!list) return;
   const local = ++seq;
@@ -45,7 +70,6 @@ async function loadAdminUsers(search) {
   try {
     const res = await api.adminUsers(search);
     if (local !== seq) return;
-    // defensive dedupe by id in case a page is delivered twice
     const seen = new Set();
     const users = (res.users || []).filter((u) => {
       if (!u || seen.has(u.id)) return false;
@@ -94,6 +118,79 @@ function adminRow(u) {
       <button class="icon-btn" data-delete="${escapeHtml(u.id)}" aria-label="Delete user" ${isMe ? 'disabled' : ''}>${icon('trash')}</button>
     </div>
   </div>`;
+}
+
+async function loadAdminUpdates() {
+  const list = $('#admin-content');
+  if (!list) return;
+  list.innerHTML = skeletonList(5);
+  try {
+    const res = await api.posts();
+    const posts = res.posts || [];
+    if (!posts.length) {
+      list.innerHTML = emptyState({ iconName: 'updates', title: 'No updates', subtitle: 'No user updates to moderate.' });
+      return;
+    }
+    list.innerHTML = posts.map((p) => `<div class="admin-post">
+      <div class="post-head">
+        ${avatar({ displayName: p.display_name, avatarUrl: p.avatar_url, avatarColor: p.avatar_color }, { size: 'sm' })}
+        <div class="post-info">
+          <div class="post-author truncate">${escapeHtml(p.display_name || 'User')} ${verifyBadge(p.is_verified)}</div>
+          <div class="post-time">${escapeHtml(p.id)}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" data-admin-del-post="${escapeHtml(p.id)}">Delete</button>
+      </div>
+      ${p.caption ? `<div class="post-caption" style="padding:0 4px">${escapeHtml(p.caption)}</div>` : ''}
+    </div>`).join('');
+    list.querySelectorAll('[data-admin-del-post]').forEach((btn) => btn.addEventListener('click', async () => {
+      const ok = await confirmSheet({ title: 'Delete update', message: 'Remove this update from the feed? This cannot be undone.', confirmText: 'Delete', danger: true });
+      if (!ok) return;
+      try {
+        await api.deletePost(btn.dataset.adminDelPost);
+        toast('Update deleted', 'success');
+        loadAdminUpdates();
+      } catch (err) { toast(err.message || 'Could not delete'); }
+    }));
+  } catch (error) {
+    list.innerHTML = errorState({ title: 'Could not load updates', subtitle: error.message, retryId: 'retry-admin-updates' });
+    $('#retry-admin-updates')?.addEventListener('click', loadAdminUpdates);
+  }
+}
+
+async function loadAdminStatuses() {
+  const list = $('#admin-content');
+  if (!list) return;
+  list.innerHTML = skeletonList(5);
+  try {
+    const res = await api.statusFeed();
+    const statuses = res.statuses || [];
+    if (!statuses.length) {
+      list.innerHTML = emptyState({ iconName: 'status', title: 'No statuses', subtitle: 'No active statuses to moderate.' });
+      return;
+    }
+    list.innerHTML = statuses.map((s) => `<div class="admin-post">
+      <div class="post-head">
+        ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
+        <div class="post-info">
+          <div class="post-author truncate">${escapeHtml(s.display_name || 'User')} ${verifyBadge(s.is_verified)}</div>
+          <div class="post-time">${escapeHtml(s.content || (s.media_type === 'video' ? 'Video' : 'Photo'))}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" data-admin-del-status="${escapeHtml(s.id)}">Delete</button>
+      </div>
+    </div>`).join('');
+    list.querySelectorAll('[data-admin-del-status]').forEach((btn) => btn.addEventListener('click', async () => {
+      const ok = await confirmSheet({ title: 'Delete status', message: 'Remove this status? This cannot be undone.', confirmText: 'Delete', danger: true });
+      if (!ok) return;
+      try {
+        await api.deleteStatus(btn.dataset.adminDelStatus);
+        toast('Status deleted', 'success');
+        loadAdminStatuses();
+      } catch (err) { toast(err.message || 'Could not delete'); }
+    }));
+  } catch (error) {
+    list.innerHTML = errorState({ title: 'Could not load statuses', subtitle: error.message, retryId: 'retry-admin-statuses' });
+    $('#retry-admin-statuses')?.addEventListener('click', loadAdminStatuses);
+  }
 }
 
 async function run(action, successMessage, search) {

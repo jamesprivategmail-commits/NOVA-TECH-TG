@@ -14,7 +14,9 @@ const {
   getMessages,
   getMessageById,
   updateMessage,
-  searchMessages
+  searchMessages,
+  markMessagesRead,
+  getMessageReadStatus
 } = require('../db/firebase');
 const { generateInviteCode } = require('../db/idGen');
 const { requireAuth } = require('../middleware/auth');
@@ -299,6 +301,38 @@ router.get('/:id/messages', async (req, res) => {
   } catch (err) {
     console.error('Get messages error:', err);
     res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+// POST /api/conversations/:id/read - mark all messages as read
+router.post('/:id/read', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
+    const updated = await markMessagesRead(req.params.id, req.user.id);
+    res.json({ ok: true, count: updated.length });
+  } catch (err) {
+    console.error('Mark read error:', err);
+    res.status(500).json({ error: 'Failed to mark messages read' });
+  }
+});
+
+// GET /api/conversations/:id/read-status - get read receipts for sender's messages
+router.get('/:id/read-status', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
+    const statuses = await getMessageReadStatus(req.params.id, req.user.id);
+    res.json({ statuses });
+  } catch (err) {
+    console.error('Read status error:', err);
+    res.status(500).json({ error: 'Failed to get read status' });
   }
 });
 

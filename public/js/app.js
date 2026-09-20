@@ -284,9 +284,21 @@ function renderMessages(convId) {
       html += `<div class="msg-group-sender">${escapeHtml(m.display_name)}</div>`;
     }
 
+    const reply = m.reply_to_id ? msgs.find(x => x.id === m.reply_to_id) : null;
+    const media = m.media_data && m.media_type === 'image' ? `<img class="message-media" src="${m.media_data}" alt="Image attachment">`
+      : m.media_data && m.media_type === 'video' ? `<video class="message-media" controls src="${m.media_data}"></video>`
+      : m.media_data && m.media_type === 'audio' ? `<audio controls src="${m.media_data}"></audio>` : '';
+    const body = m.deleted_for_everyone ? '<em>This message was deleted</em>' : `${escapeHtml(m.content || '')}${media}`;
+    const reactions = (m.reactions || []).map(r => `<span class="message-reaction">${escapeHtml(r.reaction)}</span>`).join('');
     html += `
-      <div class="msg-row ${mine ? 'mine' : 'theirs'} ${isFirstInGroup ? 'grouped-first' : ''}">
-        <div class="bubble ${mine ? 'mine' : 'theirs'}">${escapeHtml(m.content)}</div>
+      <div class="msg-row ${mine ? 'mine' : 'theirs'} ${isFirstInGroup ? 'grouped-first' : ''}" data-message-id="${m.id}">
+        <div class="bubble ${mine ? 'mine' : 'theirs'}">
+          ${reply ? `<button class="reply-preview" data-jump-to="${reply.id}"><strong>Replying to ${escapeHtml(reply.display_name || 'message')}</strong><span>${escapeHtml(reply.content || 'Attachment')}</span></button>` : ''}
+          <div class="message-body">${body}</div>
+          ${reactions ? `<div class="message-reactions">${reactions}</div>` : ''}
+          <div class="message-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${m.edited_at ? ' · edited' : ''}</div>
+        </div>
+        <div class="message-actions"><button data-action="reply" data-id="${m.id}">↩</button><button data-action="react" data-id="${m.id}">☺</button><button data-action="save" data-id="${m.id}">${m.saved_by_me ? '★' : '☆'}</button><button data-action="more" data-id="${m.id}">⋯</button></div>
       </div>`;
 
     lastSender = m.sender_id;
@@ -294,7 +306,46 @@ function renderMessages(convId) {
   });
 
   area.innerHTML = html || `<div class="empty-state"><div class="icon">✨</div><div class="title">No messages yet</div><div class="subtitle">Say something!</div></div>`;
+  wireMessageActions(convId);
   area.scrollTop = area.scrollHeight;
+}
+
+function wireMessageActions(convId) {
+  const area = $('#messages-area');
+  area.querySelectorAll('[data-action="reply"]').forEach(btn => btn.addEventListener('click', () => {
+    state.replyToId = Number(btn.dataset.id);
+    const msg = (state.messages[convId] || []).find(m => m.id === state.replyToId);
+    composerInput.value = '';
+    composerInput.placeholder = `Reply to ${msg?.display_name || 'message'}…`;
+    composerInput.focus();
+  }));
+  area.querySelectorAll('[data-action="react"]').forEach(btn => btn.addEventListener('click', async () => {
+    const reaction = prompt('Reaction emoji', '❤️');
+    if (!reaction) return;
+    await api(`/conversations/${convId}/messages/${btn.dataset.id}/reactions`, { method: 'POST', body: { reaction } });
+    const result = await api(`/conversations/${convId}/messages`);
+    state.messages[convId] = result.messages; renderMessages(convId);
+  }));
+  area.querySelectorAll('[data-action="save"]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/conversations/${convId}/messages/${btn.dataset.id}/save`, { method: 'POST' });
+    const result = await api(`/conversations/${convId}/messages`);
+    state.messages[convId] = result.messages; renderMessages(convId);
+  }));
+  area.querySelectorAll('[data-action="more"]').forEach(btn => btn.addEventListener('click', async () => {
+    const msg = (state.messages[convId] || []).find(m => m.id === Number(btn.dataset.id));
+    const options = msg?.sender_id === state.me.id ? 'edit,delete,delete-everyone,cancel' : 'delete,save,cancel';
+    const choice = prompt(`Message actions: ${options}`);
+    if (choice === 'edit' && msg) {
+      const content = prompt('Edit message', msg.content || '');
+      if (content) await api(`/conversations/${convId}/messages/${msg.id}`, { method: 'PATCH', body: { content } });
+    } else if (choice === 'delete' || choice === 'delete-everyone') {
+      await api(`/conversations/${convId}/messages/${msg.id}`, { method: 'DELETE', body: { scope: choice === 'delete-everyone' ? 'everyone' : 'me' } });
+    } else return;
+    const result = await api(`/conversations/${convId}/messages`); state.messages[convId] = result.messages; renderMessages(convId);
+  }));
+  area.querySelectorAll('.reply-preview').forEach(btn => btn.addEventListener('click', () => {
+    const target = area.querySelector(`[data-message-id="${btn.dataset.jumpTo}"]`); target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }));
 }
 
 // ---------------- COMPOSER ----------------
@@ -327,11 +378,13 @@ function sendMessage() {
   const content = composerInput.value.trim();
   if (!content || !state.activeConvId) return;
 
-  state.socket.emit('message:send', { conversationId: state.activeConvId, content }, (res) => {
+  state.socket.emit('message:send', { conversationId: state.activeConvId, content, replyToId: state.replyToId || null }, (res) => {
     if (res?.error) alert(res.error);
   });
 
   composerInput.value = '';
+  state.replyToId = null;
+  composerInput.placeholder = 'Message';
   composerInput.style.height = 'auto';
   $('#send-btn').disabled = true;
   state.socket.emit('typing', { conversationId: state.activeConvId, isTyping: false });

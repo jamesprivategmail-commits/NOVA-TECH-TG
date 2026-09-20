@@ -45,7 +45,35 @@ CREATE TABLE IF NOT EXISTS messages (
   media_mime VARCHAR(60),
   media_duration INTEGER,                    -- seconds, for voice notes
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  edited_at TIMESTAMP
+  edited_at TIMESTAMP,
+  reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+  forwarded_from_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+  deleted_for_everyone BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_at TIMESTAMP,
+  pinned_at TIMESTAMP,
+  pinned_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS message_reactions (
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reaction VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (message_id, user_id, reaction)
+);
+
+CREATE TABLE IF NOT EXISTS saved_messages (
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (message_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS hidden_messages (
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hidden_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (message_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS statuses (
@@ -88,6 +116,18 @@ CREATE TABLE IF NOT EXISTS post_comments (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Additive upgrades for databases created before message management shipped.
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded_from_id INTEGER REFERENCES messages(id) ON DELETE SET NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_for_everyone BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS pinned_at TIMESTAMP;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS pinned_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_reply ON messages(reply_to_id);
+CREATE INDEX IF NOT EXISTS idx_message_reactions_message ON message_reactions(message_id);
+CREATE INDEX IF NOT EXISTS idx_saved_messages_user ON saved_messages(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_hidden_messages_user ON hidden_messages(user_id, hidden_at DESC);
 CREATE INDEX IF NOT EXISTS idx_members_user ON conversation_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_statuses_expiry ON statuses(expires_at);

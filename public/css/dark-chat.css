@@ -42,6 +42,20 @@ body { background: radial-gradient(circle at 10% 0%, rgba(255,49,49,.08), transp
 .comment-form { display:flex; gap:8px; margin-top:8px; }
 .comment-form input { flex:1; min-width:0; background:rgba(255,255,255,.055); color:#fff; border:1px solid var(--border); border-radius:11px; padding:9px 10px; }
 .comment-form button { border:0; border-radius:11px; padding:0 12px; background:rgba(255,49,49,.15); color:#fff; }
+.message-media { display:block; max-width:240px; max-height:260px; width:auto; border-radius:12px; margin-top:7px; object-fit:cover; }
+.message-meta { color:#777; font-size:10px; margin-top:6px; text-align:right; }
+.message-actions { display:none; gap:3px; position:absolute; top:-18px; right:4px; background:#151515; border:1px solid var(--border); border-radius:9px; padding:2px; z-index:2; }
+.msg-row { position:relative; }
+.msg-row:hover .message-actions, .msg-row:focus-within .message-actions { display:flex; }
+.message-actions button { color:#aaa; border:0; background:transparent; padding:3px 5px; font-size:13px; }
+.message-actions button:hover { color:#fff; }
+.reply-preview { display:flex; flex-direction:column; gap:2px; width:100%; text-align:left; border-left:2px solid #ff4d4d; padding:4px 8px; margin-bottom:7px; background:rgba(255,49,49,.08); color:#aaa; border-radius:3px; font-size:11px; }
+.reply-preview strong { color:#ff8888; font-size:10px; }
+.message-reactions { display:flex; gap:4px; margin-top:6px; }
+.message-reaction { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.08); border-radius:999px; padding:2px 6px; font-size:12px; }
+.post-actions-row { display:flex; gap:12px; margin-top:10px; }
+.post-actions-row button { color:#aaa; background:transparent; border:0; font-size:12px; }
+.post-actions-row button:hover { color:#ff7777; }
 .nova-id-reveal { background: rgba(255,49,49,.09); }
 .nova-id-reveal .id { color: #ff6767; }
 .novaid { color: #ff6767 !important; }

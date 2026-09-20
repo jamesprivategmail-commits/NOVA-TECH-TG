@@ -31,7 +31,7 @@ function initSockets(io) {
     io.emit('presence', { userId, online: true });
 
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
-    socket.on('message:send', async ({ conversationId, content, media }, ack) => {
+    socket.on('message:send', async ({ conversationId, content, media, replyToId }, ack) => {
       try {
         const hasText = content && content.trim();
         const hasMedia = media && media.data && media.type;
@@ -50,8 +50,8 @@ function initSockets(io) {
         }
 
         const { rows } = await db.query(
-          `INSERT INTO messages (conversation_id, sender_id, content, media_type, media_data, media_mime, media_duration)
-           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+          `INSERT INTO messages (conversation_id, sender_id, content, media_type, media_data, media_mime, media_duration, reply_to_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
           [
             conversationId,
             userId,
@@ -59,7 +59,8 @@ function initSockets(io) {
             hasMedia ? media.type : null,
             hasMedia ? media.data : null,
             hasMedia ? (media.mime || null) : null,
-            hasMedia ? (media.duration || null) : null
+            hasMedia ? (media.duration || null) : null,
+            replyToId || null
           ]
         );
         const msg = rows[0];
@@ -74,6 +75,9 @@ function initSockets(io) {
           media_data: msg.media_data,
           media_mime: msg.media_mime,
           media_duration: msg.media_duration,
+          reply_to_id: msg.reply_to_id,
+          edited_at: msg.edited_at,
+          deleted_for_everyone: msg.deleted_for_everyone,
           created_at: msg.created_at,
           display_name: senderInfo.rows[0].display_name,
           avatar_color: senderInfo.rows[0].avatar_color,

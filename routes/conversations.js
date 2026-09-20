@@ -230,13 +230,97 @@ router.get('/:id/messages', async (req, res) => {
   const params = before ? [req.params.id, before] : [req.params.id];
   const { rows } = await db.query(
     `SELECT msg.id, msg.content, msg.media_type, msg.media_data, msg.media_mime, msg.media_duration,
-            msg.created_at, msg.sender_id, u.display_name, u.avatar_color, u.is_verified
+            msg.created_at, msg.sender_id, msg.edited_at, msg.reply_to_id, msg.forwarded_from_id,
+            msg.deleted_for_everyone, msg.deleted_at, msg.pinned_at, msg.pinned_by,
+            u.display_name, u.avatar_color, u.is_verified,
+            COALESCE((SELECT json_agg(json_build_object('reaction', mr.reaction, 'user_id', mr.user_id)) FROM message_reactions mr WHERE mr.message_id = msg.id), '[]') AS reactions,
+            EXISTS(SELECT 1 FROM saved_messages sm WHERE sm.message_id = msg.id AND sm.user_id = $${before ? 3 : 2}) AS saved_by_me
      FROM messages msg JOIN users u ON u.id = msg.sender_id
      WHERE msg.conversation_id = $1 ${before ? 'AND msg.id < $2' : ''}
+       AND NOT EXISTS (SELECT 1 FROM hidden_messages hm WHERE hm.message_id = msg.id AND hm.user_id = $${before ? 3 : 2})
      ORDER BY msg.created_at DESC LIMIT 50`,
-    params
+    before ? [...params, req.user.id] : [...params, req.user.id]
   );
   res.json({ messages: rows.reverse() });
+});
+
+async function messageAccess(conversationId, messageId, userId) {
+  const { rows } = await db.query(
+    `SELECT msg.*, cm.role FROM messages msg JOIN conversation_members cm
+     ON cm.conversation_id = msg.conversation_id AND cm.user_id = $3
+     WHERE msg.id = $2 AND msg.conversation_id = $1`,
+    [conversationId, messageId, userId]
+  );
+  return rows[0];
+}
+
+// Search message text within conversations the current user can access.
+router.get('/:id/search', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.json({ messages: [] });
+  const { rows } = await db.query(
+    `SELECT msg.id, msg.conversation_id, msg.content, msg.created_at, msg.sender_id,
+            u.display_name, msg.media_type, msg.reply_to_id, msg.edited_at
+     FROM messages msg JOIN users u ON u.id = msg.sender_id
+     JOIN conversation_members cm ON cm.conversation_id = msg.conversation_id AND cm.user_id = $1
+     WHERE msg.conversation_id = $2 AND msg.deleted_for_everyone = FALSE AND msg.content ILIKE $3
+     ORDER BY msg.created_at DESC LIMIT 50`,
+    [req.user.id, req.params.id, `%${q}%`]
+  );
+  res.json({ messages: rows });
+});
+
+router.patch('/:id/messages/:messageId', async (req, res) => {
+  const message = await messageAccess(req.params.id, req.params.messageId, req.user.id);
+  if (!message) return res.status(404).json({ error: 'Message not found' });
+  if (message.sender_id !== req.user.id) return res.status(403).json({ error: 'Only the sender can edit this message' });
+  const content = String(req.body.content || '').trim();
+  if (!content) return res.status(400).json({ error: 'Message content is required' });
+  const { rows } = await db.query('UPDATE messages SET content=$1, edited_at=NOW() WHERE id=$2 RETURNING *', [content.slice(0, 4000), message.id]);
+  res.json({ message: rows[0] });
+});
+
+router.delete('/:id/messages/:messageId', async (req, res) => {
+  const message = await messageAccess(req.params.id, req.params.messageId, req.user.id);
+  if (!message) return res.status(404).json({ error: 'Message not found' });
+  const scope = req.body?.scope === 'everyone' ? 'everyone' : 'me';
+  if (scope === 'everyone' && message.sender_id !== req.user.id) return res.status(403).json({ error: 'Only the sender can delete for everyone' });
+  if (scope === 'everyone') {
+    await db.query("UPDATE messages SET content=NULL, media_data=NULL, deleted_for_everyone=TRUE, deleted_at=NOW() WHERE id=$1", [message.id]);
+  } else {
+    await db.query('INSERT INTO hidden_messages (message_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [message.id, req.user.id]);
+  }
+  res.json({ ok: true, scope });
+});
+
+router.post('/:id/messages/:messageId/reactions', async (req, res) => {
+  const message = await messageAccess(req.params.id, req.params.messageId, req.user.id);
+  if (!message) return res.status(404).json({ error: 'Message not found' });
+  const reaction = String(req.body.reaction || '').trim().slice(0, 32);
+  if (!reaction) return res.status(400).json({ error: 'Reaction is required' });
+  const existing = await db.query('SELECT 1 FROM message_reactions WHERE message_id=$1 AND user_id=$2 AND reaction=$3', [message.id, req.user.id, reaction]);
+  if (existing.rows[0]) await db.query('DELETE FROM message_reactions WHERE message_id=$1 AND user_id=$2 AND reaction=$3', [message.id, req.user.id, reaction]);
+  else await db.query('INSERT INTO message_reactions (message_id,user_id,reaction) VALUES ($1,$2,$3)', [message.id, req.user.id, reaction]);
+  const { rows } = await db.query('SELECT reaction, COUNT(*)::int AS count FROM message_reactions WHERE message_id=$1 GROUP BY reaction ORDER BY reaction', [message.id]);
+  res.json({ reactions: rows });
+});
+
+router.post('/:id/messages/:messageId/save', async (req, res) => {
+  const message = await messageAccess(req.params.id, req.params.messageId, req.user.id);
+  if (!message) return res.status(404).json({ error: 'Message not found' });
+  const existing = await db.query('SELECT 1 FROM saved_messages WHERE message_id=$1 AND user_id=$2', [message.id, req.user.id]);
+  if (existing.rows[0]) await db.query('DELETE FROM saved_messages WHERE message_id=$1 AND user_id=$2', [message.id, req.user.id]);
+  else await db.query('INSERT INTO saved_messages (message_id,user_id) VALUES ($1,$2)', [message.id, req.user.id]);
+  res.json({ saved: !existing.rows[0] });
+});
+
+router.post('/:id/messages/:messageId/pin', async (req, res) => {
+  const message = await messageAccess(req.params.id, req.params.messageId, req.user.id);
+  if (!message) return res.status(404).json({ error: 'Message not found' });
+  if (!['owner', 'admin'].includes(message.role) && message.sender_id !== req.user.id) return res.status(403).json({ error: 'Only a group admin or sender can pin messages' });
+  const pinned = !message.pinned_at;
+  await db.query('UPDATE messages SET pinned_at = CASE WHEN $1 THEN NOW() ELSE NULL END, pinned_by = CASE WHEN $1 THEN $2 ELSE NULL END WHERE id=$3', [pinned, req.user.id, message.id]);
+  res.json({ pinned });
 });
 
 module.exports = router;

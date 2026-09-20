@@ -44,12 +44,17 @@ function menuText() {
   return [
     'DARK CHAT bot menu',
     '',
-    'Use the buttons below or send:',
+    'To link your account:',
+    '1. Send /pair YOUR-DARK-CHAT-ID',
+    '2. Copy the six-digit code I send back',
+    '3. Enter the code in DARK CHAT → Profile → Settings → Link Telegram bot',
+    '',
+    'After pairing, use .ping to test the connection and .menu to see commands.',
+    '',
+    'Available commands:',
     '.ping — check the bot connection',
     '.menu — show this command menu',
-    '.pair — link your DARK CHAT account',
-    '',
-    'To link your account, send: .pair YOUR-DARK-CHAT-ID'
+    '/pair YOUR-DARK-CHAT-ID — get a pairing code'
   ].join('\n');
 }
 
@@ -79,7 +84,7 @@ async function handleUpdate(update) {
     if (callback.data === 'darkchat:ping') {
       await sendMessage(chatId, 'pong — DARK CHAT bot is online.');
     } else if (callback.data === 'darkchat:pair') {
-      await sendMessage(chatId, 'Send .pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
+      await sendMessage(chatId, 'Send /pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
     } else if (callback.data === 'darkchat:help') {
       await sendMessage(chatId, menuText(), { reply_markup: menuKeyboard() });
     }
@@ -99,7 +104,7 @@ async function handleUpdate(update) {
   } else if (command === '/pair' || command === '.pair') {
     const novaId = parts[1] || '';
     if (!novaId) {
-      await sendMessage(message.chat.id, 'Send .pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
+      await sendMessage(message.chat.id, 'Send /pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
       return;
     }
     const pairing = await createTelegramPairing({

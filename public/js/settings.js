@@ -81,7 +81,7 @@ function telegramPairHtml() {
   }
   return `<div class="telegram-pair" data-telegram-panel>
     <div class="telegram-pair-title">Link Telegram bot</div>
-    <div class="telegram-pair-copy">In Telegram, send <b>.pair ${escapeHtml(state.me?.novaId || 'YOUR-DARK-CHAT-ID')}</b> to the DARK CHAT bot. Then enter the six-digit code here.</div>
+    <div class="telegram-pair-copy">In Telegram, send <b>/pair ${escapeHtml(state.me?.novaId || 'YOUR-DARK-CHAT-ID')}</b> to the DARK CHAT bot. Then enter the six-digit code here.</div>
     <div class="telegram-pair-form">
       <input class="input" data-telegram-code inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="Telegram pairing code">
       <button class="btn btn-primary" type="button" data-telegram-pair>Link bot</button>

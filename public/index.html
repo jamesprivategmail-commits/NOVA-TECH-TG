@@ -3,26 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-<title>NOVA</title>
+<title>DARK CHAT</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0B0C14">
+<meta name="theme-color" content="#050505">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/dark-chat.css">
 </head>
 <body>
 
 <!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">N</div>
-    <div class="auth-title" id="auth-title">Welcome to NOVA</div>
+    <div class="auth-logo">D</div>
+    <div class="auth-title" id="auth-title">Welcome to DARK CHAT</div>
     <div class="auth-subtitle" id="auth-subtitle">Message your people, your way.</div>
 
     <div id="auth-error" class="auth-error hidden"></div>
 
     <!-- signup success reveal -->
     <div id="nova-id-reveal" class="nova-id-reveal hidden">
-      <div class="label">Your NOVA ID</div>
+      <div class="label">Your DARK CHAT ID</div>
       <div class="id" id="revealed-nova-id"></div>
       <div class="hint">Save this — it's how friends find you. Keep your password safe, it's the only lock on your account.</div>
     </div>
@@ -36,13 +37,13 @@
         <label>Password</label>
         <input type="password" id="signup-password" placeholder="At least 6 characters" minlength="6" required autocomplete="new-password">
       </div>
-      <button type="submit" class="btn-primary">Create my NOVA ID</button>
+      <button type="submit" class="btn-primary">Create my DARK CHAT ID</button>
     </form>
 
     <form id="login-form" class="hidden">
       <div class="field-group">
-        <label>NOVA ID</label>
-        <input type="text" id="login-novaid" placeholder="NOVA-123456" required autocomplete="off">
+        <label>DARK CHAT ID</label>
+        <input type="text" id="login-novaid" placeholder="+1-626-715-1xxx" required autocomplete="off">
       </div>
       <div class="field-group">
         <label>Password</label>
@@ -52,7 +53,7 @@
     </form>
 
     <div class="auth-toggle">
-      <span id="toggle-to-login">Already have a NOVA ID? <a href="#">Log in</a></span>
+      <span id="toggle-to-login">Already have a DARK CHAT ID? <a href="#">Log in</a></span>
       <span id="toggle-to-signup" class="hidden">New here? <a href="#">Create an account</a></span>
     </div>
   </div>
@@ -62,7 +63,7 @@
 <div id="app-screen" class="hidden">
   <div class="sidebar">
     <div class="sidebar-header">
-      <h1>NOVA</h1>
+      <h1>DARK CHAT</h1>
       <div class="header-actions">
         <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
         <button class="me-avatar-btn" id="me-avatar" title="You"></button>
@@ -105,7 +106,7 @@
     <div class="empty-state" id="chat-empty">
       <div class="icon">💬</div>
       <div class="title">Select a conversation</div>
-      <div class="subtitle">Pick a chat, or start a new one with a friend's NOVA ID.</div>
+      <div class="subtitle">Pick a chat, or start a new one with a friend's DARK CHAT ID.</div>
     </div>
 
     <div id="chat-active" class="hidden" style="display:flex; flex-direction:column; height:100%;">
@@ -145,8 +146,8 @@
 
     <div id="newtab-dm">
       <div class="field-group">
-        <label>Friend's NOVA ID</label>
-        <input type="text" id="dm-novaid" placeholder="NOVA-123456">
+        <label>Friend's DARK CHAT ID</label>
+        <input type="text" id="dm-novaid" placeholder="+1-626-715-1xxx">
       </div>
       <button class="btn-primary" id="dm-start-btn">Start Chat</button>
     </div>
@@ -157,7 +158,7 @@
         <input type="text" id="group-name" placeholder="Weekend Squad">
       </div>
       <div class="field-group">
-        <label>Members (NOVA IDs, comma separated)</label>
+        <label>Members (DARK CHAT IDs, comma separated)</label>
         <input type="text" id="group-members" placeholder="NOVA-111111, NOVA-222222">
       </div>
       <button class="btn-primary" id="group-create-btn">Create Group</button>
@@ -173,8 +174,8 @@
 
     <div id="newtab-join" class="hidden">
       <div class="field-group">
-        <label>NOVATECH link or code</label>
-        <input type="text" id="join-code" placeholder="Paste a nova.link/ or invite code">
+        <label>DARK CHAT invite link or code</label>
+        <input type="text" id="join-code" placeholder="Paste a dark.chat/ or invite code">
       </div>
       <button class="btn-primary" id="join-btn">Join</button>
     </div>
@@ -189,7 +190,7 @@
     <div id="manage-group-error" class="modal-error hidden"></div>
 
     <div class="field-group" id="manage-invite-link-group">
-      <label>NOVATECH Link</label>
+      <label>DARK CHAT invite link</label>
       <div class="invite-link-box">
         <input type="text" id="manage-invite-link" readonly>
         <button id="manage-copy-link-btn">Copy</button>
@@ -204,7 +205,7 @@
 
     <div class="field-group" id="manage-add-group">
       <label>Add member (NOVA ID)</label>
-      <input type="text" id="manage-add-novaid" placeholder="NOVA-123456">
+      <input type="text" id="manage-add-novaid" placeholder="+1-626-715-1xxx">
       <button class="btn-primary" id="manage-add-btn" style="margin-top:8px;">Add</button>
     </div>
 

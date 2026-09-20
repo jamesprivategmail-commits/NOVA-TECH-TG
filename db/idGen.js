@@ -9,11 +9,11 @@ function randomAvatarColor() {
 async function generateNovaId() {
   for (let attempt = 0; attempt < 20; attempt++) {
     const digits = Math.floor(100000 + Math.random() * 900000); // 6 digits
-    const candidate = `NOVA-${digits}`;
+    const candidate = `+1-626-715-${String(digits).slice(-4)}`;
     const { rows } = await db.query('SELECT 1 FROM users WHERE nova_id = $1', [candidate]);
     if (rows.length === 0) return candidate;
   }
-  throw new Error('Could not generate a unique NOVA ID, try again');
+  throw new Error('Could not generate a unique DARK CHAT ID, try again');
 }
 
 function generateInviteCode() {

@@ -75,7 +75,7 @@ $('#toggle-to-login a').addEventListener('click', (e) => {
   $('#toggle-to-login').classList.add('hidden');
   $('#toggle-to-signup').classList.remove('hidden');
   $('#auth-title').textContent = 'Welcome back';
-  $('#auth-subtitle').textContent = 'Log in with your NOVA ID.';
+  $('#auth-subtitle').textContent = 'Log in with your DARK CHAT ID.';
   $('#nova-id-reveal').classList.add('hidden');
   hideAuthError();
 });
@@ -686,10 +686,29 @@ async function loadPosts() {
           <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
         </div>
       </div>
-      <div class="post-caption">${escapeHtml(p.caption)}</div>
+      <div class="post-caption">${escapeHtml(p.caption || '')}</div>
+      <div class="post-actions-row"><button class="post-like-btn" data-like-id="${p.id}">♥ <span>${p.like_count || 0}</span></button><button class="post-comment-btn" data-comment-id="${p.id}">Comments (${p.comment_count || 0})</button></div>
+      <div class="post-comment-panel hidden" id="comments-${p.id}"><div class="comments-list"></div><form class="comment-form" data-comment-form="${p.id}"><input maxlength="500" placeholder="Write a comment..."><button type="submit">Send</button></form></div>
     </div>`).join('');
+  wirePostComments();
 }
 
+// ---------------- POST COMMENTS ----------------
+function wirePostComments() {
+  $$('.post-comment-btn').forEach(btn => btn.addEventListener('click', async () => {
+    const panel = document.querySelector('#comments-' + btn.dataset.commentId);
+    panel.classList.toggle('hidden');
+    if (panel.dataset.loaded) return;
+    const result = await api('/posts/' + btn.dataset.commentId + '/comments');
+    panel.querySelector('.comments-list').innerHTML = result.comments.map(c => '<div class="post-comment"><strong>' + escapeHtml(c.display_name) + '</strong> ' + escapeHtml(c.content) + '</div>').join('') || '<div class="post-comment">No comments yet.</div>';
+    panel.dataset.loaded = '1';
+  }));
+  $$('.comment-form').forEach(form => form.addEventListener('submit', async e => {
+    e.preventDefault(); const input = form.querySelector('input'); if (!input.value.trim()) return;
+    await api('/posts/' + form.dataset.commentForm + '/comments', { method:'POST', body:{ content: input.value.trim() } });
+    input.value = ''; await loadPosts();
+  }));
+}
 // ---------------- INIT ----------------
 if (state.token && state.me) {
   boot();

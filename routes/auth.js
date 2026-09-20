@@ -60,14 +60,14 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { novaId, password } = req.body;
-    if (!novaId || !password) return res.status(400).json({ error: 'NOVA ID and password are required' });
+    if (!novaId || !password) return res.status(400).json({ error: 'DARK CHAT ID and password are required' });
 
     const { rows } = await db.query('SELECT * FROM users WHERE nova_id = $1', [novaId.trim().toUpperCase()]);
     const user = rows[0];
-    if (!user) return res.status(401).json({ error: 'Wrong NOVA ID or password' });
+    if (!user) return res.status(401).json({ error: 'Wrong DARK CHAT ID or password' });
 
     const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Wrong NOVA ID or password' });
+    if (!ok) return res.status(401).json({ error: 'Wrong DARK CHAT ID or password' });
 
     if (user.is_banned) {
       return res.status(403).json({ error: user.ban_reason ? `Account banned: ${user.ban_reason}` : 'Your account has been banned.' });
@@ -115,7 +115,7 @@ router.get('/lookup/:novaId', requireAuth, async (req, res) => {
     'SELECT * FROM users WHERE nova_id = $1',
     [req.params.novaId.trim().toUpperCase()]
   );
-  if (!rows[0]) return res.status(404).json({ error: 'No one has that NOVA ID' });
+  if (!rows[0]) return res.status(404).json({ error: 'No one has that DARK CHAT ID' });
   res.json({ user: publicUser(rows[0]) });
 });
 

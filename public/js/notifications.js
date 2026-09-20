@@ -1,6 +1,6 @@
 // notifications.js - notification centre and unread badge
 import { api } from './api.js';
-import { state, on } from './state.js';
+import { state, on, emit } from './state.js';
 import { $, icon, escapeHtml, timeAgo, emptyState, errorState, skeletonList, toast, openSheet } from './ui.js';
 
 let els = {};
@@ -9,7 +9,16 @@ export function initNotifications() {
   els = { badge: $('#notif-badge'), btn: $('#notifications-btn') };
   els.btn?.addEventListener('click', openNotifications);
   on('auth:signed-in', () => refreshUnread());
+  on('notification:new', onNewNotification);
   if (state.token) refreshUnread();
+}
+
+function onNewNotification(notification) {
+  if (!notification || notification.user_id !== state.me?.id) return;
+  state.unreadNotifications += 1;
+  state.notifications = [notification, ...state.notifications.filter((n) => n.id !== notification.id)].slice(0, 50);
+  renderBadge();
+  toast(notification.type === 'message' ? `${notification.actor_name || 'Someone'} sent you a message` : 'New notification');
 }
 
 export async function refreshUnread() {
@@ -80,14 +89,20 @@ async function loadNotifications() {
       ${n.read_at ? '' : '<span class="unread">1</span>'}
     </button>`).join('');
     body.querySelectorAll('[data-notif]').forEach((btn) => btn.addEventListener('click', async () => {
-      if (btn.dataset.read === '1') return;
-      try {
-        await api.markRead(btn.dataset.notif);
-        btn.dataset.read = '1';
-        btn.querySelector('.unread')?.remove();
-        btn.querySelector('.option-copy')?.style.removeProperty('font-weight');
-        refreshUnread();
-      } catch { /* ignore */ }
+      const notification = state.notifications.find((n) => n.id === btn.dataset.notif);
+      if (btn.dataset.read !== '1') {
+        try {
+          await api.markRead(btn.dataset.notif);
+          btn.dataset.read = '1';
+          btn.querySelector('.unread')?.remove();
+          btn.querySelector('.option-copy')?.style.removeProperty('font-weight');
+          state.unreadNotifications = Math.max(0, state.unreadNotifications - 1);
+          renderBadge();
+        } catch { /* ignore */ }
+      }
+      if (notification?.type === 'message' && notification.payload?.conversationId) {
+        emit('notification:open-chat', { conversationId: notification.payload.conversationId });
+      }
     }));
   } catch (err) {
     body.innerHTML = errorState({ title: 'Could not load notifications', subtitle: err.message, retryId: 'retry-notif' });

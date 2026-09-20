@@ -6,7 +6,8 @@ const {
   getConversationsForUser,
   createMessage,
   uploadToStorage,
-  markConversationRead
+  markConversationRead,
+  createNotification
 } = require('../db/firebase');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026';
@@ -129,6 +130,23 @@ function initSockets(io) {
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
+        const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(userId));
+        void Promise.allSettled(recipients.map(async (recipientId) => {
+          const notification = await createNotification({
+            userId: recipientId,
+            actorId: userId,
+            type: 'message',
+            payload: {
+              conversationId: String(conversationId),
+              messageId: msg.id,
+              preview: msg.content || 'Attachment'
+            }
+          });
+          io.to(`user:${recipientId}`).emit('notification:new', {
+            ...notification,
+            actor_name: senderInfo?.display_name || 'Someone'
+          });
+        }));
         ack?.({ ok: true, message: payload });
       } catch (err) {
         console.error('Send message socket error:', err);

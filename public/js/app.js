@@ -1,7 +1,7 @@
 // app.js - boot + router
 import { api } from './api.js';
 import { state, loadToken, on, emit } from './state.js';
-import { $, toast } from './ui.js';
+import { $, toast, closeSheet } from './ui.js';
 import { connectSocket, disconnectSocket, sendMessage } from './socket.js';
 
 import { initAuth, showAuth, hideAuth, forceLogout, logout } from './auth.js';
@@ -133,6 +133,15 @@ function wireEvents() {
   on('auth:logout', () => { disconnectSocket(); logout(); });
   on('me:updated', () => { renderMeHeader(); renderProfile(); emit('conversations:changed'); });
   on('data:refresh-conversations', () => loadConversations());
+  on('notification:open-chat', async ({ conversationId }) => {
+    try {
+      await refreshConversations();
+      const conv = state.conversations.find((item) => String(item.id) === String(conversationId));
+      if (!conv) return toast('Chat is no longer available');
+      closeSheet();
+      emit('chat:open', conv);
+    } catch { toast('Could not open that chat'); }
+  });
   on('admin:open-panel', () => openAdminPanel());
   on('chat:open', (conv) => {
     showTab(currentTab);

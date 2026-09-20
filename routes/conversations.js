@@ -16,7 +16,8 @@ const {
   getMessageById,
   updateMessage,
   markConversationRead,
-  searchMessages
+  searchMessages,
+  createNotification
 } = require('../db/firebase');
 const { generateInviteCode } = require('../db/idGen');
 const { requireAuth } = require('../middleware/auth');
@@ -325,6 +326,13 @@ router.post('/:id/messages', async (req, res) => {
       replyToId: req.body?.replyToId || null
     });
     const sender = await getUserById(req.user.id);
+    const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(req.user.id));
+    await Promise.all(recipients.map((recipientId) => createNotification({
+      userId: recipientId,
+      actorId: req.user.id,
+      type: 'message',
+      payload: { conversationId: String(req.params.id), messageId: message.id, preview: content.slice(0, 120) }
+    })));
     res.json({ message: {
       ...message,
       display_name: sender?.display_name || 'User',

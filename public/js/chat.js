@@ -450,7 +450,9 @@ export function onIncomingMessage(msg) {
       markConversationRead(convId);
     }
   } else {
-    import('./state.js').then(({ bumpUnread }) => bumpUnread(convId));
+    if (String(msg.sender_id) !== String(state.me?.id)) {
+      import('./state.js').then(({ bumpUnread }) => bumpUnread(convId));
+    }
   }
 }
 

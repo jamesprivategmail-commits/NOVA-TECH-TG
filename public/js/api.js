@@ -103,6 +103,10 @@ export const api = {
   // discover
   discover: (search) => request(`/discover/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
 
+  // telegram
+  telegramPairStatus: () => request('/telegram/pair/status'),
+  telegramPair: (code) => request('/telegram/pair', { method: 'POST', body: { code } }),
+
   // admin
   adminUsers: (search) => request(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   adminBan: (id, reason) => request(`/admin/users/${encodeURIComponent(id)}/ban`, { method: 'POST', body: { reason } }),

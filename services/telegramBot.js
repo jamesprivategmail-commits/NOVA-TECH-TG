@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { createTelegramPairing } = require('../db/firebase');
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -48,7 +49,7 @@ function menuText() {
     '.menu — show this command menu',
     '.pair — link your DARK CHAT account',
     '',
-    'Account pairing will be enabled in the next bot release.'
+    'To link your account, send: .pair YOUR-DARK-CHAT-ID'
   ].join('\n');
 }
 
@@ -78,7 +79,7 @@ async function handleUpdate(update) {
     if (callback.data === 'darkchat:ping') {
       await sendMessage(chatId, 'pong — DARK CHAT bot is online.');
     } else if (callback.data === 'darkchat:pair') {
-      await sendMessage(chatId, 'Pairing is coming next. Send /pair when pairing is enabled.');
+      await sendMessage(chatId, 'Send .pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
     } else if (callback.data === 'darkchat:help') {
       await sendMessage(chatId, menuText(), { reply_markup: menuKeyboard() });
     }
@@ -89,13 +90,33 @@ async function handleUpdate(update) {
   if (!message?.chat?.id || typeof message.text !== 'string') return;
 
   const text = message.text.trim().toLowerCase();
-  const command = text.split(/\s+/)[0].split('@')[0];
+  const parts = text.split(/\s+/);
+  const command = parts[0].split('@')[0];
   if (command === '/start' || command === '/menu' || command === '.menu') {
     await sendMessage(message.chat.id, menuText(), { reply_markup: menuKeyboard() });
   } else if (command === '/ping' || command === '.ping') {
     await sendMessage(message.chat.id, 'pong — DARK CHAT bot is online.');
   } else if (command === '/pair' || command === '.pair') {
-    await sendMessage(message.chat.id, 'Pairing is coming next. After pairing, use .ping to test the connection and .menu to see available commands.');
+    const novaId = parts[1] || '';
+    if (!novaId) {
+      await sendMessage(message.chat.id, 'Send .pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
+      return;
+    }
+    const pairing = await createTelegramPairing({
+      chatId: message.chat.id,
+      novaId,
+      telegramUser: message.from || {}
+    });
+    if (!pairing) {
+      await sendMessage(message.chat.id, 'I could not find that DARK CHAT ID. Check the ID and try again.');
+      return;
+    }
+    await sendMessage(message.chat.id, [
+      `Your DARK CHAT pairing code is: ${pairing.code}`,
+      '',
+      'Open DARK CHAT → Profile → Settings → Link Telegram bot, enter this code, and tap Link bot.',
+      'The code expires in 10 minutes.'
+    ].join('\n'));
   }
 }
 

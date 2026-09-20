@@ -63,7 +63,31 @@ export function settingsGroupHtml() {
         <span class="setting-icon" style="color:var(--danger)">${icon('logout')}</span>
         <span class="setting-copy">Log out</span>
       </button>
+    </div>
+    <div class="settings-group">
+      <div class="settings-group-title">Integrations</div>
+      ${telegramPairHtml()}
     </div>`;
+}
+
+function telegramPairHtml() {
+  const telegram = state.settings.telegram || {};
+  if (telegram.linked) {
+    return `<div class="telegram-pair" data-telegram-panel>
+      <div class="telegram-pair-title">Telegram bot linked</div>
+      <div class="telegram-pair-copy">${telegram.username ? `@${escapeHtml(telegram.username)}` : 'Your Telegram account is connected'}.</div>
+      <div class="telegram-pair-hint">Use .ping to test the connection and .menu to see available commands.</div>
+    </div>`;
+  }
+  return `<div class="telegram-pair" data-telegram-panel>
+    <div class="telegram-pair-title">Link Telegram bot</div>
+    <div class="telegram-pair-copy">In Telegram, send <b>.pair ${escapeHtml(state.me?.novaId || 'YOUR-DARK-CHAT-ID')}</b> to the DARK CHAT bot. Then enter the six-digit code here.</div>
+    <div class="telegram-pair-form">
+      <input class="input" data-telegram-code inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="Telegram pairing code">
+      <button class="btn btn-primary" type="button" data-telegram-pair>Link bot</button>
+    </div>
+    <div class="telegram-pair-hint" data-telegram-status>Code expires after 10 minutes.</div>
+  </div>`;
 }
 
 export function wireSettingsGroup(root = document) {
@@ -89,6 +113,29 @@ export function wireSettingsGroup(root = document) {
   root.querySelectorAll('[data-settings-action]').forEach((btn) => {
     btn.addEventListener('click', () => handleAction(btn.dataset.settingsAction));
   });
+  root.querySelectorAll('[data-telegram-pair]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const panel = btn.closest('[data-telegram-panel]');
+      const input = panel?.querySelector('[data-telegram-code]');
+      const code = input?.value.trim() || '';
+      if (!/^\d{6}$/.test(code)) {
+        const status = panel?.querySelector('[data-telegram-status]');
+        if (status) status.textContent = 'Enter the six-digit code from Telegram.';
+        return;
+      }
+      setBusy(btn, true, 'Linking...');
+      try {
+        const res = await api.telegramPair(code);
+        state.settings.telegram = res.telegram || { linked: true };
+        if (panel) panel.outerHTML = telegramPairHtml();
+        toast('Telegram bot linked', 'success');
+      } catch (err) {
+        const status = panel?.querySelector('[data-telegram-status]');
+        if (status) status.textContent = err.message || 'Could not link Telegram bot.';
+        setBusy(btn, false);
+      }
+    });
+  });
 }
 
 async function saveSetting(patch) {
@@ -102,6 +149,7 @@ export async function loadProfileSettings() {
     const res = await api.profileSettings();
     state.settings.privacySettings = res.privacySettings || {};
     state.settings.blockedUserIds = res.blockedUserIds || [];
+    state.settings.telegram = res.telegram || { linked: false };
   } catch { /* non-fatal */ }
 }
 

@@ -249,6 +249,59 @@ async function getUserCount() {
   return snap.docs.filter(d => !d.data().is_banned).length;
 }
 
+async function createTelegramPairing({ chatId, novaId, telegramUser = {} }) {
+  await ensureInit();
+  const target = await getUserByNovaId(novaId);
+  if (!target || target.is_banned) return null;
+
+  const code = String(crypto.randomInt(100000, 1000000));
+  const pairing = {
+    id: `telegram_${String(chatId)}`,
+    chat_id: String(chatId),
+    user_id: String(target.id),
+    nova_id: target.nova_id,
+    code,
+    telegram_user_id: telegramUser.id ? String(telegramUser.id) : null,
+    telegram_username: telegramUser.username || null,
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    consumed: false
+  };
+  await setDoc(doc(firestoreDb, 'telegram_pairings', pairing.id), pairing);
+  return { code, expiresAt: pairing.expires_at, user: target };
+}
+
+async function consumeTelegramPairing(code, userId) {
+  await ensureInit();
+  const q = query(
+    collection(firestoreDb, 'telegram_pairings'),
+    where('code', '==', String(code).trim()),
+    limit(5)
+  );
+  const snap = await getDocs(q);
+  const pairingDoc = snap.docs.find((candidate) => candidate.data().consumed !== true);
+  if (!pairingDoc) return { ok: false, reason: 'invalid' };
+
+  const pairing = pairingDoc.data();
+  if (pairing.user_id !== String(userId)) return { ok: false, reason: 'account' };
+  if (new Date(pairing.expires_at).getTime() < Date.now()) return { ok: false, reason: 'expired' };
+
+  const user = await getUserById(userId);
+  if (!user) return { ok: false, reason: 'account' };
+  const linkedAt = new Date().toISOString();
+  await updateUser(userId, {
+    telegram_chat_id: pairing.chat_id,
+    telegram_user_id: pairing.telegram_user_id,
+    telegram_username: pairing.telegram_username,
+    telegram_linked_at: linkedAt
+  });
+  await updateDoc(doc(firestoreDb, 'telegram_pairings', pairing.id), {
+    consumed: true,
+    consumed_at: linkedAt
+  });
+  return { ok: true, telegram: { linked: true, username: pairing.telegram_username, linkedAt } };
+}
+
 async function deleteUser(id) {
   await ensureInit();
   await deleteDoc(doc(firestoreDb, 'users', String(id)));
@@ -899,6 +952,8 @@ module.exports = {
   updateUser,
   getAllUsers,
   getUserCount,
+  createTelegramPairing,
+  consumeTelegramPairing,
   deleteUser,
   // Conversations
   createConversation,

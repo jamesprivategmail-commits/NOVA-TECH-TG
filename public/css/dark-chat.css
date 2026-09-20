@@ -88,7 +88,10 @@ body { background: radial-gradient(circle at 10% 0%, rgba(255,49,49,.08), transp
 .setting-toggle input:checked + i { background:#b52323; }
 .setting-toggle input:checked + i::after { transform:translateX(16px); background:#fff; }
 .profile-logout-btn { width:100%; margin-top:12px; padding:11px; border:1px solid rgba(255,69,58,.3); border-radius:12px; background:rgba(255,69,58,.12); color:#ff8a82; }
+.profile-block-btn { width:100%; margin-top:14px; padding:10px; border:1px solid rgba(255,69,58,.3); border-radius:10px; background:rgba(255,69,58,.1); color:#ff8a82; }
 .status-viewer-delete { position:absolute; right:48px; top:15px; padding:6px 9px; border-radius:8px; background:rgba(0,0,0,.24); color:#fff; font-size:11px; }
+.status-media-preview img, .status-media-preview video { display:block; width:100%; max-height:180px; object-fit:cover; border-radius:10px; margin-top:8px; }
+.status-viewer-media { max-width:100%; max-height:320px; margin:30px 0 14px; border-radius:12px; object-fit:contain; }
 .notifications-card { max-width:440px; max-height:min(680px, calc(100dvh - 32px)); overflow:auto; }
 .notifications-list { min-height:120px; }
 .notification-item { display:flex; align-items:flex-start; gap:10px; padding:12px 2px; border-bottom:1px solid rgba(255,255,255,.06); }

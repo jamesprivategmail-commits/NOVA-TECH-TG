@@ -306,6 +306,10 @@
   </div>
 </div>
 
+<div id="public-profile-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card" id="profile-card"></div>
+</div>
+
 <div id="admin-modal" class="modal-backdrop hidden">
   <div class="modal-card" style="max-width:480px;">
     <button class="modal-close" id="close-admin-panel">Done</button>
@@ -327,6 +331,11 @@
     <div class="field-group">
       <label>What's up?</label>
       <input type="text" id="status-text" placeholder="Feeling good today..." maxlength="300">
+    </div>
+    <div class="field-group">
+      <label for="status-media-input">Photo or video</label>
+      <input type="file" id="status-media-input" accept="image/*,video/*">
+      <div id="status-media-preview" class="status-media-preview"></div>
     </div>
     <div class="field-group">
       <label>Color</label>

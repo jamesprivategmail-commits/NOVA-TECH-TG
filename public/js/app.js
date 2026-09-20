@@ -153,6 +153,11 @@ function openProfileSettings() {
   $('#setting-notifications').checked = settings.notifications !== false;
   $('#profile-modal').classList.remove('hidden');
   $('#profile-modal').setAttribute('aria-hidden', 'false');
+  api('/profile/settings').then(result => {
+    const privacy = result.privacySettings || {};
+    if (privacy.online !== undefined) $('#setting-online').checked = privacy.online !== false;
+    if (privacy.readReceipts !== undefined) $('#setting-receipts').checked = privacy.readReceipts !== false;
+  }).catch(() => {});
 }
 
 function initProfileSettings() {
@@ -199,6 +204,8 @@ function initProfileSettings() {
     const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
     settings[key] = $(`#setting-${key}`).checked;
     localStorage.setItem('nova_settings', JSON.stringify(settings));
+    const payload = key === 'receipts' ? { readReceipts: settings[key] } : key === 'online' ? { online: settings[key] } : {};
+    if (Object.keys(payload).length) api('/profile/settings', { method: 'PUT', body: payload }).catch(() => {});
   }));
 }
 
@@ -931,15 +938,15 @@ $('#manage-leave-btn').addEventListener('click', async () => {
 });
 
 // ---------------- PROFILE VIEW ----------------
-$('#profile-modal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'profile-modal') $('#profile-modal').classList.add('hidden');
+$('#public-profile-modal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'public-profile-modal') $('#public-profile-modal').classList.add('hidden');
 });
 
 async function viewProfile(member) {
   const card = $('#profile-card');
   if (!card) return;
   card.innerHTML = `<div style="text-align:center;padding:16px;">Loading...</div>`;
-  $('#profile-modal')?.classList.remove('hidden');
+  $('#public-profile-modal')?.classList.remove('hidden');
   try {
     const { user } = await api(`/auth/lookup/${encodeURIComponent(member.nova_id)}`);
     card.innerHTML = `
@@ -949,8 +956,14 @@ async function viewProfile(member) {
         <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)} ${user.isVerified ? '✓' : ''}</div>
         <div style="color:var(--text-secondary); margin-bottom:12px;">${escapeHtml(user.novaId)}</div>
         ${user.bio ? `<div style="padding:12px; background:rgba(255,255,255,0.05); border-radius:10px;">${escapeHtml(user.bio)}</div>` : ''}
+        <button class="profile-block-btn" id="profile-block-btn" type="button">Block user</button>
       </div>`;
-    $('#profile-close-btn').addEventListener('click', () => $('#profile-modal').classList.add('hidden'));
+    $('#profile-close-btn').addEventListener('click', () => $('#public-profile-modal').classList.add('hidden'));
+    $('#profile-block-btn')?.addEventListener('click', async () => {
+      if (!confirm(`Block ${user.displayName}?`)) return;
+      await api('/profile/block', { method: 'POST', body: { novaId: user.novaId } });
+      $('#public-profile-modal').classList.add('hidden');
+    });
   } catch (err) {
     card.innerHTML = `<div style="text-align:center;padding:16px;">Couldn't load profile.</div>`;
   }
@@ -962,6 +975,22 @@ const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#
 function initStatusColors() {
   const wrap = $('#status-colors');
   if (!wrap) return;
+  const mediaInput = $('#status-media-input');
+  let mediaData = null;
+  let mediaMime = null;
+  let mediaType = null;
+  mediaInput?.addEventListener('change', () => {
+    const file = mediaInput.files?.[0];
+    if (!file) return;
+    mediaMime = file.type || 'image/jpeg';
+    mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+    const reader = new FileReader();
+    reader.onload = () => {
+      mediaData = reader.result;
+      $('#status-media-preview').innerHTML = mediaType === 'video' ? `<video controls src="${mediaData}"></video>` : `<img src="${mediaData}" alt="Status preview">`;
+    };
+    reader.readAsDataURL(file);
+  });
   wrap.innerHTML = STATUS_COLORS.map((c, i) =>
     `<button type="button" data-color="${c}" style="width:28px;height:28px;border-radius:50%;background:${c};border:${i === 0 ? '3px solid #fff' : 'none'}"></button>`
   ).join('');
@@ -977,12 +1006,15 @@ function initStatusColors() {
   $('#status-post-btn').onclick = async () => {
     try {
       const content = $('#status-text').value.trim();
-      if (!content) return showStatusError('Write something first');
+      if (!content && !mediaData) return showStatusError('Write text or choose media first');
       const activeBtn = wrap.querySelector('button[style*="3px"]');
       const color = activeBtn ? activeBtn.dataset.color : selected;
-      await api('/status', { method: 'POST', body: { content, bgColor: color } });
+      await api('/status', { method: 'POST', body: { content, bgColor: color, mediaData, mediaMime, mediaType } });
       $('#new-status-modal').classList.add('hidden');
       $('#status-text').value = '';
+      if (mediaInput) mediaInput.value = '';
+      mediaData = null; mediaMime = null; mediaType = null;
+      $('#status-media-preview').innerHTML = '';
       loadStatuses();
     } catch (err) { showStatusError(err.message); }
   };
@@ -1065,7 +1097,8 @@ async function viewStatus(status, isMine) {
       </div>
       <button class="status-viewer-close" id="status-viewer-close">✕</button>
       ${isMine ? '<button class="status-viewer-delete" id="status-viewer-delete" type="button">Delete status</button>' : ''}
-      <div style="font-size:20px; line-height:1.4; word-break:break-word;">${escapeHtml(status.content)}</div>
+      ${status.media_url && status.media_type === 'video' ? `<video class="status-viewer-media" controls src="${status.media_url}"></video>` : status.media_url ? `<img class="status-viewer-media" src="${status.media_url}" alt="Status media">` : ''}
+      ${status.content ? `<div style="font-size:20px; line-height:1.4; word-break:break-word;">${escapeHtml(status.content)}</div>` : ''}
     </div>`;
   backdrop.classList.remove('hidden');
 

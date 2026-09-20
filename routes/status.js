@@ -5,6 +5,7 @@ const {
   markStatusViewed,
   deleteStatus
 } = require('../db/firebase');
+const { uploadToStorage } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -13,15 +14,26 @@ router.use(requireAuth);
 // POST /api/status { content, bgColor }
 router.post('/', async (req, res) => {
   try {
-    const { content, bgColor } = req.body;
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: 'Status text is required' });
+    const { content, bgColor, mediaData, mediaMime, mediaType } = req.body || {};
+    if ((!content || !content.trim()) && !mediaData) return res.status(400).json({ error: 'Status text or media is required' });
+    let mediaUrl = null;
+    if (mediaData) {
+      const uploaded = await uploadToStorage({
+        data: mediaData,
+        mimeType: mediaMime || 'image/jpeg',
+        filename: `status_${Date.now()}.${(mediaMime || 'image/jpeg').split('/')[1] || 'bin'}`,
+        userId: req.user.id
+      });
+      mediaUrl = uploaded.url;
     }
 
     const status = await createStatus({
       userId: req.user.id,
-      content: content.trim().slice(0, 300),
-      bgColor: bgColor || '#0A84FF'
+      content: String(content || '').trim().slice(0, 300),
+      bgColor: bgColor || '#0A84FF',
+      mediaUrl,
+      mediaType: mediaType || null,
+      mediaMime: mediaMime || null
     });
 
     res.json({ status });

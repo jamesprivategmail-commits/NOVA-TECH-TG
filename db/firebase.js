@@ -560,7 +560,7 @@ async function searchMessages(convId, queryText) {
 }
 
 // ---------------- STATUSES ----------------
-async function createStatus({ userId, content, bgColor, mediaUrl }) {
+async function createStatus({ userId, content, bgColor, mediaUrl, mediaType, mediaMime }) {
   await ensureInit();
   const id = 's_' + Date.now() + '_' + crypto.randomBytes(3).toString('hex');
   const now = new Date();
@@ -571,6 +571,8 @@ async function createStatus({ userId, content, bgColor, mediaUrl }) {
     content: content ? content.trim().slice(0, 300) : '',
     bg_color: bgColor || '#0A84FF',
     media_url: mediaUrl || null,
+    media_type: mediaType || null,
+    media_mime: mediaMime || null,
     created_at: now.toISOString(),
     expires_at: expiresAt,
     viewers: []
@@ -593,6 +595,8 @@ async function getActiveStatuses(viewerUserId) {
         content: s.content,
         bg_color: s.bg_color,
         media_url: s.media_url,
+        media_type: s.media_type || null,
+        media_mime: s.media_mime || null,
         created_at: s.created_at,
         expires_at: s.expires_at,
         user_id: s.user_id,

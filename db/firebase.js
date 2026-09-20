@@ -414,6 +414,7 @@ async function getConversationMembers(convId) {
         display_name: user.display_name,
         avatar_color: user.avatar_color,
         avatar_url: user.avatar_url,
+        avatar_data: user.avatar_data,
         is_verified: user.is_verified,
         role: conv.members?.[uid]?.role || (conv.owner_id === uid ? 'owner' : 'member')
       });
@@ -444,6 +445,7 @@ async function createMessage(convId, msgData) {
     edited_at: null,
     pinned_at: null,
     pinned_by: null,
+    read_at: null,
     reactions: [], // array of { reaction, user_id }
     saved_by: [], // array of userIds
     hidden_by: [], // array of userIds
@@ -521,6 +523,19 @@ async function updateMessage(convId, messageId, updates) {
   return updated.data();
 }
 
+async function markConversationRead(convId, readerUserId) {
+  await ensureInit();
+  const snap = await getDocs(collection(firestoreDb, 'conversations', String(convId), 'messages'));
+  const readAt = new Date().toISOString();
+  const messageIds = snap.docs.map(d => d.data())
+    .filter(m => String(m.sender_id) !== String(readerUserId) && !m.read_at)
+    .map(m => m.id);
+  for (const id of messageIds) {
+    await updateDoc(doc(firestoreDb, 'conversations', String(convId), 'messages', String(id)), { read_at: readAt });
+  }
+  return { messageIds, readAt };
+}
+
 async function searchMessages(convId, queryText) {
   await ensureInit();
   const snap = await getDocs(collection(firestoreDb, 'conversations', String(convId), 'messages'));
@@ -591,6 +606,7 @@ async function getActiveStatuses(viewerUserId) {
         nova_id: author?.nova_id || '',
         display_name: author?.display_name || 'User',
         avatar_color: author?.avatar_color || '#0A84FF',
+        avatar_url: author?.avatar_url || null,
         is_verified: author?.is_verified || false,
         viewed: viewerUserId ? (s.viewers || []).includes(String(viewerUserId)) : false
       });
@@ -660,6 +676,7 @@ async function getPosts(currentUserId, limitCount = 50) {
       nova_id: author?.nova_id || '',
       display_name: author?.display_name || 'User',
       avatar_color: author?.avatar_color || '#0A84FF',
+      avatar_url: author?.avatar_url || null,
       is_verified: author?.is_verified || false,
       like_count: (p.likes || []).length,
       liked_by_me: currentUserId ? (p.likes || []).includes(String(currentUserId)) : false,
@@ -670,12 +687,12 @@ async function getPosts(currentUserId, limitCount = 50) {
   return posts.slice(0, limitCount);
 }
 
-async function deletePost(postId, userId) {
+async function deletePost(postId, userId, allowAdmin = false) {
   await ensureInit();
   const ref = doc(firestoreDb, 'posts', String(postId));
   const snap = await getDoc(ref);
   if (!snap.exists()) return false;
-  if (snap.data().user_id !== String(userId)) return false;
+  if (!allowAdmin && snap.data().user_id !== String(userId)) return false;
   await deleteDoc(ref);
   return true;
 }
@@ -723,6 +740,7 @@ async function addPostComment(postId, { userId, content }) {
     ...comment,
     display_name: author?.display_name || 'User',
     avatar_color: author?.avatar_color || '#0A84FF',
+    avatar_url: author?.avatar_url || null,
     is_verified: author?.is_verified || false
   };
 }
@@ -740,6 +758,7 @@ async function getPostComments(postId) {
       created_at: c.created_at,
       display_name: author?.display_name || 'User',
       avatar_color: author?.avatar_color || '#0A84FF',
+      avatar_url: author?.avatar_url || null,
       is_verified: author?.is_verified || false
     });
   }
@@ -889,6 +908,7 @@ module.exports = {
   getMessages,
   getMessageById,
   updateMessage,
+  markConversationRead,
   searchMessages,
   // Statuses
   createStatus,

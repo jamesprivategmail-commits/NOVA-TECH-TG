@@ -14,6 +14,7 @@ const {
   getMessages,
   getMessageById,
   updateMessage,
+  markConversationRead,
   searchMessages
 } = require('../db/firebase');
 const { generateInviteCode } = require('../db/idGen');
@@ -299,6 +300,21 @@ router.get('/:id/messages', async (req, res) => {
   } catch (err) {
     console.error('Get messages error:', err);
     res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+// POST /api/conversations/:id/read - mark messages from other people as read
+router.post('/:id/read', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
+    res.json(await markConversationRead(req.params.id, req.user.id));
+  } catch (err) {
+    console.error('Mark conversation read error:', err);
+    res.status(500).json({ error: 'Failed to mark messages read' });
   }
 });
 

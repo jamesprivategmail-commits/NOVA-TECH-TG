@@ -333,6 +333,10 @@ img, video { max-width: 100%; display: block; }
 }
 .story-plus .icon { width: 15px; height: 15px; }
 .story-name { font-size: 12px; color: var(--muted); max-width: 74px; text-align: center; }
+.verify-meta { display:inline-flex; width:15px; height:15px; color:#1877f2; vertical-align:-2px; }
+.verify-meta .icon { width:15px; height:15px; stroke:none; }
+button, .btn, .icon-btn { touch-action: manipulation; }
+input, textarea { font-size: 16px; }
 
 .status-row {
   display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;

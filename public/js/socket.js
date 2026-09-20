@@ -22,6 +22,7 @@ export function connectSocket() {
     socket.on('connect_error', (err) => { state.socketReady = false; emit('socket:state', { connected: false, error: err?.message }); });
 
     socket.on('message:new', (msg) => emit('message:new', msg));
+    socket.on('messages:read', (payload) => emit('messages:read', payload));
     socket.on('typing', (payload) => emit('typing', payload));
     socket.on('presence', (payload) => emit('presence', payload));
     socket.on('call:incoming', (payload) => emit('call:incoming', payload));
@@ -58,6 +59,10 @@ export function sendMessage({ conversationId, content, media, replyToId }) {
       resolve(ack || { error: 'No response' });
     });
   });
+}
+
+export function markConversationRead(conversationId) {
+  if (socket && conversationId) socket.emit('conversation:read', { conversationId });
 }
 
 export function sendTyping(conversationId, isTyping) {

@@ -1,7 +1,7 @@
 // chat.js - conversation screen: history, realtime, sending, media, actions
 import { api, ApiError } from './api.js';
 import { state, emit, on, markRead } from './state.js';
-import { joinConversation, sendMessage as socketSend, sendTyping } from './socket.js';
+import { joinConversation, sendMessage as socketSend, sendTyping, markConversationRead } from './socket.js';
 import {
   $, avatar, icon, escapeHtml, formatTime, dayLabel, lastSeenLabel, conversationTitle,
   conversationAvatarUser, toast, openSheet, closeSheet, confirmSheet, promptSheet,
@@ -83,6 +83,7 @@ export function initChat() {
   els.messages?.addEventListener('click', onMessagesClick);
 
   on('message:new', onIncomingMessage);
+  on('messages:read', onMessagesRead);
   on('typing', onTyping);
   on('presence', onPresence);
 }
@@ -104,6 +105,7 @@ export async function openConversation(conv) {
   try {
     const res = await api.messages(conv.id);
     state.messages[conv.id] = res.messages || [];
+    markConversationRead(conv.id);
     state.hasMore[conv.id] = (res.messages || []).length >= 50;
     renderMessages(true);
   } catch (err) {
@@ -208,6 +210,15 @@ function onPresence(payload) {
   }
 }
 
+function onMessagesRead(payload) {
+  if (!payload?.conversationId) return;
+  const ids = new Set(payload.messageIds || []);
+  (state.messages[payload.conversationId] || []).forEach((msg) => {
+    if (ids.has(msg.id)) msg.read_at = payload.readAt;
+  });
+  if (state.activeConv?.id === payload.conversationId) renderMessages(false);
+}
+
 // ---------------- messages ----------------
 function messageMediaUrl(msg) {
   const url = msg.media_url || msg.media_data;
@@ -267,7 +278,7 @@ function metaHtml(msg) {
   const edited = msg.edited_at ? '<span class="edited">edited</span>' : '';
   const ticking = msg._status === 'sending'
     ? `<span style="opacity:.6">${icon('check')}</span>`
-    : `<span class="seen">${icon('check-check')}</span>`;
+    : msg.read_at ? `<span class="seen read">${icon('check-check')}</span>` : `<span class="sent">${icon('check')}</span>`;
   const pin = msg.pinned_at ? `<span class="pin-flag" title="Pinned">${icon('pin')}</span>` : '';
   return `<div class="meta">${edited}${pin}<span>${escapeHtml(formatTime(msg.created_at))}</span>${msg.sender_id === state.me?.id ? ticking : ''}</div>`;
 }
@@ -381,6 +392,10 @@ export function onIncomingMessage(msg) {
   if (!state.messages[convId]) state.messages[convId] = [];
   const list = state.messages[convId];
   const idx = list.findIndex((m) => m.id === msg.id);
+  const pendingIdx = idx < 0 ? list.findIndex((m) => m._status === 'sending' &&
+    m.sender_id === msg.sender_id && m.content === msg.content &&
+    Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000) : -1;
+  if (pendingIdx > -1) list.splice(pendingIdx, 1);
   if (idx > -1) list[idx] = { ...list[idx], ...msg, _status: 'sent' };
   else list.push({ ...msg, _status: 'sent' });
 
@@ -399,7 +414,10 @@ export function onIncomingMessage(msg) {
     const atBottom = els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight < 120;
     renderMessages(false);
     if (atBottom || msg.sender_id === state.me?.id) scrollToEnd();
-    if (document.visibilityState === 'visible') markRead(convId);
+    if (document.visibilityState === 'visible') {
+      markRead(convId);
+      markConversationRead(convId);
+    }
   } else {
     import('./state.js').then(({ bumpUnread }) => bumpUnread(convId));
   }
@@ -513,6 +531,12 @@ async function deliverTemp(convId, temp) {
       if (atBottom) scrollToEnd();
     }
   };
+
+  // A sender receives both the realtime event and the acknowledgement. Keep one canonical copy.
+  const samePending = list.find((m) => m._status === 'sending' && m !== temp &&
+    m.sender_id === temp.sender_id && m.content === temp.content &&
+    Math.abs(new Date(m.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000);
+  if (samePending) list.splice(list.indexOf(samePending), 1);
 
   let mediaData = null;
   if (temp._attachment) {

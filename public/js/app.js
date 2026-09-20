@@ -99,8 +99,21 @@ async function onSignedIn() {
 }
 
 function wireChrome() {
+  history.replaceState({ tab: currentTab }, '', location.href.split('#')[0] + '#chats');
   document.querySelectorAll('.bottom-nav .nav').forEach((btn) => {
-    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      history.pushState({ tab }, '', `#${tab}`);
+      showTab(tab);
+    });
+  });
+  window.addEventListener('popstate', (event) => {
+    if (state.activeConv) {
+      closeConversation();
+      return;
+    }
+    const tab = event.state?.tab || 'chats';
+    showTab(SCREENS[tab] ? tab : 'chats');
   });
   window.addEventListener('resize', updateLayout);
 }

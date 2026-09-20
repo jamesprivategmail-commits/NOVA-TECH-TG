@@ -57,7 +57,7 @@ export function avatar(user, { size = '', cls = '', id = '' } = {}) {
 }
 
 export function verifyBadge(isVerified) {
-  return isVerified ? `<span class="verify" title="Verified">${icon('badge-check')}</span>` : '';
+  return isVerified ? `<span class="verify verify-meta" title="Verified account" aria-label="Verified account">${icon('badge-check')}</span>` : '';
 }
 
 export function formatTime(iso) {

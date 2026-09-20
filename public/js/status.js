@@ -8,6 +8,9 @@ import {
 
 let els = {};
 let viewerTimer = null;
+let progressStartedAt = 0;
+let progressRemaining = 0;
+let progressPaused = false;
 
 const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#ff3b45', '#1a1a1d'];
 
@@ -39,7 +42,7 @@ function groupByUser() {
   const map = new Map();
   for (const s of state.statuses) {
     if (!map.has(s.user_id)) {
-      const group = { userId: s.user_id, name: s.display_name, novaId: s.nova_id, color: s.avatar_color, verified: s.is_verified, items: [] };
+      const group = { userId: s.user_id, name: s.display_name, novaId: s.nova_id, avatarUrl: s.avatar_url, color: s.avatar_color, verified: s.is_verified, items: [] };
       map.set(s.user_id, group);
       groups.push(group);
     }
@@ -69,7 +72,7 @@ function renderStatus() {
     const item = g.items[g.items.length - 1];
     return `<button class="story ${isOwn ? 'story-own' : ''}" data-status-user="${escapeHtml(g.userId)}">
       <span class="story-ring ${seen ? 'seen' : ''}">
-        <span class="story-inner">${avatar({ displayName: g.name, avatarColor: g.color }, { cls: '' })}</span>
+        <span class="story-inner">${avatar({ displayName: g.name, avatarUrl: g.avatarUrl, avatarColor: g.color }, { cls: '' })}</span>
       </span>
       ${isOwn ? `<span class="story-plus">${icon('plus')}</span>` : ''}
       <span class="story-name truncate">${escapeHtml(isOwn ? 'My status' : (g.name || 'User'))}</span>
@@ -83,7 +86,7 @@ function renderStatus() {
 
   html += '<div class="settings-group-title" style="padding-left:16px">Recent updates</div>';
   html += state.statuses.map((s) => `<button class="status-row" data-status-id="${escapeHtml(s.id)}">
-    <span class="avatar-wrap">${avatar({ displayName: s.display_name, avatarColor: s.avatar_color })}</span>
+    <span class="avatar-wrap">${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color })}</span>
     <span class="status-info">
       <span class="status-name truncate">${escapeHtml(s.display_name || 'User')}</span>
       <span class="status-time truncate">${escapeHtml(timeAgo(s.created_at))} · ${escapeHtml(s.content || (s.media_type === 'video' ? 'Video' : 'Photo'))}</span>
@@ -189,7 +192,7 @@ function openViewerForUser(userId, focusId = null) {
     viewer.innerHTML = `
       <div class="viewer-progress">${items.map((_, i) => `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i === index ? '0%' : '0%'}"></span></div>`).join('')}</div>
       <div class="viewer-head">
-        ${avatar({ displayName: s.display_name, avatarColor: s.avatar_color }, { size: 'sm' })}
+        ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
         <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
         ${isOwn ? `<button class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
         <button class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
@@ -211,6 +214,11 @@ function openViewerForUser(userId, focusId = null) {
       try { await api.deleteStatus(s.id); toast('Deleted'); closeViewer(); loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
     });
     viewer.querySelector('#viewer-send').addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
+    const stage = viewer.querySelector('.viewer-stage');
+    stage?.addEventListener('pointerdown', pauseProgress);
+    stage?.addEventListener('pointerup', resumeProgress);
+    stage?.addEventListener('pointercancel', resumeProgress);
+    stage?.addEventListener('pointerleave', resumeProgress);
 
     if (!s.viewed && !isOwn) api.viewStatus(s.id).catch(() => {});
     startProgress(s);
@@ -220,6 +228,9 @@ function openViewerForUser(userId, focusId = null) {
     clearTimeout(viewerTimer);
     const seg = viewer.querySelectorAll('.viewer-progress .seg span')[index];
     const duration = s.media_type === 'video' ? 8000 : 5000;
+    progressRemaining = duration;
+    progressPaused = false;
+    progressStartedAt = Date.now();
     if (seg) {
       requestAnimationFrame(() => { seg.style.transition = `width ${duration}ms linear`; seg.style.width = '100%'; });
     }
@@ -227,6 +238,23 @@ function openViewerForUser(userId, focusId = null) {
       if (index < items.length - 1) { index++; render(); }
       else closeViewer();
     }, duration);
+  }
+  function pauseProgress() {
+    if (progressPaused) return;
+    progressPaused = true;
+    progressRemaining = Math.max(0, progressRemaining - (Date.now() - progressStartedAt));
+    clearTimeout(viewerTimer);
+    viewer.querySelector('video')?.pause();
+  }
+  function resumeProgress() {
+    if (!progressPaused) return;
+    progressPaused = false;
+    progressStartedAt = Date.now();
+    viewer.querySelector('video')?.play().catch(() => {});
+    viewerTimer = setTimeout(() => {
+      if (index < items.length - 1) { index++; render(); }
+      else closeViewer();
+    }, progressRemaining || 1);
   }
 
   render();

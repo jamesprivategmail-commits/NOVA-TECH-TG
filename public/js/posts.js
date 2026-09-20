@@ -102,6 +102,7 @@ function renderPosts() {
 
 function postHtml(p) {
   const own = String(p.user_id) === String(state.me?.id);
+  const canDelete = own || !!state.me?.isAdmin;
   const image = p.image_url || p.image_data;
   return `<article class="post" data-post="${escapeHtml(p.id)}">
     <div class="post-head">
@@ -110,7 +111,7 @@ function postHtml(p) {
         <div class="post-author truncate">${escapeHtml(p.display_name || 'User')} ${verifyBadge(p.is_verified)}</div>
         <div class="post-time">${escapeHtml(timeAgo(p.created_at))}</div>
       </div>
-      ${own ? `<button class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete post">${icon('trash')}</button>` : ''}
+      ${canDelete ? `<button class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete post">${icon('trash')}</button>` : ''}
     </div>
     ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
     ${image ? `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>` : ''}
@@ -196,7 +197,7 @@ async function loadComments(postId, container) {
       return;
     }
     container.innerHTML = comments.map((c) => `<div class="comment-row">
-      ${avatar({ displayName: c.display_name, avatarColor: c.avatar_color }, { size: 'sm' })}
+      ${avatar({ displayName: c.display_name, avatarUrl: c.avatar_url, avatarColor: c.avatar_color }, { size: 'sm' })}
       <div class="comment-body">
         <div class="comment-name">${escapeHtml(c.display_name || 'User')} ${verifyBadge(c.is_verified)}</div>
         <div class="comment-text">${escapeHtml(c.content)}</div>

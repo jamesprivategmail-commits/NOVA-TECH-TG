@@ -5,7 +5,8 @@ const {
   getConversationById,
   getConversationsForUser,
   createMessage,
-  uploadToStorage
+  uploadToStorage,
+  markConversationRead
 } = require('../db/firebase');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026';
@@ -122,6 +123,7 @@ function initSockets(io) {
           created_at: msg.created_at,
           display_name: senderInfo?.display_name || 'User',
           avatar_color: senderInfo?.avatar_color || '#0A84FF',
+          avatar_url: senderInfo?.avatar_url || null,
           is_verified: senderInfo?.is_verified || false
         };
 
@@ -130,6 +132,22 @@ function initSockets(io) {
       } catch (err) {
         console.error('Send message socket error:', err);
         ack?.({ error: 'Failed to send message' });
+      }
+    });
+
+    socket.on('conversation:read', async ({ conversationId }) => {
+      try {
+        const conv = await getConversationById(conversationId);
+        if (!conv || (conv.type !== 'channel' && !(conv.member_ids || []).includes(userId))) return;
+        const result = await markConversationRead(conversationId, userId);
+        if (result.messageIds.length) io.to(`conv:${conversationId}`).emit('messages:read', {
+          conversationId,
+          messageIds: result.messageIds,
+          readAt: result.readAt,
+          readerId: userId
+        });
+      } catch (err) {
+        console.error('Mark messages read socket error:', err);
       }
     });
 

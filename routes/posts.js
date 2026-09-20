@@ -9,6 +9,7 @@ const {
   uploadToStorage
 } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
+const { isAdminNovaId } = require('../middleware/admin');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -63,7 +64,7 @@ router.post('/', async (req, res) => {
 // DELETE /api/posts/:id - only your own post
 router.delete('/:id', async (req, res) => {
   try {
-    const ok = await deletePost(req.params.id, req.user.id);
+    const ok = await deletePost(req.params.id, req.user.id, isAdminNovaId(req.user.novaId));
     if (!ok) return res.status(404).json({ error: 'Post not found or unauthorized' });
     res.json({ ok: true });
   } catch (err) {

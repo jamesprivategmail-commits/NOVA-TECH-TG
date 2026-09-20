@@ -39,7 +39,7 @@ Visit `http://localhost:3000`.
 
 ## Telegram bot integration
 
-The first Telegram integration slice supports `/start`, `/menu`, `/ping`, `.ping`, and inline menu buttons. Telegram sends updates to the public webhook endpoint `/api/telegram/webhook`.
+The first Telegram integration slice supports `/start`, `/menu`, `/ping`, `.ping`, `.menu`, and inline menu buttons. After an account is paired, dot-prefixed commands are the primary syntax: `.ping` checks the connection and `.menu` shows the available commands. Telegram sends updates to the public webhook endpoint `/api/telegram/webhook`.
 
 Configure these environment variables on the deployment:
 

@@ -41,8 +41,9 @@ function menuText() {
     'DARK CHAT bot menu',
     '',
     'Use the buttons below or send:',
-    '/ping — check the bot connection',
-    '/pair — link your DARK CHAT account',
+    '.ping — check the bot connection',
+    '.menu — show this command menu',
+    '.pair — link your DARK CHAT account',
     '',
     'Account pairing will be enabled in the next bot release.'
   ].join('\n');
@@ -91,7 +92,7 @@ async function handleUpdate(update) {
   } else if (command === '/ping' || command === '.ping') {
     await sendMessage(message.chat.id, 'pong — DARK CHAT bot is online.');
   } else if (command === '/pair' || command === '.pair') {
-    await sendMessage(message.chat.id, 'Pairing is coming next. This bot currently supports /start, /menu, and /ping.');
+    await sendMessage(message.chat.id, 'Pairing is coming next. After pairing, use .ping to test the connection and .menu to see available commands.');
   }
 }
 

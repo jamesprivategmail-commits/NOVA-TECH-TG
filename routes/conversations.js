@@ -343,11 +343,19 @@ router.post('/:id/messages', async (req, res) => {
     };
     let assistantMessage = null;
     const isDarkPairConversation = (conv.member_ids || []).includes('u_dark_pair') || String(req.params.id).startsWith('dm_dark_pair_');
-    if (isDarkPairConversation && (content.startsWith('/') || /^\d{6}$/.test(content))) {
-      const reply = await getDarkPairReply(content, req.user.id);
+    const commandText = content.toLowerCase();
+    let assistantReply = null;
+    if (isDarkPairConversation && (commandText.startsWith('/') || /^\d{6}$/.test(commandText))) {
+      assistantReply = await getDarkPairReply(content, req.user.id);
+    } else if (sender?.dark_pair_linked && commandText === '.ping') {
+      assistantReply = '50ms';
+    } else if (sender?.dark_pair_linked && commandText === '.menu') {
+      assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
+    }
+    if (assistantReply) {
       const savedReply = await createMessage(req.params.id, {
         senderId: 'u_dark_pair',
-        content: reply
+        content: assistantReply
       });
       assistantMessage = {
         ...savedReply,

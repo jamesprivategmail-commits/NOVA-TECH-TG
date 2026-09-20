@@ -132,12 +132,20 @@ function initSockets(io) {
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
         const isDarkPairConversation = (conv.member_ids || []).includes('u_dark_pair') || String(conversationId).startsWith('dm_dark_pair_');
+        const commandText = hasText ? content.trim().toLowerCase() : '';
         let assistantPayload = null;
-        if (isDarkPairConversation && hasText && (content.trim().startsWith('/') || /^\d{6}$/.test(content.trim()))) {
-          const reply = await getDarkPairReply(content.trim(), userId);
+        let assistantReply = null;
+        if (isDarkPairConversation && hasText && (commandText.startsWith('/') || /^\d{6}$/.test(commandText))) {
+          assistantReply = await getDarkPairReply(content.trim(), userId);
+        } else if (senderInfo?.dark_pair_linked && commandText === '.ping') {
+          assistantReply = '50ms';
+        } else if (senderInfo?.dark_pair_linked && commandText === '.menu') {
+          assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
+        }
+        if (assistantReply) {
           const assistantMsg = await createMessage(conversationId, {
             senderId: 'u_dark_pair',
-            content: reply
+            content: assistantReply
           });
           assistantPayload = {
             ...assistantMsg,

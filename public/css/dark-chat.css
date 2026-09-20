@@ -43,6 +43,8 @@ svg { width:1em; height:1em; display:block; fill:none; stroke:currentColor; stro
 .icon-updates::after { width:8px; height:2px; left:4px; top:7px; background:currentColor; box-shadow:0 4px currentColor; }
 .icon-user::before { width:7px; height:7px; left:5px; top:1px; border:2px solid currentColor; border-radius:50%; }
 .icon-user::after { width:14px; height:7px; left:1px; bottom:1px; border:2px solid currentColor; border-radius:9px 9px 4px 4px; }
+.icon-discover::before { width:14px; height:14px; left:2px; top:2px; border:2px solid currentColor; border-radius:50%; }
+.icon-discover::after { width:6px; height:6px; left:6px; top:6px; border:2px solid currentColor; border-radius:50%; }
 .button-icon { font-size:1.35em; line-height:.8; vertical-align:-1px; }
 .verification-badge { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:4px; border-radius:50%; background:#2d8cff; color:#fff; vertical-align:1px; box-shadow:0 0 0 2px rgba(45,140,255,.12); }
 .verification-badge svg { width:10px; height:10px; stroke-width:2.5; }
@@ -74,6 +76,20 @@ svg { width:1em; height:1em; display:block; fill:none; stroke:currentColor; stro
 .tabbar button.active { background:rgba(121,32,35,.48) !important; color:#f4f4f4 !important; box-shadow:inset 0 0 0 1px rgba(255,70,76,.38),0 4px 13px rgba(255,40,48,.1) !important; }
 .conversation-search { margin:0 27px 13px !important; min-height:40px; background:#121212 !important; border:1px solid rgba(255,255,255,.07) !important; border-radius:13px !important; }
 .new-chat-btn { margin:0 27px 23px !important; width:auto !important; min-height:53px; padding:0 18px !important; border-radius:17px !important; font-size:19px !important; font-weight:800 !important; }
+.discover-search { margin-top:3px !important; }
+.discover-list { flex:1; overflow:auto; padding:0 14px calc(var(--nav-h, 68px) + 18px); scrollbar-width:none; }
+.discover-list::-webkit-scrollbar { display:none; }
+.discover-card { margin:9px 0; padding:14px; background:#0d0d0f; border:1px solid rgba(255,255,255,.075); border-radius:19px; }
+.discover-head { display:flex; align-items:center; gap:11px; }
+.discover-avatar { position:relative; width:52px; height:52px; flex:none; overflow:hidden; border-radius:50%; border:1px solid rgba(255,255,255,.08); display:grid; place-items:center; font-weight:800; }
+.discover-avatar img { width:100%; height:100%; object-fit:cover; }
+.discover-info { flex:1; min-width:0; }
+.discover-name { font-size:14px; font-weight:820; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.discover-handle { margin-top:3px; color:#919198; font-size:10px; }
+.discover-bio { margin-top:9px; color:#c7c7ca; font-size:11px; line-height:1.45; }
+.discover-message-btn { height:35px; min-width:82px; padding:0 12px; border-radius:12px; background:#fff; color:#090909; font-size:10px; font-weight:850; }
+.discover-message-btn:active { transform:scale(.96); }
+.discover-empty,.discover-loading,.discover-error { padding:45px 18px; text-align:center; color:#919198; font-size:12px; }
 
 .conv-list,.status-list,.posts-list { scrollbar-width:none; }
 .conv-list::-webkit-scrollbar,.status-list::-webkit-scrollbar,.posts-list::-webkit-scrollbar { display:none; }
@@ -168,7 +184,7 @@ svg { width:1em; height:1em; display:block; fill:none; stroke:currentColor; stro
   .chat-action-btn { width:31px !important; font-size:15px !important; }
   .bubble { max-width:82%; }
   .mobile-nav { position:fixed; display:flex; left:0; right:0; bottom:0; z-index:30; height:68px; padding:6px 10px calc(6px + env(safe-area-inset-bottom)); justify-content:space-around; background:#0b0b0b; border-top:1px solid var(--line); }
-  .mobile-nav button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:#777; border-radius:12px; }
+  .mobile-nav button { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:#777; border-radius:12px; }
   .mobile-nav button.active { color:#ff6666; background:rgba(255,49,49,.08); }
   .mobile-nav button span { font-size:18px; line-height:1; }
 .mobile-nav button small { font-size:10px; }

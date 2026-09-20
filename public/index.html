@@ -87,7 +87,8 @@
     <div class="tabbar">
       <button data-tab="chats" class="active">Chats</button>
       <button data-tab="status">Status</button>
-      <button data-tab="posts">Posts</button>
+      <button data-tab="posts">Updates</button>
+      <button data-tab="discover">Discover</button>
     </div>
 
     <label class="conversation-search" for="conversation-search-input">
@@ -118,6 +119,15 @@
         </div>
       </div>
       <div class="posts-list" id="posts-list"></div>
+    </div>
+
+    <!-- DISCOVER TAB: real existing users, message only -->
+    <div id="tab-discover" class="hidden" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+      <label class="conversation-search discover-search" for="discover-search-input">
+        <span aria-hidden="true" class="icon icon-search"></span>
+        <input id="discover-search-input" type="search" placeholder="Search people to message" autocomplete="off">
+      </label>
+      <div class="discover-list" id="discover-list"></div>
     </div>
   </div>
 
@@ -167,6 +177,7 @@
     <button data-tab="chats" class="active"><span class="icon icon-chat"></span><small>Chats</small></button>
     <button data-tab="status"><span class="icon icon-status"></span><small>Status</small></button>
     <button data-tab="posts"><span class="icon icon-updates"></span><small>Updates</small></button>
+    <button data-tab="discover"><span class="icon icon-discover"></span><small>Discover</small></button>
     <button id="mobile-profile-btn"><span class="icon icon-user"></span><small>Profile</small></button>
   </nav>
 </div>

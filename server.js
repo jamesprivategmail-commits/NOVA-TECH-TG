@@ -15,6 +15,7 @@ const callRoutes = require('./routes/calls');
 const adminRoutes = require('./routes/admin');
 const storageRoutes = require('./routes/storage');
 const profileRoutes = require('./routes/profile');
+const discoverRoutes = require('./routes/discover');
 const { initSockets } = require('./sockets');
 
 if (!process.env.JWT_SECRET) {
@@ -36,6 +37,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Firebase Storage route
 app.use('/api/storage', storageRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/discover', discoverRoutes);
 
 // API routes
 app.use('/api/auth', authRoutes);

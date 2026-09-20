@@ -284,9 +284,61 @@ function selectTab(tab) {
   $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
   $('#tab-status').classList.toggle('hidden', tab !== 'status');
   $('#tab-posts').classList.toggle('hidden', tab !== 'posts');
+  $('#tab-discover').classList.toggle('hidden', tab !== 'discover');
   if (tab === 'status') loadStatuses();
   if (tab === 'posts') loadPosts();
+  if (tab === 'discover') loadDiscover();
 }
+
+function discoverAvatar(user) {
+  return user.avatarUrl
+    ? `<img src="${escapeHtml(user.avatarUrl)}" alt="">`
+    : escapeHtml(initials(user.displayName));
+}
+
+async function loadDiscover(search = $('#discover-search-input')?.value.trim() || '') {
+  const list = $('#discover-list');
+  if (!list) return;
+  list.innerHTML = '<div class="discover-loading">Loading people…</div>';
+  try {
+    const result = await api(`/discover/users?search=${encodeURIComponent(search)}`);
+    const users = result.users || [];
+    list.innerHTML = users.length ? users.map(user => `
+      <article class="discover-card">
+        <div class="discover-head">
+          <div class="discover-avatar" style="background:${escapeHtml(user.avatarColor)}">${discoverAvatar(user)}</div>
+          <div class="discover-info">
+            <div class="discover-name">${escapeHtml(user.displayName)} ${verifiedBadge(user.isVerified)}</div>
+            <div class="discover-handle">${escapeHtml(user.novaId)}</div>
+          </div>
+          <button class="discover-message-btn" type="button" data-message-user="${escapeHtml(user.novaId)}">Message</button>
+        </div>
+        ${user.bio ? `<div class="discover-bio">${escapeHtml(user.bio)}</div>` : ''}
+      </article>`).join('') : '<div class="discover-empty">No people found.<br>Try a name or DARK CHAT ID.</div>';
+    list.querySelectorAll('[data-message-user]').forEach(button => button.addEventListener('click', async () => {
+      button.disabled = true;
+      button.textContent = 'Opening…';
+      try {
+        const result = await api('/conversations/dm', { method: 'POST', body: { novaId: button.dataset.messageUser } });
+        await loadConversations();
+        selectTab('chats');
+        await openConversation(result.conversationId);
+      } catch (err) {
+        button.disabled = false;
+        button.textContent = 'Message';
+        alert(err.message);
+      }
+    }));
+  } catch (err) {
+    list.innerHTML = `<div class="discover-error">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+let discoverSearchTimer = null;
+$('#discover-search-input')?.addEventListener('input', () => {
+  clearTimeout(discoverSearchTimer);
+  discoverSearchTimer = setTimeout(() => loadDiscover(), 220);
+});
 
 // ---------------- BOOT ----------------
 async function boot() {

@@ -15,15 +15,7 @@ async function updateProfileSettings(userId, updates = {}) {
 
 async function getProfileSettings(userId) {
   const user = await getUserById(userId);
-  return user ? {
-    privacySettings: user.privacy_settings || {},
-    blockedUserIds: user.blocked_user_ids || [],
-    telegram: user.telegram_chat_id ? {
-      linked: true,
-      username: user.telegram_username || null,
-      linkedAt: user.telegram_linked_at || null
-    } : { linked: false }
-  } : null;
+  return user ? { privacySettings: user.privacy_settings || {}, blockedUserIds: user.blocked_user_ids || [] } : null;
 }
 
 async function blockUser(userId, targetId) {

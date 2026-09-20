@@ -73,6 +73,7 @@ async function ensureInit() {
     console.log('✅ Firebase initialized successfully for DARK CHAT (database:', dbId, ')');
     
     await seedAdminUser();
+    await seedDarkPairAccount();
     return firestoreDb;
   })();
 
@@ -118,6 +119,35 @@ async function seedAdminUser() {
     }
   } catch (err) {
     console.warn('Admin account seeding warning:', err.message);
+  }
+}
+
+async function seedDarkPairAccount() {
+  try {
+    const accountId = 'u_dark_pair';
+    const ref = doc(firestoreDb, 'users', accountId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) return;
+    const now = new Date().toISOString();
+    await setDoc(ref, {
+      id: accountId,
+      nova_id: 'DARK-PAIR',
+      display_name: 'DARK PAIR',
+      password_hash: null,
+      avatar_color: '#7C3AED',
+      avatar_url: '/assets/logo.jpg',
+      avatar_data: null,
+      avatar_mime: null,
+      bio: 'DARK CHAT quick assistant. Send /start to see the menu.',
+      is_verified: true,
+      is_system: true,
+      is_banned: false,
+      created_at: now,
+      last_seen: now
+    });
+    console.log('✅ DARK PAIR special account seeded');
+  } catch (err) {
+    console.warn('DARK PAIR seeding warning:', err.message);
   }
 }
 
@@ -249,57 +279,41 @@ async function getUserCount() {
   return snap.docs.filter(d => !d.data().is_banned).length;
 }
 
-async function createTelegramPairing({ chatId, novaId, telegramUser = {} }) {
-  await ensureInit();
-  const target = await getUserByNovaId(novaId);
-  if (!target || target.is_banned) return null;
-
-  const code = String(crypto.randomInt(100000, 1000000));
-  const pairing = {
-    id: `telegram_${String(chatId)}`,
-    chat_id: String(chatId),
-    user_id: String(target.id),
-    nova_id: target.nova_id,
-    code,
-    telegram_user_id: telegramUser.id ? String(telegramUser.id) : null,
-    telegram_username: telegramUser.username || null,
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-    consumed: false
-  };
-  await setDoc(doc(firestoreDb, 'telegram_pairings', pairing.id), pairing);
-  return { code, expiresAt: pairing.expires_at, user: target };
-}
-
-async function consumeTelegramPairing(code, userId) {
-  await ensureInit();
-  const q = query(
-    collection(firestoreDb, 'telegram_pairings'),
-    where('code', '==', String(code).trim()),
-    limit(5)
-  );
-  const snap = await getDocs(q);
-  const pairingDoc = snap.docs.find((candidate) => candidate.data().consumed !== true);
-  if (!pairingDoc) return { ok: false, reason: 'invalid' };
-
-  const pairing = pairingDoc.data();
-  if (pairing.user_id !== String(userId)) return { ok: false, reason: 'account' };
-  if (new Date(pairing.expires_at).getTime() < Date.now()) return { ok: false, reason: 'expired' };
-
-  const user = await getUserById(userId);
-  if (!user) return { ok: false, reason: 'account' };
-  const linkedAt = new Date().toISOString();
-  await updateUser(userId, {
-    telegram_chat_id: pairing.chat_id,
-    telegram_user_id: pairing.telegram_user_id,
-    telegram_username: pairing.telegram_username,
-    telegram_linked_at: linkedAt
-  });
-  await updateDoc(doc(firestoreDb, 'telegram_pairings', pairing.id), {
-    consumed: true,
-    consumed_at: linkedAt
-  });
-  return { ok: true, telegram: { linked: true, username: pairing.telegram_username, linkedAt } };
+async function getDarkPairReply(content, userId) {
+  const text = String(content || '').trim();
+  const parts = text.split(/\s+/);
+  const command = (parts[0] || '').toLowerCase();
+  if (command === '/start' || command === '/menu') {
+    return [
+      'DARK PAIR',
+      '',
+      'Quick commands:',
+      '/start — open this menu',
+      '/menu — show available commands',
+      '/pair DARK-CHAT-ID — generate a Dark code',
+      '',
+      'Send /pair followed by your DARK CHAT ID to begin.'
+    ].join('\n');
+  }
+  if (command === '/pair') {
+    const novaId = (parts[1] || '').toUpperCase();
+    if (!novaId) return 'Use this format: /pair DARK-CHAT-ID';
+    const target = await getUserByNovaId(novaId);
+    if (!target || target.is_banned || String(target.id) !== String(userId)) {
+      return 'That DARK CHAT ID does not match this account. Use your own ID and try again.';
+    }
+    const code = String(crypto.randomInt(100000, 1000000));
+    await setDoc(doc(firestoreDb, 'dark_pair_codes', `code_${String(userId)}`), {
+      id: `code_${String(userId)}`,
+      user_id: String(userId),
+      code,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      consumed: false
+    });
+    return [`Your Dark code is: ${code}`, '', 'Keep this code safe. DARK PAIR is now ready for your account.'].join('\n');
+  }
+  return 'Send /start to see the DARK PAIR menu.';
 }
 
 async function deleteUser(id) {
@@ -351,6 +365,7 @@ async function getConversationById(id) {
 
 async function getConversationsForUser(userId) {
   await ensureInit();
+  await ensureDarkPairConversation(userId);
   const q = query(
     collection(firestoreDb, 'conversations'),
     where('member_ids', 'array-contains', String(userId))
@@ -391,6 +406,23 @@ async function getConversationsForUser(userId) {
   });
 
   return list;
+}
+
+async function ensureDarkPairConversation(userId) {
+  if (!userId || String(userId) === 'u_dark_pair') return null;
+  const existing = await findDmBetween(userId, 'u_dark_pair');
+  if (existing) return existing;
+  const now = new Date().toISOString();
+  return createConversation({
+    id: `dm_dark_pair_${String(userId)}`,
+    type: 'dm',
+    ownerId: 'u_dark_pair',
+    memberIds: [String(userId), 'u_dark_pair'],
+    members: {
+      [String(userId)]: { role: 'member', joined_at: now },
+      u_dark_pair: { role: 'owner', joined_at: now }
+    }
+  });
 }
 
 async function findDmBetween(user1Id, user2Id) {
@@ -952,8 +984,8 @@ module.exports = {
   updateUser,
   getAllUsers,
   getUserCount,
-  createTelegramPairing,
-  consumeTelegramPairing,
+  ensureDarkPairConversation,
+  getDarkPairReply,
   deleteUser,
   // Conversations
   createConversation,

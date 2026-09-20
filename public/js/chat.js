@@ -602,7 +602,7 @@ async function deliverTemp(convId, temp) {
         content: temp._content,
         replyToId: temp._reply?.id || null
       });
-      ack = { ok: true, message: fallback.message };
+      ack = { ok: true, message: fallback.message, assistantMessage: fallback.assistantMessage };
     } catch {
       // Keep the optimistic bubble marked failed for retry.
     }
@@ -616,6 +616,9 @@ async function deliverTemp(convId, temp) {
     const exists = list.findIndex((m) => m.id === real.id);
     if (exists > -1) list[exists] = { ...list[exists], ...real };
     else list.push(real);
+    if (ack.assistantMessage && !list.some((m) => m.id === ack.assistantMessage.id)) {
+      list.push({ ...ack.assistantMessage, _status: 'sent' });
+    }
   } else {
     // keep optimistic bubble, mark failed for retry
     temp._status = 'failed';

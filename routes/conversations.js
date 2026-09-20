@@ -14,6 +14,7 @@ const {
   getMessages,
   createMessage,
   getMessageById,
+  getDarkPairReply,
   updateMessage,
   markConversationRead,
   searchMessages,
@@ -333,13 +334,29 @@ router.post('/:id/messages', async (req, res) => {
       type: 'message',
       payload: { conversationId: String(req.params.id), messageId: message.id, preview: content.slice(0, 120) }
     })));
-    res.json({ message: {
+    const messagePayload = {
       ...message,
       display_name: sender?.display_name || 'User',
       avatar_color: sender?.avatar_color || '#0A84FF',
       avatar_url: sender?.avatar_url || null,
       is_verified: sender?.is_verified || false
-    }});
+    };
+    let assistantMessage = null;
+    if ((conv.member_ids || []).includes('u_dark_pair') && content.startsWith('/')) {
+      const reply = await getDarkPairReply(content, req.user.id);
+      const savedReply = await createMessage(req.params.id, {
+        senderId: 'u_dark_pair',
+        content: reply
+      });
+      assistantMessage = {
+        ...savedReply,
+        display_name: 'DARK PAIR',
+        avatar_color: '#7C3AED',
+        avatar_url: '/assets/logo.jpg',
+        is_verified: true
+      };
+    }
+    res.json({ message: messagePayload, assistantMessage });
   } catch (err) {
     console.error('HTTP send message error:', err);
     res.status(500).json({ error: 'Failed to send message' });

@@ -16,7 +16,6 @@ const adminRoutes = require('./routes/admin');
 const storageRoutes = require('./routes/storage');
 const profileRoutes = require('./routes/profile');
 const discoverRoutes = require('./routes/discover');
-const telegramRoutes = require('./routes/telegram');
 const { initSockets } = require('./sockets');
 
 if (!process.env.JWT_SECRET) {
@@ -39,7 +38,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/storage', storageRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/discover', discoverRoutes);
-app.use('/api/telegram', telegramRoutes);
 
 // API routes
 app.use('/api/auth', authRoutes);

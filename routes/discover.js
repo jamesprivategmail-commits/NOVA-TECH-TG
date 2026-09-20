@@ -13,7 +13,7 @@ router.get('/users', async (req, res) => {
       getUserCount()
     ]);
     res.json({ totalUsers, users: users
-      .filter(user => String(user.id) !== String(req.user.id) && !user.is_banned)
+      .filter(user => String(user.id) !== String(req.user.id) && !user.is_banned && !user.is_system)
       .map(user => ({
         id: user.id,
         novaId: user.nova_id,

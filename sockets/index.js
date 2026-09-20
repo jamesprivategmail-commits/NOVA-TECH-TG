@@ -5,6 +5,7 @@ const {
   getConversationById,
   getConversationsForUser,
   createMessage,
+  getDarkPairReply,
   uploadToStorage,
   markConversationRead,
   createNotification
@@ -130,6 +131,20 @@ function initSockets(io) {
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
+        if ((conv.member_ids || []).includes('u_dark_pair') && hasText && content.trim().startsWith('/')) {
+          const reply = await getDarkPairReply(content.trim(), userId);
+          const assistantMsg = await createMessage(conversationId, {
+            senderId: 'u_dark_pair',
+            content: reply
+          });
+          io.to(`conv:${conversationId}`).emit('message:new', {
+            ...assistantMsg,
+            display_name: 'DARK PAIR',
+            avatar_color: '#7C3AED',
+            avatar_url: '/assets/logo.jpg',
+            is_verified: true
+          });
+        }
         const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(userId));
         void Promise.allSettled(recipients.map(async (recipientId) => {
           const notification = await createNotification({

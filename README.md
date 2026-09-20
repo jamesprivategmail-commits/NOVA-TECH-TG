@@ -37,23 +37,9 @@ npm start
 
 Visit `http://localhost:3000`.
 
-## Telegram bot integration
+## DARK PAIR in-app assistant
 
-The first Telegram integration slice supports `/start`, `/menu`, `/ping`, `.ping`, `.menu`, and inline menu buttons. After an account is paired, dot-prefixed commands are the primary syntax: `.ping` checks the connection and `.menu` shows the available commands. Telegram sends updates to the public webhook endpoint `/api/telegram/webhook`.
-
-Configure these environment variables on the deployment:
-
-- `TELEGRAM_BOT_TOKEN` — the token from BotFather; keep it server-side.
-- `TELEGRAM_WEBHOOK_SECRET` — a long random secret used to verify Telegram webhook requests.
-- `TELEGRAM_WEBHOOK_URL` — the full deployed URL ending in `/api/telegram/webhook`.
-
-After deployment, register the webhook and command menu with:
-
-```bash
-npm run telegram:register
-```
-
-The account-pairing flow and the larger command registry will be added after this base bot connection is verified.
+DARK PAIR is a verified special account inside DARK CHAT. It appears as a normal conversation for each user. Open the chat and send `/start` to see the menu, `/menu` to show available commands, or `/pair DARK-CHAT-ID` to generate a six-digit Dark code for the account.
 
 ## How accounts work
 

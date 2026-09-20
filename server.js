@@ -9,6 +9,8 @@ const authRoutes = require('./routes/auth');
 const conversationRoutes = require('./routes/conversations');
 const statusRoutes = require('./routes/status');
 const postRoutes = require('./routes/posts');
+const notificationRoutes = require('./routes/notifications');
+const callRoutes = require('./routes/calls');
 const { initSockets } = require('./sockets');
 
 if (!process.env.JWT_SECRET) {
@@ -27,6 +29,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/status', statusRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/calls', callRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, name: 'NOVA Chat' }));
 

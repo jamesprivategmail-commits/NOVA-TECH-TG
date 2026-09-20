@@ -76,6 +76,26 @@ CREATE TABLE IF NOT EXISTS hidden_messages (
   PRIMARY KEY (message_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  type VARCHAR(32) NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  read_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS call_sessions (
+  id UUID PRIMARY KEY,
+  conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
+  initiator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind VARCHAR(10) NOT NULL CHECK (kind IN ('voice', 'video')),
+  state VARCHAR(16) NOT NULL DEFAULT 'ringing',
+  started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  ended_at TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS statuses (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -129,5 +149,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_reply ON messages(reply_to_id);
 CREATE INDEX IF NOT EXISTS idx_message_reactions_message ON message_reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_saved_messages_user ON saved_messages(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_hidden_messages_user ON hidden_messages(user_id, hidden_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_calls_conversation ON call_sessions(conversation_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_members_user ON conversation_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_statuses_expiry ON statuses(expires_at);

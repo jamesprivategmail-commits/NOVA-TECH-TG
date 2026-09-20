@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 
 function initSockets(io) {
+  const onlineSockets = new Map();
   // Auth middleware for socket connections
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -28,7 +29,18 @@ function initSockets(io) {
     convs.forEach((c) => socket.join(`conv:${c.conversation_id}`));
     socket.join(`user:${userId}`);
 
-    io.emit('presence', { userId, online: true });
+    onlineSockets.set(userId, (onlineSockets.get(userId) || 0) + 1);
+    io.emit('presence', { userId, online: true, connections: onlineSockets.get(userId) });
+
+    socket.on('call:invite', ({ targetUserId, call }) => {
+      if (targetUserId) io.to(`user:${targetUserId}`).emit('call:incoming', { call, fromUserId: userId });
+    });
+    socket.on('call:signal', ({ targetUserId, callId, signal }) => {
+      if (targetUserId && callId && signal) io.to(`user:${targetUserId}`).emit('call:signal', { callId, signal, fromUserId: userId });
+    });
+    socket.on('call:state', ({ targetUserId, callId, state }) => {
+      if (targetUserId && callId && state) io.to(`user:${targetUserId}`).emit('call:state', { callId, state, fromUserId: userId });
+    });
 
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
     socket.on('message:send', async ({ conversationId, content, media, replyToId }, ack) => {
@@ -106,7 +118,10 @@ function initSockets(io) {
 
     socket.on('disconnect', async () => {
       await db.query('UPDATE users SET last_seen = NOW() WHERE id=$1', [userId]);
-      io.emit('presence', { userId, online: false });
+      const remaining = Math.max(0, (onlineSockets.get(userId) || 1) - 1);
+      if (remaining) onlineSockets.set(userId, remaining);
+      else onlineSockets.delete(userId);
+      io.emit('presence', { userId, online: remaining > 0, connections: remaining });
     });
   });
 }

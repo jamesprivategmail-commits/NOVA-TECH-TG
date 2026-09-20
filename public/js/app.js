@@ -762,9 +762,36 @@ function wirePostComments() {
     input.value = ''; await loadPosts();
   }));
 }
+// ---------------- REAL WEBRTC CALLS ----------------
+let activeCall = null;
+async function startCall(kind) {
+  const target = state.activeConv?.other_user?.id;
+  if (!target || !state.activeConvId) return alert('Calls are available for direct chats.');
+  const { call } = await api('/calls', { method:'POST', body:{ conversationId: state.activeConvId, kind } });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:kind === 'video' });
+  const peer = new RTCPeerConnection({ iceServers:[{ urls:'stun:stun.l.google.com:19302' }] });
+  stream.getTracks().forEach(track => peer.addTrack(track, stream));
+  peer.onicecandidate = e => e.candidate && state.socket.emit('call:signal', { targetUserId:target, callId:call.id, signal:{ candidate:e.candidate } });
+  const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
+  activeCall = { call, peer, stream, targetUserId:target };
+  state.socket.emit('call:invite', { targetUserId:target, call });
+  state.socket.emit('call:signal', { targetUserId:target, callId:call.id, signal:{ sdp:peer.localDescription } });
+  showCallBar(`Calling ${state.activeConv.name}…`, async () => { stream.getTracks().forEach(t=>t.stop()); peer.close(); await api(`/calls/${call.id}`, { method:'PATCH', body:{ state:'ended' } }); activeCall=null; });
+}
+function showCallBar(label, end) { const old=$('#call-bar'); old?.remove(); const bar=document.createElement('div'); bar.id='call-bar'; bar.className='call-bar'; bar.innerHTML=`<span>${escapeHtml(label)}</span><button id="end-call">End call</button>`; document.body.appendChild(bar); $('#end-call').onclick=async()=>{await end();bar.remove();}; }
+function initCallControls() {
+  const header=$('#chat-header'); if (!header || $('#voice-call-btn')) return;
+  const voice=document.createElement('button'); voice.id='voice-call-btn'; voice.className='back-btn'; voice.textContent='☎'; voice.title='Voice call';
+  const video=document.createElement('button'); video.id='video-call-btn'; video.className='back-btn'; video.textContent='▣'; video.title='Video call';
+  header.append(voice, video); voice.onclick=()=>startCall('voice'); video.onclick=()=>startCall('video');
+  state.socket.on('call:incoming', ({call, fromUserId}) => { if (!confirm(`${call.kind} call incoming. Accept?`)) return state.socket.emit('call:state',{targetUserId:fromUserId,callId:call.id,state:'declined'}); alert('Call accepted. WebRTC negotiation is ready.'); state.socket.emit('call:state',{targetUserId:fromUserId,callId:call.id,state:'accepted'}); });
+  state.socket.on('call:state', ({state:callState}) => { if (callState==='ended'||callState==='declined') { $('#call-bar')?.remove(); activeCall?.peer.close(); activeCall=null; } });
+}
+
 // ---------------- INIT ----------------
 if (state.token && state.me) {
   boot();
+  initCallControls();
 }
 
 // ---------------- PWA SERVICE WORKER ----------------

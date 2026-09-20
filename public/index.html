@@ -2,391 +2,356 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-<title>NOVA Messenger</title>
-<meta name="description" content="NOVA Messenger — private chats, groups, channels, statuses, and posts">
-<link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
-<link rel="shortcut icon" href="/assets/logo.jpg">
-<link rel="apple-touch-icon" href="/assets/logo.jpg">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DARK CHAT</title>
+<meta name="description" content="DARK CHAT - private chats, groups, channels, statuses and updates.">
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg?v=2">
+<link rel="shortcut icon" type="image/jpeg" href="/assets/logo.jpg?v=2">
+<link rel="apple-touch-icon" href="/assets/logo.jpg?v=2">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#050505">
+<meta name="color-scheme" content="dark">
 <meta property="og:title" content="DARK CHAT">
-<meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, stories, and posts">
-<meta property="og:image" content="https://i.postimg.cc/vmxGsS6k/b3c298e52eb495056209ebfefd8918d3.jpg">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://i.postimg.cc/vmxGsS6k/b3c298e52eb495056209ebfefd8918d3.jpg">
-<link rel="stylesheet" href="/css/style.css">
-<link rel="stylesheet" href="/css/dark-chat.css">
+<meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, statuses and posts">
+<link rel="stylesheet" href="/css/app.css?v=2">
 </head>
 <body>
 
-<!-- AUTH -->
-<div id="auth-screen">
+<!-- ============================================================= -->
+<!-- ICON SPRITE - inline SVG, stroke icons (Lucide-style paths)    -->
+<!-- ============================================================= -->
+<svg class="sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-check" viewBox="0 0 24 24"><path d="m2 13 4 4L14 9"/><path d="m11 15 1.5 1.5L22 7"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+    <symbol id="i-more-vertical" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.8-4.6A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></symbol>
+    <symbol id="i-message-dot" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.8-4.6A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></symbol>
+    <symbol id="i-status" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="0 0 0 0" /><path d="M12 3a9 9 0 0 1 0 18" opacity=".45"/></symbol>
+    <symbol id="i-updates" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h6"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2A3.4 3.4 0 0 1 16 12M18 20a6.6 6.6 0 0 0-1.6-4.3"/></symbol>
+    <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.6"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M19 6v6M16 9h6"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9Z"/><path d="M10.5 20a2 2 0 0 0 3 0"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8L15 10"/></symbol>
+    <symbol id="i-badge-check" viewBox="0 0 24 24"><path d="m12 2.5 2.2 2 3-.3 1 2.8 2.6 1.5-.9 2.9.9 2.9-2.6 1.5-1 2.8-3-.3-2.2 2-2.2-2-3 .3-1-2.8L3.2 14l.9-2.9-.9-2.9 2.6-1.5 1-2.8 3 .3 2.2-2Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.5 3h-2A1.5 1.5 0 0 0 3 4.5C3 12.5 11.5 21 19.5 21a1.5 1.5 0 0 0 1.5-1.5v-2a1.4 1.4 0 0 0-1.1-1.4l-3-.6a1.4 1.4 0 0 0-1.4.5l-.9 1.1a13.5 13.5 0 0 1-6.2-6.2l1.1-.9a1.4 1.4 0 0 0 .5-1.4l-.6-3A1.4 1.4 0 0 0 6.5 3Z"/></symbol>
+    <symbol id="i-phone-off" viewBox="0 0 24 24"><path d="M6.5 3h-2A1.5 1.5 0 0 0 3 4.5a18 18 0 0 0 4.9 12.1"/><path d="M10.5 20.4A18 18 0 0 0 19.5 21a1.5 1.5 0 0 0 1.5-1.5v-2a1.4 1.4 0 0 0-1.1-1.4l-3-.6a1.4 1.4 0 0 0-1.4.5l-.9 1.1a13.6 13.6 0 0 1-3.4-2.4"/><path d="m3 3 18 18"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="2.5"/><path d="m15 10 6-3.5v11L15 14"/></symbol>
+    <symbol id="i-video-off" viewBox="0 0 24 24"><path d="M15 10.5V8.5A2.5 2.5 0 0 0 12.5 6H8"/><path d="M3.5 6.6A2.5 2.5 0 0 0 3 8.5v7A2.5 2.5 0 0 0 5.5 18h7a2.5 2.5 0 0 0 2.2-1.3"/><path d="m15 11 6-3.5v9"/><path d="m3 3 18 18"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></symbol>
+    <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M15 5v-1a3 3 0 0 0-6 0v6"/><path d="M9 12.5a3 3 0 0 0 4.5 2.6"/><path d="M18.5 11a6.5 6.5 0 0 1-9.6 5.7M5.5 11a6.5 6.5 0 0 0 .9 3.3"/><path d="M12 17.5V21M9 21h6"/><path d="m3 3 18 18"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M21 11.5 12.6 20a5 5 0 0 1-7-7l8.3-8.4a3.4 3.4 0 0 1 4.8 4.8l-8.3 8.4a1.8 1.8 0 0 1-2.5-2.5l7.6-7.7"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5.5v13l11-6.5-11-6.5Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5S3.5 15 3.5 9.2A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8C20.5 15 12 20.5 12 20.5Z"/></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-4-6 4v-17Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v4M8 3h8l-1 7 3 3v2H6v-2l3-3-1-7Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 6.5h16M9 6.5V4h6v2.5M6.5 6.5 7.5 21h9l1-14.5"/><path d="M10.5 10v7M13.5 10v7"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m13.5 6.5 3 3"/></symbol>
+    <symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 8Z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16h.01"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4.5L4 8"/><path d="M4 5v3.5h3.5"/><path d="M4 13a8 8 0 0 0 14 4.5L20 16"/><path d="M20 19v-3.5h-3.5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M14 11a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><path d="M5 9h14M4 15h14M10 3 8 21M16 3l-2 18"/></symbol>
+    <symbol id="i-camera-switch" viewBox="0 0 24 24"><path d="M15 5.5h2A3.5 3.5 0 0 1 20.5 9v1"/><path d="M4 12v-2A3.5 3.5 0 0 1 7.5 6.5H9"/><path d="m6.5 8.5 2-2M15.5 17.5l2-2"/><path d="M12 8.5 14 6l-2-2.5"/><path d="M12 17.5 10 20l2 2.5"/></symbol>
+    <symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.6"/><path d="M15.6 12v1.4a2.6 2.6 0 0 0 5 1.1A9.6 9.6 0 1 0 17 20.4"/></symbol>
+    <symbol id="i-camera-plus" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 8Z"/><path d="M12 10.5v5M9.5 13h5"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4v-5Z"/><path d="M16 9a4 4 0 0 1 0 6"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="m3 3 18 18"/><path d="M8.5 13.5a5 5 0 0 1 6-.8"/><path d="M5 10a10 10 0 0 1 4-2.3M2 7a15 15 0 0 1 4.5-2.5M22 7a15 15 0 0 0-7.5-3.4M19 10a10 10 0 0 0-3.5-2"/><path d="M12 20h.01"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================= -->
+<!-- AUTH                                                          -->
+<!-- ============================================================= -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-bg" aria-hidden="true"></div>
   <div class="auth-card">
-    <div class="auth-logo">
-      <img src="/assets/logo.jpg" alt="DARK CHAT" class="auth-logo-img">
-    </div>
-    <div class="auth-title" id="auth-title">Welcome to DARK CHAT</div>
-    <div class="auth-subtitle" id="auth-subtitle">Message your people, your way.</div>
-
-    <div id="auth-error" class="auth-error hidden"></div>
-
-    <!-- signup success reveal -->
-    <div id="nova-id-reveal" class="nova-id-reveal hidden">
-      <div class="label">Your DARK CHAT ID</div>
-      <div class="id" id="revealed-nova-id"></div>
-      <div class="hint">Save this — it's how friends find you. Keep your password safe, it's the only lock on your account.</div>
+    <div class="auth-brand">
+      <img src="/assets/logo.jpg?v=2" alt="" class="auth-logo">
+      <div>
+        <div class="auth-title">DARK CHAT</div>
+        <div class="auth-sub">Message your people, your way.</div>
+      </div>
     </div>
 
-    <form id="signup-form">
-      <div class="field-group">
-        <label>Display name</label>
+    <div id="auth-error" class="alert alert-error hidden" role="alert"></div>
+
+    <div id="nova-id-reveal" class="id-reveal hidden">
+      <div class="id-reveal-label">Your DARK CHAT ID</div>
+      <div class="id-reveal-value" id="revealed-nova-id"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="copy-id-btn">Copy ID</button>
+      <div class="id-reveal-hint">Save this - it is how friends find you. Your password is the only lock on your account.</div>
+      <button type="button" class="btn btn-primary btn-block" id="reveal-continue">Continue to DARK CHAT</button>
+    </div>
+
+    <form id="signup-form" class="auth-form" autocomplete="off">
+      <label class="field">
+        <span class="field-label">Display name</span>
         <input type="text" id="signup-name" placeholder="What should people call you?" maxlength="60" required autocomplete="off">
-      </div>
-      <div class="field-group">
-        <label>Password</label>
+      </label>
+      <label class="field">
+        <span class="field-label">Password</span>
         <input type="password" id="signup-password" placeholder="At least 6 characters" minlength="6" required autocomplete="new-password">
-      </div>
-      <button type="submit" class="btn-primary">Create my DARK CHAT ID</button>
+      </label>
+      <button type="submit" class="btn btn-primary btn-block" id="signup-submit">Create my DARK CHAT ID</button>
     </form>
 
-    <form id="login-form" class="hidden">
-      <div class="field-group">
-        <label>DARK CHAT ID</label>
-        <input type="text" id="login-novaid" placeholder="+1-999-234-8321" required autocomplete="off">
-      </div>
-      <div class="field-group">
-        <label>Password</label>
+    <form id="login-form" class="auth-form hidden" autocomplete="off">
+      <label class="field">
+        <span class="field-label">DARK CHAT ID</span>
+        <input type="text" id="login-novaid" placeholder="+1-626-715-0000" required autocomplete="off">
+      </label>
+      <label class="field">
+        <span class="field-label">Password</span>
         <input type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn-primary">Log in</button>
+      </label>
+      <button type="submit" class="btn btn-primary btn-block" id="login-submit">Log in</button>
     </form>
 
     <div class="auth-toggle">
-      <span id="toggle-to-login">Already have a DARK CHAT ID? <a href="#">Log in</a></span>
-      <span id="toggle-to-signup" class="hidden">New here? <a href="#">Create an account</a></span>
+      <span id="toggle-to-login">Already have a DARK CHAT ID? <button type="button" class="link-btn">Log in</button></span>
+      <span id="toggle-to-signup" class="hidden">New here? <button type="button" class="link-btn">Create an account</button></span>
     </div>
   </div>
 </div>
 
-<!-- APP -->
-<div id="app-screen" class="hidden">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <div class="brand-title-wrap">
-        <img src="/assets/logo.jpg" alt="DARK CHAT Logo" class="sidebar-logo-img">
-        <h1>DARK CHAT</h1>
+<!-- ============================================================= -->
+<!-- APP SHELL                                                     -->
+<!-- ============================================================= -->
+<div id="app" class="app hidden">
+
+  <!-- CHATS -->
+  <section class="screen screen-list active" id="screen-chats" data-screen="chats" aria-label="Chats">
+    <header class="header">
+      <div class="header-left">
+        <button class="avatar-btn" id="me-avatar-btn" aria-label="Your profile">
+          <span class="avatar avatar-sm" id="me-avatar"></span>
+        </button>
+        <div>
+          <div class="header-title">DARK CHAT</div>
+          <div class="header-sub" id="me-id-sub"></div>
+        </div>
       </div>
       <div class="header-actions">
-        <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel" aria-label="Admin panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8 3.5-2.05-.76a6.1 6.1 0 0 0-.66-1.6l.9-2-1.83-1.83-2 .9a6.1 6.1 0 0 0-1.6-.66L12 4h-2l-.76 2.05a6.1 6.1 0 0 0-1.6.66l-2-.9L3.81 7.64l.9 2a6.1 6.1 0 0 0-.66 1.6L2 12v2l2.05.76c.16.56.38 1.1.66 1.6l-.9 2 1.83 1.83 2-.9c.5.28 1.04.5 1.6.66L10 20h2l.76-2.05a6.1 6.1 0 0 0 1.6-.66l2 .9 1.83-1.83-.9-2c.28-.5.5-1.04.66-1.6L20 14v-2Z"/></svg></button>
-        <button class="icon-btn" id="notifications-btn" title="Notifications" aria-label="Notifications"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/></svg></button>
-        <button class="me-avatar-btn" id="me-avatar" title="You"></button>
+        <button class="icon-btn" id="admin-btn" aria-label="Admin panel" title="Admin" hidden>
+          <svg class="icon"><use href="#i-shield"></use></svg>
+        </button>
+        <button class="icon-btn" id="notifications-btn" aria-label="Notifications" title="Notifications">
+          <svg class="icon"><use href="#i-bell"></use></svg>
+          <span class="badge hidden" id="notif-badge">0</span>
+        </button>
+        <button class="icon-btn" id="new-chat-btn" aria-label="New chat" title="New chat">
+          <svg class="icon"><use href="#i-plus"></use></svg>
+        </button>
       </div>
-    </div>
-
-    <div class="tabbar">
-      <button data-tab="chats" class="active">Chats</button>
-      <button data-tab="status">Status</button>
-      <button data-tab="posts">Updates</button>
-      <button data-tab="discover">Discover</button>
-    </div>
-
-    <label class="conversation-search" for="conversation-search-input">
-      <span aria-hidden="true" class="icon icon-search"></span>
-      <input id="conversation-search-input" type="search" placeholder="Search conversations" autocomplete="off">
+    </header>
+    <label class="search" for="chats-search">
+      <svg class="icon"><use href="#i-search"></use></svg>
+      <input id="chats-search" type="search" placeholder="Search conversations" autocomplete="off">
     </label>
+    <div class="chips" id="chat-filters">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="unread">Unread</button>
+      <button class="chip" data-filter="groups">Groups</button>
+      <button class="chip" data-filter="channels">Channels</button>
+    </div>
+    <div class="content scroll" id="chats-list" aria-live="polite"></div>
+  </section>
 
-    <!-- CHATS TAB -->
-    <div id="tab-chats">
-      <button class="new-chat-btn" id="new-chat-btn"><span class="button-icon">+</span> New Chat</button>
-      <div class="conv-list" id="conv-list"></div>
+  <!-- STATUS -->
+  <section class="screen screen-list" id="screen-status" data-screen="status" aria-label="Status" hidden>
+    <header class="header">
+      <div class="header-left">
+        <div class="header-title">Status</div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="new-status-btn" aria-label="Create status" title="Create status">
+          <svg class="icon"><use href="#i-camera-plus"></use></svg>
+        </button>
+      </div>
+    </header>
+    <div class="content scroll" id="status-list" aria-live="polite"></div>
+  </section>
+
+  <!-- POSTS / UPDATES -->
+  <section class="screen screen-list" id="screen-posts" data-screen="posts" aria-label="Updates" hidden>
+    <header class="header">
+      <div class="header-left"><div class="header-title">Updates</div></div>
+    </header>
+    <div class="content scroll" id="posts-list" aria-live="polite"></div>
+  </section>
+
+  <!-- DISCOVER -->
+  <section class="screen screen-list" id="screen-discover" data-screen="discover" aria-label="Discover" hidden>
+    <header class="header">
+      <div class="header-left"><div class="header-title">Discover</div></div>
+    </header>
+    <label class="search" for="discover-search">
+      <svg class="icon"><use href="#i-search"></use></svg>
+      <input id="discover-search" type="search" placeholder="Search people by name or DARK CHAT ID" autocomplete="off">
+    </label>
+    <div class="content scroll" id="discover-list" aria-live="polite"></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="screen screen-list" id="screen-profile" data-screen="profile" aria-label="Profile" hidden>
+    <header class="header">
+      <div class="header-left">
+        <button class="icon-btn" id="profile-edit-btn" aria-label="Edit profile" title="Edit profile">
+          <svg class="icon"><use href="#i-edit"></use></svg>
+        </button>
+        <div class="header-title">Profile</div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="profile-settings-btn" aria-label="Settings" title="Settings">
+          <svg class="icon"><use href="#i-settings"></use></svg>
+        </button>
+      </div>
+    </header>
+    <div class="content scroll" id="profile-content"></div>
+  </section>
+
+  <!-- CHAT (conversation) -->
+  <section class="screen chat-screen" id="screen-chat" data-screen="chat" aria-label="Conversation" hidden>
+    <header class="chat-header">
+      <button class="icon-btn back" id="chat-back" aria-label="Back">
+        <svg class="icon"><use href="#i-arrow-left"></use></svg>
+      </button>
+      <button class="chat-user" id="chat-user-btn">
+        <span class="avatar avatar-sm" id="chat-avatar"></span>
+        <span class="chat-user-info">
+          <span class="chat-user-name truncate" id="chat-title"></span>
+          <span class="chat-user-state truncate" id="chat-sub"></span>
+        </span>
+      </button>
+      <div class="chat-header-actions">
+        <button class="icon-btn" id="chat-call-btn" aria-label="Voice call" title="Voice call">
+          <svg class="icon"><use href="#i-phone"></use></svg>
+        </button>
+        <button class="icon-btn" id="chat-video-btn" aria-label="Video call" title="Video call">
+          <svg class="icon"><use href="#i-video"></use></svg>
+        </button>
+        <button class="icon-btn" id="chat-search-btn" aria-label="Search in conversation" title="Search in conversation">
+          <svg class="icon"><use href="#i-search"></use></svg>
+        </button>
+        <button class="icon-btn" id="chat-more-btn" aria-label="Conversation options" title="Options">
+          <svg class="icon"><use href="#i-more-vertical"></use></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="chat-searchbar hidden" id="chat-searchbar">
+      <svg class="icon"><use href="#i-search"></use></svg>
+      <input id="chat-search-input" type="search" placeholder="Search in conversation" autocomplete="off">
+      <button class="icon-btn" id="chat-search-close" aria-label="Close search"><svg class="icon"><use href="#i-x"></use></svg></button>
     </div>
 
-    <!-- STATUS TAB -->
-    <div id="tab-status" class="hidden">
-      <div class="status-list" id="status-list"></div>
+    <div class="pinned-bar hidden" id="pinned-bar"></div>
+
+    <div class="messages scroll" id="messages" aria-live="polite"></div>
+
+    <div class="typing-indicator hidden" id="typing-indicator"></div>
+
+    <div class="reply-preview hidden" id="reply-preview">
+      <div class="reply-preview-body">
+        <span class="reply-preview-name" id="reply-preview-name"></span>
+        <span class="reply-preview-text truncate" id="reply-preview-text"></span>
+      </div>
+      <button class="icon-btn" id="reply-cancel" aria-label="Cancel reply"><svg class="icon"><use href="#i-x"></use></svg></button>
     </div>
 
-    <!-- POSTS TAB -->
-    <div id="tab-posts" class="hidden" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
-      <div class="new-post-box">
-        <textarea id="new-post-text" rows="2" placeholder="Share something..." maxlength="500"></textarea>
-        <img id="post-image-preview" class="post-image-preview">
-        <div class="post-toolbar">
-          <input type="file" id="post-image-input" accept="image/*" class="hidden">
-          <button class="composer-icon-btn" id="post-image-btn" title="Add image" aria-label="Add image"><span class="icon icon-image"></span></button>
-          <button class="btn-primary" id="new-post-btn">Post</button>
+    <div class="attachment-preview hidden" id="attachment-preview">
+      <div class="attachment-preview-inner" id="attachment-preview-inner"></div>
+      <div class="attachment-progress" id="attachment-progress"><span></span></div>
+      <button class="icon-btn" id="attachment-cancel" aria-label="Remove attachment"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+
+    <form class="composer" id="composer">
+      <textarea id="composer-input" class="composer-input" rows="1" placeholder="Message" aria-label="Message" autocomplete="off"></textarea>
+      <button type="button" class="composer-icon-btn" id="composer-emoji" aria-label="Emoji"><svg class="icon"><use href="#i-smile"></use></svg></button>
+      <button type="button" class="composer-icon-btn" id="composer-attach" aria-label="Attach"><svg class="icon"><use href="#i-paperclip"></use></svg></button>
+      <button type="button" class="composer-icon-btn" id="composer-voice" aria-label="Record voice note"><svg class="icon"><use href="#i-mic"></use></svg></button>
+      <button type="submit" class="send" id="send-btn" aria-label="Send">
+        <svg class="icon"><use href="#i-send"></use></svg>
+      </button>
+      <input type="file" id="attach-input" class="hidden">
+    </form>
+  </section>
+
+  <!-- CALL -->
+  <section class="screen call-screen" id="screen-call" data-screen="call" aria-label="Call" hidden>
+    <div class="call-top">
+      <span class="call-peer-name truncate" id="call-peer-name"></span>
+      <span class="call-mode" id="call-mode">VOICE</span>
+    </div>
+    <div class="call-stage" id="call-stage">
+      <video id="remote-video" class="call-video remote hidden" autoplay playsinline></video>
+      <video id="local-video" class="call-video local hidden" autoplay muted playsinline></video>
+      <audio id="remote-audio" autoplay></audio>
+      <div class="call-center" id="call-center">
+        <div class="call-avatar-wrap">
+          <div class="avatar avatar-xl" id="call-avatar"></div>
+          <div class="call-pulse" aria-hidden="true"></div>
         </div>
+        <div class="call-name" id="call-name"></div>
+        <div class="call-state" id="call-state">Ringing...</div>
       </div>
-      <div class="posts-list" id="posts-list"></div>
     </div>
+    <div class="call-controls" id="call-controls">
+      <button class="call-btn" id="call-mute" aria-label="Mute microphone"><svg class="icon"><use href="#i-mic"></use></svg></button>
+      <button class="call-btn" id="call-camera" aria-label="Toggle camera"><svg class="icon"><use href="#i-video"></use></svg></button>
+      <button class="call-btn call-btn-danger" id="call-end" aria-label="End call"><svg class="icon"><use href="#i-phone-off"></use></svg></button>
+    </div>
+    <div class="call-incoming" id="call-incoming" hidden>
+      <button class="call-btn call-btn-accept" id="call-accept" aria-label="Accept call"><svg class="icon"><use href="#i-phone"></use></svg></button>
+      <button class="call-btn call-btn-danger" id="call-decline" aria-label="Decline call"><svg class="icon"><use href="#i-phone-off"></use></svg></button>
+    </div>
+  </section>
 
-    <!-- DISCOVER TAB: real existing users, message only -->
-    <div id="tab-discover" class="hidden" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
-      <label class="conversation-search discover-search" for="discover-search-input">
-        <span aria-hidden="true" class="icon icon-search"></span>
-        <input id="discover-search-input" type="search" placeholder="Search people to message" autocomplete="off">
-      </label>
-      <div class="discover-list" id="discover-list"></div>
-    </div>
-  </div>
-
-  <div class="chat-view" id="chat-view">
-    <div class="empty-state" id="chat-empty">
-      <div class="icon icon-chat" aria-hidden="true"></div>
-      <div class="title">Select a conversation</div>
-      <div class="subtitle">Pick a chat, or start a new one with a friend's DARK CHAT ID.</div>
-    </div>
-
-    <div id="chat-active" class="hidden" style="display:flex; flex-direction:column; height:100%;">
-      <div class="chat-header">
-          <button class="back-btn" id="chat-back" aria-label="Back"><span class="icon icon-back"></span></button>
-        <div class="avatar sm" id="chat-avatar"></div>
-        <div style="flex:1;" id="chat-header-info">
-          <div class="title" id="chat-title"></div>
-          <div class="subtitle" id="chat-subtitle"></div>
-        </div>
-        <div class="chat-header-actions" aria-label="Conversation actions">
-          <button class="back-btn chat-action-btn" id="chat-call-btn" title="Voice call" aria-label="Voice call"><span class="icon icon-phone"></span></button>
-          <button class="back-btn chat-action-btn" id="chat-video-btn" title="Video call" aria-label="Video call"><span class="icon icon-video"></span></button>
-          <button class="back-btn chat-action-btn" id="chat-search-btn" title="Search this chat" aria-label="Search this chat"><span class="icon icon-search"></span></button>
-          <button class="back-btn chat-action-btn" id="chat-more-btn" title="More options" aria-label="More options"><span class="icon icon-more"></span></button>
-        </div>
-        <button class="back-btn hidden" id="chat-manage-btn" title="Manage">⋮</button>
-      </div>
-      <div class="chat-tools-menu hidden" id="chat-tools-menu" role="menu">
-        <button data-chat-tool="media">Media, links &amp; docs</button>
-        <button data-chat-tool="mute">Mute notifications</button>
-        <button data-chat-tool="pin">Pin chat</button>
-        <button data-chat-tool="archive">Archive chat</button>
-        <button data-chat-tool="clear">Clear chat</button>
-      </div>
-      <div class="messages-area" id="messages-area"></div>
-      <div class="composer">
-        <input type="file" id="image-input" accept="image/*" class="hidden">
-        <input type="file" id="file-input" accept="image/*,video/*,audio/*,.pdf,.zip,.txt,.doc,.docx" class="hidden">
-        <button class="composer-icon-btn" id="file-btn" title="Attach file" aria-label="Attach file"><span class="icon icon-clip"></span></button>
-        <button class="composer-icon-btn" id="image-btn" title="Send image" aria-label="Send image"><span class="icon icon-image"></span></button>
-        <button class="composer-icon-btn" id="voice-btn" title="Record voice note" aria-label="Record voice note"><span class="icon icon-mic"></span></button>
-        <textarea id="composer-input" rows="1" placeholder="Message"></textarea>
-        <button class="send-btn" id="send-btn" aria-label="Send message"><span class="icon icon-send"></span></button>
-      </div>
-    </div>
-  </div>
-  <nav class="mobile-nav" aria-label="Primary navigation">
-    <button data-tab="chats" class="active"><span class="icon icon-chat"></span><small>Chats</small></button>
-    <button data-tab="status"><span class="icon icon-status"></span><small>Status</small></button>
-    <button data-tab="posts"><span class="icon icon-updates"></span><small>Updates</small></button>
-    <button data-tab="discover"><span class="icon icon-discover"></span><small>Discover</small></button>
-    <button id="mobile-profile-btn"><span class="icon icon-user"></span><small>Profile</small></button>
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" aria-label="Primary">
+    <button class="nav active" data-tab="chats"><svg class="icon"><use href="#i-message-dot"></use></svg><small>Chats</small><span class="nav-dot hidden" id="nav-dot-chats"></span></button>
+    <button class="nav" data-tab="status"><svg class="icon"><use href="#i-status"></use></svg><small>Status</small></button>
+    <button class="nav" data-tab="posts"><svg class="icon"><use href="#i-updates"></use></svg><small>Updates</small></button>
+    <button class="nav" data-tab="discover"><svg class="icon"><use href="#i-compass"></use></svg><small>Discover</small></button>
+    <button class="nav" data-tab="profile"><svg class="icon"><use href="#i-user"></use></svg><small>Profile</small></button>
   </nav>
 </div>
 
-<div id="call-modal" class="modal-backdrop hidden" aria-hidden="true">
-  <div class="call-card">
-    <div class="call-card-header">
-      <div>
-        <div id="call-modal-title" class="call-title">Incoming call</div>
-        <div id="call-modal-subtitle" class="call-subtitle">Waiting for response</div>
-      </div>
-      <span id="call-modal-kind" class="call-kind">VOICE</span>
-    </div>
-    <div class="call-stage">
-      <audio id="remote-audio" autoplay></audio>
-      <video id="remote-video" autoplay playsinline></video>
-      <video id="local-video" autoplay muted playsinline></video>
-      <div id="call-avatar" class="call-avatar"></div>
-    </div>
-    <div id="incoming-call-actions" class="call-actions">
-      <button id="accept-call-btn" class="call-accept" type="button">Accept</button>
-      <button id="decline-call-btn" class="call-decline" type="button">Decline</button>
-    </div>
-    <div id="active-call-actions" class="call-actions hidden">
-      <button id="toggle-mic-btn" type="button">Mute</button>
-      <button id="toggle-camera-btn" type="button">Camera</button>
-      <button id="end-call-btn" class="call-decline" type="button">End call</button>
-    </div>
-  </div>
+<!-- ============================================================= -->
+<!-- OVERLAYS                                                      -->
+<!-- ============================================================= -->
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet scroll" id="sheet" role="dialog" aria-modal="true"></div>
 </div>
 
-<!-- NEW CHAT MODAL -->
-<div id="new-chat-modal" class="modal-backdrop hidden">
-  <div class="modal-card">
-      <button class="modal-close" id="close-new-chat">Close</button>
-    <h2>New</h2>
-    <div class="modal-tabs">
-      <button data-newtab="dm" class="active">Direct Message</button>
-      <button data-newtab="group">Group</button>
-      <button data-newtab="channel">Channel</button>
-      <button data-newtab="join">Join Link</button>
-    </div>
-    <div id="modal-error" class="modal-error hidden"></div>
+<div class="viewer" id="viewer" hidden></div>
 
-    <div id="newtab-dm">
-      <div class="field-group">
-        <label>Friend's DARK CHAT ID</label>
-        <input type="text" id="dm-novaid" placeholder="+1-626-715-1xxx">
-      </div>
-      <button class="btn-primary" id="dm-start-btn">Start Chat</button>
-    </div>
+<div class="toast-host" id="toast-host" aria-live="polite"></div>
 
-    <div id="newtab-group" class="hidden">
-      <div class="field-group">
-        <label>Group name</label>
-        <input type="text" id="group-name" placeholder="Weekend Squad">
-      </div>
-      <div class="field-group">
-        <label>Members (DARK CHAT IDs, comma separated)</label>
-        <input type="text" id="group-members" placeholder="NOVA-111111, NOVA-222222">
-      </div>
-      <button class="btn-primary" id="group-create-btn">Create Group</button>
-    </div>
-
-    <div id="newtab-channel" class="hidden">
-      <div class="field-group">
-        <label>Channel name</label>
-        <input type="text" id="channel-name" placeholder="Announcements">
-      </div>
-      <button class="btn-primary" id="channel-create-btn">Create Channel</button>
-    </div>
-
-    <div id="newtab-join" class="hidden">
-      <div class="field-group">
-        <label>DARK CHAT invite link or code</label>
-        <input type="text" id="join-code" placeholder="Paste a dark.chat/ or invite code">
-      </div>
-      <button class="btn-primary" id="join-btn">Join</button>
-    </div>
-  </div>
-</div>
-
-<!-- MANAGE GROUP MODAL -->
-<div id="manage-group-modal" class="modal-backdrop hidden">
-  <div class="modal-card">
-    <button class="modal-close" id="close-manage-group">Done</button>
-    <h2 id="manage-group-title">Manage Group</h2>
-    <div id="manage-group-error" class="modal-error hidden"></div>
-
-    <div class="field-group" id="manage-invite-link-group">
-      <label>DARK CHAT invite link</label>
-      <div class="invite-link-box">
-        <input type="text" id="manage-invite-link" readonly>
-        <button id="manage-copy-link-btn">Copy</button>
-      </div>
-    </div>
-
-    <div class="field-group" id="manage-rename-group">
-      <label>Group name</label>
-      <input type="text" id="manage-group-name" placeholder="Group name">
-      <button class="btn-primary" id="manage-rename-btn" style="margin-top:8px;">Rename</button>
-    </div>
-
-    <div class="field-group" id="manage-add-group">
-      <label>Add member (DARK CHAT ID)</label>
-      <input type="text" id="manage-add-novaid" placeholder="+1-626-715-1xxx">
-      <button class="btn-primary" id="manage-add-btn" style="margin-top:8px;">Add</button>
-    </div>
-
-    <div class="field-group">
-      <label>Members</label>
-      <div id="manage-members-list"></div>
-    </div>
-
-    <button class="btn-ghost" id="manage-leave-btn">Leave Group</button>
-    <button class="btn-danger hidden" id="manage-delete-btn" style="margin-top:8px;">Delete Group</button>
-  </div>
-</div>
-
-<!-- WHATSAPP-STYLE PROFILE PAGE -->
-<div id="profile-page" class="profile-page hidden">
-  <button class="profile-back" id="profile-back-btn">‹</button>
-  <div class="profile-hero">
-    <div class="avatar lg" id="profile-avatar"></div>
-    <div class="name" id="profile-name"></div>
-    <div class="novaid" id="profile-novaid"></div>
-  </div>
-  <div class="profile-body" id="profile-body"></div>
-</div>
-
-<!-- ADMIN PANEL MODAL -->
-<!-- PROFILE + SETTINGS MODAL -->
-<div id="profile-modal" class="modal-backdrop hidden" aria-hidden="true">
-  <div class="modal-card profile-settings-card">
-    <button class="modal-close" id="profile-close-btn" type="button">Close</button>
-    <div class="profile-modal-heading">
-      <div class="avatar lg" id="profile-edit-avatar"></div>
-      <div>
-        <h2 id="profile-edit-title">Your profile</h2>
-        <p id="profile-edit-id" class="profile-id-label"></p>
-      </div>
-    </div>
-    <div id="profile-form-error" class="modal-error hidden"></div>
-    <form id="profile-edit-form">
-      <div class="field-group"><label for="profile-display-name">Display name</label><input id="profile-display-name" maxlength="60" required></div>
-      <div class="field-group"><label for="profile-bio">About</label><textarea id="profile-bio" maxlength="160" rows="3" placeholder="Tell people about yourself"></textarea></div>
-      <div class="field-group"><label for="profile-avatar-input">Profile photo</label><input id="profile-avatar-input" type="file" accept="image/*"></div>
-      <div class="settings-section-title">Privacy &amp; notifications</div>
-      <label class="setting-toggle"><span>Show online status</span><input id="setting-online" type="checkbox" checked><i></i></label>
-      <label class="setting-toggle"><span>Read receipts</span><input id="setting-receipts" type="checkbox" checked><i></i></label>
-      <label class="setting-toggle"><span>Message notifications</span><input id="setting-notifications" type="checkbox" checked><i></i></label>
-      <button class="btn-primary" id="profile-save-btn" type="submit">Save changes</button>
-    </form>
-    <button class="btn-danger profile-logout-btn" id="profile-logout-btn" type="button">Log out</button>
-  </div>
-</div>
-
-<div id="notifications-modal" class="modal-backdrop hidden" aria-hidden="true">
-  <div class="modal-card notifications-card">
-    <button class="modal-close" id="notifications-close-btn" type="button">Close</button>
-    <h2>Notifications</h2>
-    <div id="notifications-list" class="notifications-list"></div>
-    <button class="btn-ghost notifications-read-btn" id="notifications-read-btn" type="button">Mark all as read</button>
-  </div>
-</div>
-
-<div id="public-profile-modal" class="modal-backdrop hidden" aria-hidden="true">
-  <div class="modal-card" id="profile-card"></div>
-</div>
-
-<div id="admin-modal" class="modal-backdrop hidden">
-  <div class="modal-card" style="max-width:480px;">
-    <button class="modal-close" id="close-admin-panel">Done</button>
-    <h2>Admin Panel</h2>
-    <div id="admin-error" class="modal-error hidden"></div>
-    <div class="field-group">
-      <input type="text" id="admin-search" placeholder="Search by DARK CHAT ID or name">
-    </div>
-    <div id="admin-users-list"></div>
-  </div>
-</div>
-
-<!-- ADD STATUS MODAL -->
-<div id="new-status-modal" class="modal-backdrop hidden">
-  <div class="modal-card">
-    <button class="modal-close" id="close-new-status">Cancel</button>
-    <h2>New Status</h2>
-    <div id="status-error" class="modal-error hidden"></div>
-    <div class="field-group">
-      <label>What's up?</label>
-      <input type="text" id="status-text" placeholder="Feeling good today..." maxlength="300">
-    </div>
-    <div class="field-group">
-      <label for="status-media-input">Photo or video</label>
-      <input type="file" id="status-media-input" accept="image/*,video/*">
-      <div id="status-media-preview" class="status-media-preview"></div>
-    </div>
-    <div class="field-group">
-      <label>Color</label>
-      <div id="status-colors" style="display:flex; gap:8px;"></div>
-    </div>
-    <button class="btn-primary" id="status-post-btn">Post Status (24h)</button>
-  </div>
-</div>
-
-<!-- STATUS VIEWER -->
-<div id="status-viewer" class="status-viewer-backdrop hidden"></div>
-
-<script src="/socket.io/socket.io.js"></script>
-<script src="/js/app.js"></script>
+<script type="module" src="/js/app.js"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ async function updateProfileSettings(userId, updates = {}) {
   const user = await getUserById(userId);
   if (!user) return null;
   const current = user.privacy_settings || {};
-  const allowed = ['online', 'lastSeen', 'profilePhoto', 'bio', 'status', 'whoCanMessage', 'whoCanAddToGroups', 'readReceipts'];
+  const allowed = ['online', 'lastSeen', 'profilePhoto', 'bio', 'status', 'whoCanMessage', 'whoCanAddToGroups', 'readReceipts', 'notifications'];
   const privacy = { ...current };
   for (const key of allowed) {
     if (updates[key] !== undefined) privacy[key] = updates[key];

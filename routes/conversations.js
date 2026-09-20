@@ -342,7 +342,7 @@ router.post('/:id/messages', async (req, res) => {
       is_verified: sender?.is_verified || false
     };
     let assistantMessage = null;
-    if ((conv.member_ids || []).includes('u_dark_pair') && content.startsWith('/')) {
+    if ((conv.member_ids || []).includes('u_dark_pair') && (content.startsWith('/') || /^\d{6}$/.test(content))) {
       const reply = await getDarkPairReply(content, req.user.id);
       const savedReply = await createMessage(req.params.id, {
         senderId: 'u_dark_pair',

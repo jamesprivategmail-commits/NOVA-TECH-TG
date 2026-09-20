@@ -39,7 +39,7 @@ Visit `http://localhost:3000`.
 
 ## DARK PAIR in-app assistant
 
-DARK PAIR is a verified special account inside DARK CHAT. It appears as a normal conversation for each user. Open the chat and send `/start` to see the menu, `/menu` to show available commands, or `/pair DARK-CHAT-ID` to generate a six-digit Dark code for the account.
+DARK PAIR is a verified special account inside DARK CHAT. It appears as a normal conversation for each user. Open the chat and send `/start` to see the menu, `/menu` to show available commands, or `/pair DARK-CHAT-ID` to generate a six-digit Dark code. Reply with that six-digit code directly in the same chat to confirm pairing; no separate Settings field is required.
 
 ## How accounts work
 

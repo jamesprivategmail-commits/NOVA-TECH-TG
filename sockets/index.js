@@ -131,7 +131,7 @@ function initSockets(io) {
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
-        if ((conv.member_ids || []).includes('u_dark_pair') && hasText && content.trim().startsWith('/')) {
+        if ((conv.member_ids || []).includes('u_dark_pair') && hasText && (content.trim().startsWith('/') || /^\d{6}$/.test(content.trim()))) {
           const reply = await getDarkPairReply(content.trim(), userId);
           const assistantMsg = await createMessage(conversationId, {
             senderId: 'u_dark_pair',

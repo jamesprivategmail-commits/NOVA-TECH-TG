@@ -45,6 +45,9 @@ export function initChat() {
     replyName: $('#reply-preview-name'),
     replyText: $('#reply-preview-text'),
     replyCancel: $('#reply-cancel'),
+    darkPairCodeBar: $('#dark-pair-code-bar'),
+    darkPairCodeInput: $('#dark-pair-code-input'),
+    darkPairCodeSubmit: $('#dark-pair-code-submit'),
     composer: $('#composer'),
     input: $('#composer-input'),
     sendBtn: $('#send-btn'),
@@ -67,6 +70,10 @@ export function initChat() {
   els.moreBtn?.addEventListener('click', openChatMenu);
   els.replyCancel?.addEventListener('click', clearReply);
   els.attachCancel?.addEventListener('click', clearAttachment);
+  els.darkPairCodeSubmit?.addEventListener('click', submitDarkPairCode);
+  els.darkPairCodeInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitDarkPairCode(); }
+  });
 
   els.composer?.addEventListener('submit', (e) => { e.preventDefault(); handleSend(); });
   els.input?.addEventListener('input', onInput);
@@ -100,6 +107,7 @@ export async function openConversation(conv) {
   els.screen.classList.add('active');
   document.querySelectorAll('.screen-list').forEach((s) => s.classList.add('chat-open'));
   renderHeader();
+  els.darkPairCodeBar?.classList.toggle('hidden', conv.other_user?.id !== 'u_dark_pair');
   markRead(conv.id);
   els.messages.innerHTML = `<div style="padding:20px">${emptyState({ iconName: 'message', title: 'Loading messages', subtitle: '' })}</div>`;
   joinConversation(conv.id);
@@ -115,6 +123,17 @@ export async function openConversation(conv) {
     $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
   }
   setTimeout(() => els.input?.focus(), 80);
+}
+
+function submitDarkPairCode() {
+  const code = els.darkPairCodeInput?.value.trim() || '';
+  if (!/^\d{6}$/.test(code)) {
+    toast('Enter the six-digit Dark code');
+    return;
+  }
+  els.input.value = code;
+  els.darkPairCodeInput.value = '';
+  handleSend();
 }
 
 export function closeConversation() {

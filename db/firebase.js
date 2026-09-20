@@ -284,15 +284,12 @@ async function getDarkPairReply(content, userId) {
   const parts = text.split(/\s+/);
   const command = (parts[0] || '').toLowerCase();
   if (/^\d{6}$/.test(text)) {
-    const codeRef = doc(firestoreDb, 'dark_pair_codes', `code_${String(userId)}`);
-    const codeSnap = await getDoc(codeRef);
-    if (!codeSnap.exists()) return 'No active Dark code found. Send /pair YOUR-DARK-CHAT-ID first.';
-    const pairing = codeSnap.data();
-    if (pairing.consumed || pairing.code !== text) return 'That Dark code is invalid. Send /pair YOUR-DARK-CHAT-ID to generate a new one.';
-    if (new Date(pairing.expires_at).getTime() < Date.now()) return 'That Dark code has expired. Send /pair YOUR-DARK-CHAT-ID to generate a new one.';
+    const currentUser = await getUserById(userId);
+    if (!currentUser?.dark_pair_code) return 'No active Dark code found. Send /pair YOUR-DARK-CHAT-ID first.';
+    if (currentUser.dark_pair_code_consumed || currentUser.dark_pair_code !== text) return 'That Dark code is invalid. Send /pair YOUR-DARK-CHAT-ID to generate a new one.';
+    if (new Date(currentUser.dark_pair_code_expires_at).getTime() < Date.now()) return 'That Dark code has expired. Send /pair YOUR-DARK-CHAT-ID to generate a new one.';
     const linkedAt = new Date().toISOString();
-    await updateDoc(codeRef, { consumed: true, consumed_at: linkedAt });
-    await updateUser(userId, { dark_pair_linked: true, dark_pair_linked_at: linkedAt });
+    await updateUser(userId, { dark_pair_code_consumed: true, dark_pair_code_consumed_at: linkedAt, dark_pair_linked: true, dark_pair_linked_at: linkedAt });
     return 'DARK PAIR is now paired with your account. Send /menu to see available commands.';
   }
   if (command === '/start' || command === '/menu') {
@@ -319,13 +316,12 @@ async function getDarkPairReply(content, userId) {
       ].join('\n');
     }
     const code = String(crypto.randomInt(100000, 1000000));
-    await setDoc(doc(firestoreDb, 'dark_pair_codes', `code_${String(userId)}`), {
-      id: `code_${String(userId)}`,
-      user_id: String(userId),
-      code,
-      created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      consumed: false
+    await updateUser(userId, {
+      dark_pair_code: code,
+      dark_pair_code_created_at: new Date().toISOString(),
+      dark_pair_code_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      dark_pair_code_consumed: false,
+      dark_pair_linked: false
     });
     return [`Your Dark code is: ${code}`, '', 'Reply with the six-digit code in this chat to confirm pairing.'].join('\n');
   }

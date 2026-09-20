@@ -86,7 +86,7 @@ $('#toggle-to-signup a').addEventListener('click', (e) => {
   $('#signup-form').classList.remove('hidden');
   $('#toggle-to-signup').classList.add('hidden');
   $('#toggle-to-login').classList.remove('hidden');
-  $('#auth-title').textContent = 'Welcome to NOVA';
+  $('#auth-title').textContent = 'Welcome to DARK CHAT';
   $('#auth-subtitle').textContent = 'Message your people, your way.';
   hideAuthError();
 });

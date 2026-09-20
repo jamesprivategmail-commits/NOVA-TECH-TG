@@ -1,8 +1,8 @@
-# NOVA Chat
+# DARK CHAT
 
 A real-time messaging platform for you and your friends — DMs, groups, channels,
 24-hour status updates, and a posts feed. iMessage-inspired UI. No phone number
-required: signing up generates you a unique **NOVA ID** (like `NOVA-482913`) that's
+required: signing up generates you a unique **DARK CHAT ID** (like `NOVA-482913`) that's
 secured by your password — that's your "number."
 
 ## Stack
@@ -23,7 +23,7 @@ secured by your password — that's your "number."
    npm run migrate
    ```
    Alternatively, run it locally against the Railway Postgres by copying `DATABASE_URL` into a local `.env` and running `npm run migrate` on your machine.
-5. Railway will detect `npm start` from `railway.json` / `package.json` and deploy. Once live, visit your Railway-provided URL — you'll land on the NOVA sign-up screen.
+5. Railway will detect `npm start` from `railway.json` / `package.json` and deploy. Once live, visit your Railway-provided URL — you'll land on the DARK CHAT sign-up screen.
 
 ## Running locally
 
@@ -39,10 +39,10 @@ Visit `http://localhost:3000`.
 
 ## How accounts work
 
-- Sign up with just a display name + password. NOVA generates you a unique ID
-  (`NOVA-XXXXXX`) — that's shown once at signup, save it. It's how friends find
+- Sign up with just a display name + password. DARK CHAT generates you a unique ID
+  (`+1-626-715-1xxx`) — that's shown once at signup, save it. It's how friends find
   you to start a DM or add you to a group.
-- Log back in anytime with your NOVA ID + password.
+- Log back in anytime with your DARK CHAT ID + password.
 - There's no email/phone recovery flow yet — if you lose your password, you lose
   the account. Fine for a friends-group app; add a recovery flow before opening
   this up more broadly.
@@ -51,7 +51,7 @@ Visit `http://localhost:3000`.
 
 | Feature | Status |
 |---|---|
-| Auth (NOVA ID + password) | ✅ |
+| Auth (DARK CHAT ID + password) | ✅ |
 | Direct messages (real-time) | ✅ |
 | Group chats | ✅ |
 | Channels (broadcast, invite code to join) | ✅ |

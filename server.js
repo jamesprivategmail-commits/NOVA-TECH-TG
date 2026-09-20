@@ -32,7 +32,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/calls', callRoutes);
 
-app.get('/api/health', (req, res) => res.json({ ok: true, name: 'NOVA Chat' }));
+app.get('/api/health', (req, res) => res.json({ ok: true, name: 'DARK CHAT' }));
 
 // SPA fallback
 app.get('*', (req, res) => {
@@ -43,5 +43,5 @@ initSockets(io);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🚀 NOVA Chat running on port ${PORT}`);
+  console.log(`🚀 DARK CHAT running on port ${PORT}`);
 });

@@ -1,4 +1,4 @@
--- NOVA Chat schema
+-- DARK CHAT schema
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,

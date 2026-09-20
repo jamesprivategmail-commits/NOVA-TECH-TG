@@ -1,7 +1,7 @@
 {
   "name": "nova-chat",
   "version": "1.0.0",
-  "description": "NOVA Chat - real-time messaging platform (DMs, groups, channels)",
+  "description": "DARK CHAT - real-time messaging platform (DMs, groups, channels)",
   "main": "server.js",
   "engines": {
     "node": ">=18.0.0"

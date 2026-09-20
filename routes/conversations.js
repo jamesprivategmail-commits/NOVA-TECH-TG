@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 router.post('/dm', async (req, res) => {
   const { novaId } = req.body;
   const target = await db.query('SELECT * FROM users WHERE nova_id = $1', [(novaId || '').trim().toUpperCase()]);
-  if (!target.rows[0]) return res.status(404).json({ error: 'No one has that NOVA ID' });
+  if (!target.rows[0]) return res.status(404).json({ error: 'No one has that DARK CHAT ID' });
   if (target.rows[0].id === req.user.id) return res.status(400).json({ error: "You can't DM yourself" });
 
   // Check for existing DM between these two users
@@ -154,7 +154,7 @@ router.post('/:id/members', async (req, res) => {
   }
 
   const target = await db.query('SELECT id, display_name, avatar_color FROM users WHERE nova_id = $1', [(novaId || '').trim().toUpperCase()]);
-  if (!target.rows[0]) return res.status(404).json({ error: 'No one has that NOVA ID' });
+  if (!target.rows[0]) return res.status(404).json({ error: 'No one has that DARK CHAT ID' });
 
   const already = await db.query(
     'SELECT 1 FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',

@@ -75,7 +75,7 @@ $('#toggle-to-login a').addEventListener('click', (e) => {
   $('#toggle-to-login').classList.add('hidden');
   $('#toggle-to-signup').classList.remove('hidden');
   $('#auth-title').textContent = 'Welcome back';
-  $('#auth-subtitle').textContent = 'Log in with your NOVA ID.';
+  $('#auth-subtitle').textContent = 'Log in with your DARK CHAT ID.';
   $('#nova-id-reveal').classList.add('hidden');
   hideAuthError();
 });
@@ -86,7 +86,7 @@ $('#toggle-to-signup a').addEventListener('click', (e) => {
   $('#signup-form').classList.remove('hidden');
   $('#toggle-to-signup').classList.add('hidden');
   $('#toggle-to-login').classList.remove('hidden');
-  $('#auth-title').textContent = 'Welcome to NOVA';
+  $('#auth-title').textContent = 'Welcome to DARK CHAT';
   $('#auth-subtitle').textContent = 'Message your people, your way.';
   hideAuthError();
 });

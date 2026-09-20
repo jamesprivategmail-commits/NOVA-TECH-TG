@@ -17,6 +17,8 @@ if (!webhookUrl) {
     drop_pending_updates: false
   });
 
+  await telegramRequest('setMyName', { name: 'DARK PAIR' });
+
   await telegramRequest('setMyCommands', {
     commands: [
       { command: 'start', description: 'Open the DARK CHAT menu' },

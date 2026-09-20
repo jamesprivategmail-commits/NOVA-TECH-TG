@@ -42,12 +42,12 @@ function menuKeyboard() {
 
 function menuText() {
   return [
-    'DARK CHAT assistant',
+    'DARK PAIR',
     '',
     'To link your account:',
     '1. Send /pair YOUR-DARK-CHAT-ID',
     '2. Copy the six-digit code I send back',
-    '3. Enter the code in DARK CHAT → Profile → Settings → Link DARK CHAT assistant',
+    '3. Enter the code in DARK CHAT → Profile → Settings → Link DARK PAIR',
     '',
     'After pairing, use .ping to test the connection and .menu to see commands.',
     '',
@@ -82,7 +82,7 @@ async function handleUpdate(update) {
 
     await answerCallbackQuery(callback.id, '');
     if (callback.data === 'darkchat:ping') {
-      await sendMessage(chatId, 'pong — DARK CHAT assistant is online.');
+      await sendMessage(chatId, 'pong — DARK PAIR is online.');
     } else if (callback.data === 'darkchat:pair') {
       await sendMessage(chatId, 'Send /pair YOUR-DARK-CHAT-ID to receive a six-digit pairing code.');
     } else if (callback.data === 'darkchat:help') {
@@ -100,7 +100,7 @@ async function handleUpdate(update) {
   if (command === '/start' || command === '/menu' || command === '.menu') {
     await sendMessage(message.chat.id, menuText(), { reply_markup: menuKeyboard() });
   } else if (command === '/ping' || command === '.ping') {
-    await sendMessage(message.chat.id, 'pong — DARK CHAT assistant is online.');
+    await sendMessage(message.chat.id, 'pong — DARK PAIR is online.');
   } else if (command === '/pair' || command === '.pair') {
     const novaId = parts[1] || '';
     if (!novaId) {
@@ -119,7 +119,7 @@ async function handleUpdate(update) {
     await sendMessage(message.chat.id, [
       `Your DARK CHAT pairing code is: ${pairing.code}`,
       '',
-      'Open DARK CHAT → Profile → Settings → Link DARK CHAT assistant, enter this code, and tap Link assistant.',
+      'Open DARK CHAT → Profile → Settings → Link DARK PAIR, enter this code, and tap Link assistant.',
       'The code expires in 10 minutes.'
     ].join('\n'));
   }

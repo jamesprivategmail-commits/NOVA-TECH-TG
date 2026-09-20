@@ -679,7 +679,9 @@ input, textarea { font-size: 16px; }
 .telegram-pair-copy { margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .telegram-pair-hint { margin-top: 8px; color: var(--dim); font-size: 12px; }
 .telegram-pair-form { display: flex; gap: 8px; margin-top: 12px; }
-.telegram-pair-form .input { min-width: 0; flex: 1; letter-spacing: 2px; font-weight: 700; }
+.telegram-code-field { min-width: 0; flex: 1; }
+.telegram-code-field .field-label { display: block; margin-bottom: 4px; }
+.telegram-pair-form .input { width: 100%; min-width: 0; letter-spacing: 2px; font-weight: 700; }
 .telegram-pair-form .btn { flex: 0 0 auto; }
 .toggle {
   width: 48px; height: 28px; border-radius: 999px; background: var(--surface3);

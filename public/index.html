@@ -171,6 +171,33 @@
   </nav>
 </div>
 
+<div id="call-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="call-card">
+    <div class="call-card-header">
+      <div>
+        <div id="call-modal-title" class="call-title">Incoming call</div>
+        <div id="call-modal-subtitle" class="call-subtitle">Waiting for response</div>
+      </div>
+      <span id="call-modal-kind" class="call-kind">VOICE</span>
+    </div>
+    <div class="call-stage">
+      <audio id="remote-audio" autoplay></audio>
+      <video id="remote-video" autoplay playsinline></video>
+      <video id="local-video" autoplay muted playsinline></video>
+      <div id="call-avatar" class="call-avatar"></div>
+    </div>
+    <div id="incoming-call-actions" class="call-actions">
+      <button id="accept-call-btn" class="call-accept" type="button">Accept</button>
+      <button id="decline-call-btn" class="call-decline" type="button">Decline</button>
+    </div>
+    <div id="active-call-actions" class="call-actions hidden">
+      <button id="toggle-mic-btn" type="button">Mute</button>
+      <button id="toggle-camera-btn" type="button">Camera</button>
+      <button id="end-call-btn" class="call-decline" type="button">End call</button>
+    </div>
+  </div>
+</div>
+
 <!-- NEW CHAT MODAL -->
 <div id="new-chat-modal" class="modal-backdrop hidden">
   <div class="modal-card">

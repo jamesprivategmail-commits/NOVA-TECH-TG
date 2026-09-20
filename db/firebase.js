@@ -815,13 +815,14 @@ async function markNotificationsRead(userId, notifId = null) {
 }
 
 // ---------------- CALL SESSIONS ----------------
-async function createCallSession({ id, conversationId, initiatorId, kind }) {
+async function createCallSession({ id, conversationId, initiatorId, targetUserId, kind }) {
   await ensureInit();
   const callId = id || crypto.randomUUID();
   const call = {
     id: callId,
     conversation_id: String(conversationId),
     initiator_id: String(initiatorId),
+    target_user_id: targetUserId ? String(targetUserId) : null,
     kind,
     state: 'ringing',
     started_at: new Date().toISOString(),
@@ -840,7 +841,7 @@ async function getCallSession(callId) {
 async function updateCallSessionState(callId, state) {
   await ensureInit();
   const updates = { state };
-  if (['declined', 'ended', 'missed'].includes(state)) {
+  if (['declined', 'ended', 'missed', 'busy'].includes(state)) {
     updates.ended_at = new Date().toISOString();
   }
   await updateDoc(doc(firestoreDb, 'call_sessions', String(callId)), updates);

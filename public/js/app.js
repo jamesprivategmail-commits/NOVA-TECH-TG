@@ -1335,73 +1335,172 @@ async function loadAdminUsers(search = '') {
 
 // ---------------- REAL WEBRTC CALLS ----------------
 let activeCall = null;
+let pendingIncomingCall = null;
+
+function setCallModal(mode, call, title, subtitle) {
+  const modal = $('#call-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  $('#call-modal-title').textContent = title;
+  $('#call-modal-subtitle').textContent = subtitle;
+  $('#call-modal-kind').textContent = String(call.kind || 'voice').toUpperCase();
+  $('#incoming-call-actions').classList.toggle('hidden', mode !== 'incoming');
+  $('#active-call-actions').classList.toggle('hidden', mode !== 'active');
+  $('#local-video').style.display = call.kind === 'video' ? 'block' : 'none';
+  $('#remote-video').style.display = call.kind === 'video' ? 'block' : 'none';
+  $('#call-avatar').classList.toggle('hidden', call.kind === 'video');
+}
+
+function closeCallModal() {
+  const modal = $('#call-modal');
+  modal?.classList.add('hidden');
+  modal?.setAttribute('aria-hidden', 'true');
+  const local = $('#local-video');
+  const remote = $('#remote-video');
+  if (local) local.srcObject = null;
+  if (remote) remote.srcObject = null;
+  const audio = $('#remote-audio');
+  if (audio) audio.srcObject = null;
+}
+
+function sendCallSignal(targetUserId, callId, signal) {
+  state.socket?.emit('call:signal', { targetUserId, callId, signal });
+}
+
+async function buildPeer(call, targetUserId, stream) {
+  const peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  stream.getTracks().forEach(track => peer.addTrack(track, stream));
+  peer.onicecandidate = e => e.candidate && sendCallSignal(targetUserId, call.id, { candidate: e.candidate });
+  peer.ontrack = e => {
+    const remote = e.streams[0];
+    if (call.kind === 'video') $('#remote-video').srcObject = remote;
+    else $('#remote-audio').srcObject = remote;
+  };
+  peer.onconnectionstatechange = () => {
+    if (!activeCall || activeCall.call.id !== call.id) return;
+    if (['failed', 'disconnected'].includes(peer.connectionState)) $('#call-modal-subtitle').textContent = 'Connection interrupted';
+    if (peer.connectionState === 'connected') $('#call-modal-subtitle').textContent = 'Connected';
+  };
+  $('#local-video').srcObject = call.kind === 'video' ? stream : null;
+  return peer;
+}
 
 async function startCall(kind) {
   const target = state.activeConv?.other_user?.id;
   if (!target || !state.activeConvId) return alert('Calls are available for direct chats.');
-  const { call } = await api('/calls', { method: 'POST', body: { conversationId: state.activeConvId, kind } });
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === 'video' });
-  const peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-  stream.getTracks().forEach(track => peer.addTrack(track, stream));
-
-  peer.onicecandidate = e => e.candidate && state.socket.emit('call:signal', { targetUserId: target, callId: call.id, signal: { candidate: e.candidate } });
-  const offer = await peer.createOffer();
-  await peer.setLocalDescription(offer);
-
-  activeCall = { call, peer, stream, targetUserId: target };
-  state.socket.emit('call:invite', { targetUserId: target, call });
-  state.socket.emit('call:signal', { targetUserId: target, callId: call.id, signal: { sdp: peer.localDescription } });
-
-  showCallBar(`Calling ${state.activeConv.name}…`, async () => {
-    stream.getTracks().forEach(t => t.stop());
-    peer.close();
-    await api(`/calls/${call.id}`, { method: 'PATCH', body: { state: 'ended' } });
-    activeCall = null;
-  });
+  if (activeCall || pendingIncomingCall) return alert('There is already an active call.');
+  try {
+    const { call } = await api('/calls', { method: 'POST', body: { conversationId: state.activeConvId, kind } });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === 'video' });
+    const peer = await buildPeer(call, target, stream);
+    activeCall = { call, peer, stream, targetUserId: target, initiator: true, remoteDescriptionSet: false };
+    setCallModal('active', call, `Calling ${state.activeConv.name || 'contact'}`, 'Ringing…');
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+    state.socket.emit('call:invite', { targetUserId: target, call });
+    sendCallSignal(target, call.id, { sdp: peer.localDescription });
+  } catch (err) {
+    closeCallModal();
+    alert(err.message || 'Unable to start call. Check microphone and camera permissions.');
+  }
 }
 
-function showCallBar(label, end) {
-  const old = $('#call-bar');
-  old?.remove();
-  const bar = document.createElement('div');
-  bar.id = 'call-bar';
-  bar.className = 'call-bar';
-  bar.innerHTML = `<span>${escapeHtml(label)}</span><button id="end-call">End call</button>`;
-  document.body.appendChild(bar);
-  $('#end-call').onclick = async () => { await end(); bar.remove(); };
+async function acceptIncomingCall() {
+  if (!pendingIncomingCall) return;
+  const incoming = pendingIncomingCall;
+  pendingIncomingCall = null;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: incoming.call.kind === 'video' });
+    const peer = await buildPeer(incoming.call, incoming.fromUserId, stream);
+    activeCall = { call: incoming.call, peer, stream, targetUserId: incoming.fromUserId, initiator: false, remoteDescriptionSet: false };
+    setCallModal('active', incoming.call, 'Call connected', 'Connecting…');
+    state.socket.emit('call:state', { targetUserId: incoming.fromUserId, callId: incoming.call.id, state: 'accepted' });
+    if (incoming.signal?.sdp) await handleCallSignal(incoming.signal, incoming.fromUserId, incoming.call.id);
+  } catch (err) {
+    state.socket.emit('call:state', { targetUserId: incoming.fromUserId, callId: incoming.call.id, state: 'declined' });
+    closeCallModal();
+    alert(err.message || 'Unable to access microphone or camera.');
+  }
+}
+
+async function handleCallSignal(signal, fromUserId, callId) {
+  if (!activeCall || activeCall.call.id !== callId) {
+    if (pendingIncomingCall && pendingIncomingCall.call.id === callId) pendingIncomingCall.signal = signal;
+    return;
+  }
+  const peer = activeCall.peer;
+  if (signal.sdp) {
+    await peer.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    activeCall.remoteDescriptionSet = true;
+    if (signal.sdp.type === 'offer') {
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      sendCallSignal(fromUserId, callId, { sdp: peer.localDescription });
+    }
+  }
+  if (signal.candidate) {
+    try { await peer.addIceCandidate(new RTCIceCandidate(signal.candidate)); } catch (err) { console.warn('ICE candidate rejected', err); }
+  }
+}
+
+async function endActiveCall(nextState = 'ended') {
+  const call = activeCall;
+  if (!call) { closeCallModal(); return; }
+  call.stream?.getTracks().forEach(track => track.stop());
+  call.peer?.close();
+  state.socket?.emit('call:state', { targetUserId: call.targetUserId, callId: call.call.id, state: nextState });
+  await api(`/calls/${call.call.id}`, { method: 'PATCH', body: { state: nextState } }).catch(() => {});
+  activeCall = null;
+  closeCallModal();
 }
 
 function initCallControls() {
-  const header = $('#chat-header');
-  if (!header || $('#voice-call-btn')) return;
-  const voice = document.createElement('button');
-  voice.id = 'voice-call-btn';
-  voice.className = 'back-btn';
-  voice.textContent = '☎';
-  voice.title = 'Voice call';
-  const video = document.createElement('button');
-  video.id = 'video-call-btn';
-  video.className = 'back-btn';
-  video.textContent = '▣';
-  video.title = 'Video call';
-  header.append(voice, video);
-
-  voice.onclick = () => startCall('voice');
-  video.onclick = () => startCall('video');
-
-  state.socket.on('call:incoming', ({ call, fromUserId }) => {
-    if (!confirm(`${call.kind} call incoming. Accept?`)) {
-      return state.socket.emit('call:state', { targetUserId: fromUserId, callId: call.id, state: 'declined' });
-    }
-    alert('Call accepted. WebRTC negotiation is ready.');
-    state.socket.emit('call:state', { targetUserId: fromUserId, callId: call.id, state: 'accepted' });
+  if ($('#call-controls-initialized')) return;
+  const marker = document.createElement('span');
+  marker.id = 'call-controls-initialized';
+  marker.className = 'hidden';
+  document.body.appendChild(marker);
+  $('#chat-call-btn')?.addEventListener('click', () => startCall('voice'));
+  $('#chat-video-btn')?.addEventListener('click', () => startCall('video'));
+  $('#accept-call-btn')?.addEventListener('click', acceptIncomingCall);
+  $('#decline-call-btn')?.addEventListener('click', () => {
+    if (!pendingIncomingCall) return closeCallModal();
+    state.socket.emit('call:state', { targetUserId: pendingIncomingCall.fromUserId, callId: pendingIncomingCall.call.id, state: 'declined' });
+    pendingIncomingCall = null;
+    closeCallModal();
   });
-
-  state.socket.on('call:state', ({ state: callState }) => {
-    if (callState === 'ended' || callState === 'declined') {
-      $('#call-bar')?.remove();
-      activeCall?.peer?.close();
-      activeCall = null;
+  $('#end-call-btn')?.addEventListener('click', () => endActiveCall('ended'));
+  $('#toggle-mic-btn')?.addEventListener('click', () => {
+    const track = activeCall?.stream?.getAudioTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    $('#toggle-mic-btn').textContent = track.enabled ? 'Mute' : 'Unmute';
+  });
+  $('#toggle-camera-btn')?.addEventListener('click', () => {
+    const track = activeCall?.stream?.getVideoTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    $('#toggle-camera-btn').textContent = track.enabled ? 'Camera off' : 'Camera on';
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && activeCall) endActiveCall('ended'); });
+  state.socket.on('call:incoming', ({ call, fromUserId }) => {
+    if (activeCall || pendingIncomingCall) {
+      state.socket.emit('call:state', { targetUserId: fromUserId, callId: call.id, state: 'busy' });
+      return;
+    }
+    pendingIncomingCall = { call, fromUserId, signal: null };
+    setCallModal('incoming', call, 'Incoming call', `${call.kind === 'video' ? 'Video' : 'Voice'} call incoming`);
+  });
+  state.socket.on('call:signal', ({ callId, signal, fromUserId }) => handleCallSignal(signal, fromUserId, callId));
+  state.socket.on('call:state', ({ callId, state: callState }) => {
+    if (pendingIncomingCall?.call.id === callId && ['declined', 'ended', 'busy'].includes(callState)) {
+      pendingIncomingCall = null;
+      closeCallModal();
+    }
+    if (activeCall?.call.id === callId) {
+      if (callState === 'accepted') $('#call-modal-subtitle').textContent = 'Connecting…';
+      if (['ended', 'declined', 'missed', 'busy'].includes(callState)) endActiveCall(callState === 'busy' ? 'ended' : callState);
     }
   });
 }

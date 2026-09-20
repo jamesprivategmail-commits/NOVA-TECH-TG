@@ -95,19 +95,7 @@ async function seedAdminUser() {
     const now = new Date().toISOString();
 
     if (!snap.empty) {
-      const docRef = snap.docs[0].ref;
-      await updateDoc(docRef, {
-        password_hash: passwordHash,
-        display_name: snap.docs[0].data().display_name || 'DARK CHAT Admin',
-        is_verified: true,
-        is_banned: false,
-        ban_reason: null,
-        avatar_color: '#ff3131',
-        avatar_url: '/assets/logo.jpg',
-        bio: 'Official DARK CHAT Administrator',
-        last_seen: now
-      });
-      console.log('✅ Admin account verified & password synced for', adminNovaId);
+      console.log('✅ Existing admin account preserved for', adminNovaId);
     } else {
       const adminId = 'u_admin_master';
       await setDoc(doc(firestoreDb, 'users', adminId), {

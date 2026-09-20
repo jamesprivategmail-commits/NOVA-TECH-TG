@@ -99,21 +99,29 @@ async function onSignedIn() {
 }
 
 function wireChrome() {
-  history.replaceState({ tab: currentTab }, '', location.href.split('#')[0] + '#chats');
+  const appUrl = location.href.split('#')[0];
+  // Keep an in-app history entry so the first browser Back action is handled by the SPA.
+  history.replaceState({ app: true, tab: currentTab, chat: false }, '', `${appUrl}#chats`);
+  history.pushState({ app: true, tab: currentTab, chat: false }, '', `${appUrl}#chats`);
   document.querySelectorAll('.bottom-nav .nav').forEach((btn) => {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
-      history.pushState({ tab }, '', `#${tab}`);
+      history.pushState({ app: true, tab, chat: false }, '', `${appUrl}#${tab}`);
       showTab(tab);
     });
   });
   window.addEventListener('popstate', (event) => {
-    if (state.activeConv) {
+    if (event.state?.app && state.activeConv) {
       closeConversation();
       return;
     }
-    const tab = event.state?.tab || 'chats';
-    showTab(SCREENS[tab] ? tab : 'chats');
+    if (event.state?.app) {
+      const tab = event.state.tab || 'chats';
+      showTab(SCREENS[tab] ? tab : 'chats');
+      return;
+    }
+    // The sentinel entry prevents the first Back action from leaving the app.
+    history.pushState({ app: true, tab: currentTab, chat: false }, '', `${appUrl}#${currentTab}`);
   });
   window.addEventListener('resize', updateLayout);
 }
@@ -126,7 +134,11 @@ function wireEvents() {
   on('me:updated', () => { renderMeHeader(); renderProfile(); emit('conversations:changed'); });
   on('data:refresh-conversations', () => loadConversations());
   on('admin:open-panel', () => openAdminPanel());
-  on('chat:open', (conv) => { showTab(currentTab); openConversation(conv); });
+  on('chat:open', (conv) => {
+    showTab(currentTab);
+    history.pushState({ app: true, tab: currentTab, chat: true }, '', `#${currentTab}/chat`);
+    openConversation(conv);
+  });
   on('chat:needs-send', async ({ conversationId, content }) => {
     try {
       await refreshConversations();

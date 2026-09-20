@@ -689,7 +689,15 @@ input, textarea { font-size: 16px; }
   position: relative;
 }
 .profile-body { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 14px; }
-.profile-photo { margin-top: -52px; }
+.profile-photo {
+  position: relative;
+  z-index: 2;
+  width: 88px;
+  height: 88px;
+  margin-top: -52px;
+  flex: 0 0 88px;
+}
+.profile-photo .avatar { display: flex; position: relative; z-index: 2; }
 .profile-name { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 7px; }
 .profile-handle { color: var(--muted); font-size: 14px; }
 .profile-bio { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }

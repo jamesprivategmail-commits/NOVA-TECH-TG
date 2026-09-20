@@ -61,6 +61,7 @@ function initSockets(io) {
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
     socket.on('message:send', async ({ conversationId, content, media, replyToId, clientMessageId }, ack) => {
       try {
+        const startedAt = Date.now();
         const hasText = content && content.trim();
         const hasMedia = media && media.data && media.type;
         if (!hasText && !hasMedia) return ack?.({ error: 'Empty message' });
@@ -138,21 +139,21 @@ function initSockets(io) {
         if (isDarkPairConversation && hasText && (commandText.startsWith('/') || /^\d{6}$/.test(commandText))) {
           assistantReply = await getDarkPairReply(content.trim(), userId);
         } else if (senderInfo?.dark_pair_linked && commandText === '.ping') {
-          assistantReply = '50ms';
+          assistantReply = `${Math.max(1, Date.now() - startedAt)}ms`;
         } else if (senderInfo?.dark_pair_linked && commandText === '.menu') {
           assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
         }
         if (assistantReply) {
           const assistantMsg = await createMessage(conversationId, {
-            senderId: 'u_dark_pair',
+            senderId: userId,
             content: assistantReply
           });
           assistantPayload = {
             ...assistantMsg,
-            display_name: 'DARK PAIR',
-            avatar_color: '#7C3AED',
-            avatar_url: '/assets/logo.jpg',
-            is_verified: true
+            display_name: senderInfo?.display_name || 'User',
+            avatar_color: senderInfo?.avatar_color || '#0A84FF',
+            avatar_url: senderInfo?.avatar_url || null,
+            is_verified: senderInfo?.is_verified || false
           };
           io.to(`conv:${conversationId}`).emit('message:new', assistantPayload);
         }

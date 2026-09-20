@@ -320,6 +320,7 @@ router.post('/:id/messages', async (req, res) => {
     }
     const content = String(req.body?.content || '').trim();
     if (!content) return res.status(400).json({ error: 'Only text messages are supported by the HTTP fallback' });
+    const startedAt = Date.now();
     const message = await createMessage(req.params.id, {
       id: req.body?.clientMessageId || undefined,
       senderId: req.user.id,
@@ -348,21 +349,21 @@ router.post('/:id/messages', async (req, res) => {
     if (isDarkPairConversation && (commandText.startsWith('/') || /^\d{6}$/.test(commandText))) {
       assistantReply = await getDarkPairReply(content, req.user.id);
     } else if (sender?.dark_pair_linked && commandText === '.ping') {
-      assistantReply = '50ms';
+      assistantReply = `${Math.max(1, Date.now() - startedAt)}ms`;
     } else if (sender?.dark_pair_linked && commandText === '.menu') {
       assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
     }
     if (assistantReply) {
       const savedReply = await createMessage(req.params.id, {
-        senderId: 'u_dark_pair',
+        senderId: req.user.id,
         content: assistantReply
       });
       assistantMessage = {
         ...savedReply,
-        display_name: 'DARK PAIR',
-        avatar_color: '#7C3AED',
-        avatar_url: '/assets/logo.jpg',
-        is_verified: true
+        display_name: sender?.display_name || 'User',
+        avatar_color: sender?.avatar_color || '#0A84FF',
+        avatar_url: sender?.avatar_url || null,
+        is_verified: sender?.is_verified || false
       };
     }
     res.json({ message: messagePayload, assistantMessage });

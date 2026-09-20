@@ -14,7 +14,10 @@ let state = {
   myStatuses: [],
   replyToId: null,
   postImageData: null,
-  postImageMime: null
+  postImageMime: null,
+  conversationFilter: '',
+  openMessageId: null,
+  presence: {}
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -133,25 +136,137 @@ function logout() {
   location.reload();
 }
 
+function openProfileSettings() {
+  const user = state.me;
+  if (!user) return;
+  $('#profile-edit-title').textContent = user.displayName || 'Your profile';
+  $('#profile-edit-id').textContent = user.novaId || '';
+  $('#profile-display-name').value = user.displayName || '';
+  $('#profile-bio').value = user.bio || '';
+  const avatar = $('#profile-edit-avatar');
+  avatar.textContent = initials(user.displayName);
+  avatar.style.background = user.avatarColor || '#ff3131';
+  if (user.avatarUrl) avatar.style.backgroundImage = `url(${user.avatarUrl})`, avatar.style.backgroundSize = 'cover';
+  const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
+  $('#setting-online').checked = settings.online !== false;
+  $('#setting-receipts').checked = settings.receipts !== false;
+  $('#setting-notifications').checked = settings.notifications !== false;
+  $('#profile-modal').classList.remove('hidden');
+  $('#profile-modal').setAttribute('aria-hidden', 'false');
+}
+
+function initProfileSettings() {
+  const modal = $('#profile-modal');
+  if (!modal || modal.dataset.initialized === '1') return;
+  modal.dataset.initialized = '1';
+  $('#me-avatar')?.addEventListener('click', openProfileSettings);
+  $('#mobile-profile-btn')?.addEventListener('click', openProfileSettings);
+  $('#profile-close-btn')?.addEventListener('click', () => $('#profile-modal').classList.add('hidden'));
+  $('#profile-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'profile-modal') $('#profile-modal').classList.add('hidden');
+  });
+  $('#profile-logout-btn')?.addEventListener('click', () => {
+    if (confirm('Log out of NOVA Messenger?')) logout();
+  });
+  $('#profile-edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const error = $('#profile-form-error');
+    error.classList.add('hidden');
+    const body = { displayName: $('#profile-display-name').value.trim(), bio: $('#profile-bio').value.trim() };
+    const file = $('#profile-avatar-input').files?.[0];
+    try {
+      if (file) {
+        body.avatarMime = file.type || 'image/jpeg';
+        body.avatarData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+      const result = await api('/auth/me', { method: 'PUT', body });
+      state.me = result.user;
+      localStorage.setItem('nova_me', JSON.stringify(state.me));
+      $('#profile-modal').classList.add('hidden');
+      updateCurrentUserAvatar();
+      await loadConversations();
+    } catch (err) {
+      error.textContent = err.message;
+      error.classList.remove('hidden');
+    }
+  });
+  ['online', 'receipts', 'notifications'].forEach(key => $(`#setting-${key}`)?.addEventListener('change', () => {
+    const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
+    settings[key] = $(`#setting-${key}`).checked;
+    localStorage.setItem('nova_settings', JSON.stringify(settings));
+  }));
+}
+
+function updateCurrentUserAvatar() {
+  const avatar = $('#me-avatar');
+  if (!avatar || !state.me) return;
+  avatar.textContent = initials(state.me.displayName);
+  avatar.style.background = state.me.avatarColor || '#ff3131';
+  if (state.me.avatarUrl) {
+    avatar.style.backgroundImage = `url(${state.me.avatarUrl})`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.style.backgroundPosition = 'center';
+    avatar.textContent = '';
+  }
+}
+
+function formatNotification(notification) {
+  const kind = notification.type || notification.kind || 'activity';
+  const text = notification.message || notification.content || `${kind} notification`;
+  return `<div class="notification-item ${notification.read_at ? '' : 'unread'}"><div class="notification-dot"></div><div><div class="notification-text">${escapeHtml(text)}</div><div class="notification-time">${timeAgo(notification.created_at || notification.createdAt)}</div></div></div>`;
+}
+
+async function loadNotifications() {
+  const list = $('#notifications-list');
+  if (!list) return;
+  list.innerHTML = '<div class="notification-loading">Loading notifications…</div>';
+  try {
+    const result = await api('/notifications');
+    const notifications = result.notifications || [];
+    list.innerHTML = notifications.length ? notifications.map(formatNotification).join('') : '<div class="notification-empty">You are all caught up.</div>';
+    const unread = notifications.filter(n => !n.read_at).length;
+    $('#notifications-btn')?.classList.toggle('has-unread', unread > 0);
+  } catch (err) {
+    list.innerHTML = `<div class="notification-empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function initNotifications() {
+  const modal = $('#notifications-modal');
+  if (!modal || modal.dataset.initialized === '1') return;
+  modal.dataset.initialized = '1';
+  $('#notifications-btn')?.addEventListener('click', async () => {
+    modal.classList.remove('hidden');
+    await loadNotifications();
+  });
+  $('#notifications-close-btn')?.addEventListener('click', () => modal.classList.add('hidden'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+  $('#notifications-read-btn')?.addEventListener('click', async () => {
+    await api('/notifications/read', { method: 'POST', body: {} });
+    await loadNotifications();
+  });
+}
+
+function selectTab(tab) {
+  $$('.tabbar button, .mobile-nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
+  $('#tab-status').classList.toggle('hidden', tab !== 'status');
+  $('#tab-posts').classList.toggle('hidden', tab !== 'posts');
+  if (tab === 'status') loadStatuses();
+  if (tab === 'posts') loadPosts();
+}
+
 // ---------------- BOOT ----------------
 async function boot() {
   authScreen.classList.add('hidden');
   appScreen.classList.remove('hidden');
-  if (state.me.avatarUrl) {
-    $('#me-avatar').style.backgroundImage = `url(${state.me.avatarUrl})`;
-    $('#me-avatar').style.backgroundSize = 'cover';
-    $('#me-avatar').style.backgroundPosition = 'center';
-    $('#me-avatar').textContent = '';
-  } else {
-    $('#me-avatar').style.backgroundImage = 'none';
-    $('#me-avatar').style.background = state.me.avatarColor || '#ff3131';
-    $('#me-avatar').textContent = initials(state.me.displayName);
-  }
-  $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — tap to copy ID, click to logout`;
-  $('#me-avatar').addEventListener('click', () => {
-    navigator.clipboard?.writeText(state.me.novaId);
-    if (confirm(`You are ${state.me.displayName} (${state.me.novaId}).\n\nID copied to clipboard.\n\nLog out?`)) logout();
-  });
+  updateCurrentUserAvatar();
+  $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — open profile settings`;
 
   // Admin button visibility
   if (state.me.isAdmin) {
@@ -166,6 +281,9 @@ async function boot() {
   initPostMedia();
   initAdminPanel();
   initCallControls();
+  initChatHeaderActions();
+  initProfileSettings();
+  initNotifications();
 }
 
 function connectSocket() {
@@ -200,20 +318,21 @@ function connectSocket() {
       indicator.remove();
     }
   });
+
+  state.socket.on('presence', ({ userId, online }) => {
+    state.presence[String(userId)] = Boolean(online);
+    if (state.activeConv?.type !== 'dm') return;
+    if (String(state.activeConv.other_user?.id) === String(userId)) {
+      $('#chat-subtitle').textContent = online ? 'online' : 'last seen recently';
+    }
+  });
 }
 
 // ---------------- TABS ----------------
-$$('.tabbar button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.tabbar button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
-    $('#tab-status').classList.toggle('hidden', tab !== 'status');
-    $('#tab-posts').classList.toggle('hidden', tab !== 'posts');
-    if (tab === 'status') loadStatuses();
-    if (tab === 'posts') loadPosts();
-  });
+$$('.tabbar button, .mobile-nav button[data-tab]').forEach(btn => btn.addEventListener('click', () => selectTab(btn.dataset.tab)));
+$('#conversation-search-input')?.addEventListener('input', (e) => {
+  state.conversationFilter = e.target.value.trim().toLowerCase();
+  renderConvList();
 });
 
 // ---------------- CONVERSATIONS ----------------
@@ -228,11 +347,20 @@ async function loadConversations() {
 
 function renderConvList() {
   const list = $('#conv-list');
+  const conversations = state.conversations.filter(c => {
+    if (!state.conversationFilter) return true;
+    const haystack = [c.name, c.last_message, c.other_user?.nova_id].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(state.conversationFilter);
+  });
   if (state.conversations.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="icon">👋</div><div class="title">No chats yet</div><div class="subtitle">Tap "+ New Chat" to message a friend.</div></div>`;
     return;
   }
-  list.innerHTML = state.conversations.map(c => {
+  if (conversations.length === 0) {
+    list.innerHTML = `<div class="empty-state compact"><div class="icon">⌕</div><div class="title">No matching chats</div><div class="subtitle">Try another name or NOVA ID.</div></div>`;
+    return;
+  }
+  list.innerHTML = conversations.map(c => {
     const preview = c.last_message
       ? (String(c.last_sender_id) === String(state.me.id) ? 'You: ' : '') + escapeHtml(c.last_message)
       : (c.type === 'channel' ? 'No posts yet' : 'Say hi 👋');
@@ -258,6 +386,7 @@ function renderConvList() {
 
 async function openConversation(id) {
   state.activeConvId = String(id);
+  closeChatTools();
   appScreen.classList.add('chat-open');
   $('#chat-empty').classList.add('hidden');
   $('#chat-active').classList.remove('hidden');
@@ -266,7 +395,8 @@ async function openConversation(id) {
   const conv = state.conversations.find(c => String(c.id) === String(id));
   state.activeConv = conv;
   $('#chat-title').textContent = conv?.name || 'Chat';
-  $('#chat-subtitle').textContent = conv?.type === 'channel' ? 'Channel' : conv?.type === 'group' ? 'Group' : conv?.other_user?.nova_id || '';
+  const otherOnline = conv?.other_user?.id && state.presence[String(conv.other_user.id)];
+  $('#chat-subtitle').textContent = conv?.type === 'channel' ? 'Channel' : conv?.type === 'group' ? 'Group' : otherOnline ? 'online' : conv?.other_user?.nova_id || '';
   $('#chat-avatar').style.background = conv?.avatar_color || '#8E8E93';
   $('#chat-avatar').textContent = initials(conv?.name || '?');
 
@@ -278,6 +408,8 @@ async function openConversation(id) {
     const { messages } = await api(`/conversations/${id}/messages`);
     state.messages[id] = messages;
   }
+  composerInput.value = localStorage.getItem(`nova_draft_${id}`) || '';
+  composerInput.dispatchEvent(new Event('input'));
   renderMessages(id);
 }
 
@@ -309,7 +441,8 @@ function renderMessages(convId) {
     const mediaSrc = m.media_url || m.media_data;
     const media = mediaSrc && m.media_type === 'image' ? `<img class="message-media" src="${mediaSrc}" alt="Attachment" style="max-width:240px;border-radius:10px;margin-top:6px;display:block;">`
       : mediaSrc && m.media_type === 'video' ? `<video class="message-media" controls src="${mediaSrc}" style="max-width:240px;border-radius:10px;margin-top:6px;display:block;"></video>`
-      : mediaSrc && (m.media_type === 'audio' || m.media_type === 'voice') ? `<audio controls src="${mediaSrc}" style="max-width:240px;margin-top:6px;display:block;"></audio>` : '';
+      : mediaSrc && (m.media_type === 'audio' || m.media_type === 'voice') ? `<audio controls src="${mediaSrc}" style="max-width:240px;margin-top:6px;display:block;"></audio>`
+      : mediaSrc && m.media_type === 'file' ? `<a class="message-file" href="${mediaSrc}" target="_blank" rel="noopener">Open attachment</a>` : '';
 
     const body = m.deleted_for_everyone ? '<em>This message was deleted</em>' : `${escapeHtml(m.content || '')}${media}`;
     const reactions = (m.reactions || []).map(r => `<span class="message-reaction">${escapeHtml(r.reaction)}</span>`).join('');
@@ -335,6 +468,17 @@ function renderMessages(convId) {
 
   area.innerHTML = html || `<div class="empty-state"><div class="icon">✨</div><div class="title">No messages yet</div><div class="subtitle">Say something!</div></div>`;
   wireMessageActions(convId);
+  area.querySelectorAll('.msg-row[data-message-id]').forEach(row => {
+    const open = (event) => {
+      if (event.target.closest('button, a, input, textarea')) return;
+      event.preventDefault();
+      area.querySelectorAll('.msg-row.message-menu-open').forEach(item => item.classList.remove('message-menu-open'));
+      row.classList.add('message-menu-open');
+      state.openMessageId = row.dataset.messageId;
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('contextmenu', open);
+  });
   area.scrollTop = area.scrollHeight;
 }
 
@@ -386,6 +530,55 @@ function wireMessageActions(convId) {
   }));
 }
 
+function closeChatTools() {
+  $('#chat-tools-menu')?.classList.add('hidden');
+}
+
+function initChatHeaderActions() {
+  const menu = $('#chat-tools-menu');
+  if (!menu || menu.dataset.initialized === '1') return;
+  menu.dataset.initialized = '1';
+  $('#chat-call-btn')?.addEventListener('click', () => startCall('voice'));
+  $('#chat-video-btn')?.addEventListener('click', () => startCall('video'));
+  $('#chat-search-btn')?.addEventListener('click', () => {
+    const query = prompt('Search this conversation');
+    if (!query?.trim() || !state.activeConvId) return;
+    api(`/conversations/${state.activeConvId}/search?q=${encodeURIComponent(query.trim())}`).then(result => {
+      const hit = (result.messages || [])[0];
+      if (!hit) return alert('No matching messages in this chat.');
+      document.querySelector(`[data-message-id="${hit.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }).catch(err => alert(err.message));
+  });
+  $('#chat-more-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu?.classList.toggle('hidden');
+  });
+  menu?.querySelectorAll('[data-chat-tool]').forEach(btn => btn.addEventListener('click', async () => {
+    const action = btn.dataset.chatTool;
+    const conv = state.activeConv;
+    if (!conv) return;
+    closeChatTools();
+    if (action === 'clear') {
+      if (!confirm('Clear this chat for you?')) return;
+      const messages = state.messages[conv.id] || [];
+      await Promise.all(messages.map(message => api(`/conversations/${conv.id}/messages/${message.id}`, { method: 'DELETE', body: { scope: 'me' } }).catch(() => null)));
+      const result = await api(`/conversations/${conv.id}/messages`);
+      state.messages[conv.id] = result.messages || [];
+      renderMessages(conv.id);
+      return;
+    }
+    if (action === 'pin' || action === 'archive' || action === 'mute') {
+      await api(`/conversations/${conv.id}`, { method: 'PUT', body: { [action === 'pin' ? 'pinned' : action === 'archive' ? 'archived' : 'muted']: true } });
+      await loadConversations();
+      return;
+    }
+    if (action === 'media') alert('Shared media will appear here once this conversation has attachments.');
+  }));
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#chat-tools-menu, #chat-more-btn')) closeChatTools();
+  });
+}
+
 // ---------------- COMPOSER & MEDIA (FIREBASE STORAGE) ----------------
 const composerInput = $('#composer-input');
 
@@ -393,6 +586,7 @@ composerInput.addEventListener('input', () => {
   composerInput.style.height = 'auto';
   composerInput.style.height = Math.min(composerInput.scrollHeight, 100) + 'px';
   $('#send-btn').disabled = !composerInput.value.trim();
+  if (state.activeConvId) localStorage.setItem(`nova_draft_${state.activeConvId}`, composerInput.value);
 
   if (state.activeConvId) {
     state.socket.emit('typing', { conversationId: state.activeConvId, isTyping: true });
@@ -425,6 +619,7 @@ function sendMessage() {
   });
 
   composerInput.value = '';
+  localStorage.removeItem(`nova_draft_${state.activeConvId}`);
   state.replyToId = null;
   composerInput.placeholder = 'Message';
   composerInput.style.height = 'auto';
@@ -440,6 +635,8 @@ let isRecordingVoice = false;
 function initMediaButtons() {
   const imageBtn = $('#image-btn');
   const imageInput = $('#image-input');
+  const fileBtn = $('#file-btn');
+  const fileInput = $('#file-input');
   const voiceBtn = $('#voice-btn');
 
   if (imageBtn && imageInput) {
@@ -470,6 +667,30 @@ function initMediaButtons() {
         composerInput.value = '';
         state.replyToId = null;
         imageInput.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (fileBtn && fileInput) {
+    fileBtn.addEventListener('click', () => {
+      if (!state.activeConvId) return alert('Open a chat first');
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file || !state.activeConvId) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'file';
+        state.socket.emit('message:send', {
+          conversationId: state.activeConvId,
+          content: file.name,
+          media: { type, data: reader.result, mime: file.type || 'application/octet-stream' },
+          replyToId: state.replyToId || null
+        }, res => { if (res?.error) alert(res.error); });
+        fileInput.value = '';
+        state.replyToId = null;
       };
       reader.readAsDataURL(file);
     });
@@ -843,14 +1064,26 @@ async function viewStatus(status, isMine) {
         <span>${escapeHtml(status.display_name)}${isMine ? ' (you)' : ''}</span>
       </div>
       <button class="status-viewer-close" id="status-viewer-close">✕</button>
+      ${isMine ? '<button class="status-viewer-delete" id="status-viewer-delete" type="button">Delete status</button>' : ''}
       <div style="font-size:20px; line-height:1.4; word-break:break-word;">${escapeHtml(status.content)}</div>
     </div>`;
   backdrop.classList.remove('hidden');
 
-  const close = () => backdrop.classList.add('hidden');
+  const close = () => {
+    backdrop.classList.add('hidden');
+    if (backdrop._timer) clearTimeout(backdrop._timer);
+  };
   $('#status-viewer-close').addEventListener('click', close);
+  $('#status-viewer-delete')?.addEventListener('click', async () => {
+    if (!confirm('Delete this status?')) return;
+    try {
+      await api(`/status/${status.id}`, { method: 'DELETE' });
+      close();
+      await loadStatuses();
+    } catch (err) { alert(err.message); }
+  });
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
-  setTimeout(close, 5000);
+  backdrop._timer = setTimeout(close, 5000);
 }
 
 // ---------------- POSTS (WITH FIREBASE STORAGE IMAGES) ----------------

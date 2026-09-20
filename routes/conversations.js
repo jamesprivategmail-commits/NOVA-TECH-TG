@@ -227,20 +227,29 @@ router.delete('/:id/members/:userId', async (req, res) => {
   }
 });
 
-// PUT /api/conversations/:id { name } - rename
+// PUT /api/conversations/:id { name, pinned, archived, muted, wallpaper } - update chat settings
 router.put('/:id', async (req, res) => {
   try {
     const convId = req.params.id;
-    const { name } = req.body;
-    if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+    const { name, pinned, archived, muted, wallpaper } = req.body || {};
 
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    if (conv.owner_id !== req.user.id) {
-      return res.status(403).json({ error: 'Only the owner can rename this' });
+    if (!(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
     }
 
-    const updated = await updateConversation(convId, { name: name.trim() });
+    const updates = {};
+    if (name !== undefined) {
+      if (!String(name).trim()) return res.status(400).json({ error: 'Name is required' });
+      if (conv.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the owner can rename this' });
+      updates.name = String(name).trim().slice(0, 120);
+    }
+    for (const [key, value] of Object.entries({ pinned, archived, muted, wallpaper })) {
+      if (value !== undefined) updates[key] = key === 'wallpaper' ? String(value).slice(0, 200) : Boolean(value);
+    }
+    if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nothing to update' });
+    const updated = await updateConversation(convId, updates);
     res.json({ conversation: updated });
   } catch (err) {
     console.error('Rename conversation error:', err);

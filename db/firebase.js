@@ -278,6 +278,10 @@ async function createConversation(data) {
     last_message: null,
     last_message_at: null,
     last_sender_id: null,
+    pinned: Boolean(data.pinned),
+    archived: Boolean(data.archived),
+    muted: Boolean(data.muted),
+    wallpaper: data.wallpaper || null,
     created_at: now
   };
 
@@ -332,6 +336,8 @@ async function getConversationsForUser(userId) {
 
   // Sort newest message first
   list.sort((a, b) => {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+    if (Boolean(a.archived) !== Boolean(b.archived)) return a.archived ? 1 : -1;
     const timeA = new Date(a.last_message_at || a.created_at || 0).getTime();
     const timeB = new Date(b.last_message_at || b.created_at || 0).getTime();
     return timeB - timeA;

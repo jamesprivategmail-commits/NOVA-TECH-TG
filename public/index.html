@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-<title>DARK CHAT</title>
-<meta name="description" content="Real-time messaging platform with DMs, groups, channels, stories, and posts">
+<title>NOVA Messenger</title>
+<meta name="description" content="NOVA Messenger — private chats, groups, channels, statuses, and posts">
 <link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
 <link rel="shortcut icon" href="/assets/logo.jpg">
 <link rel="apple-touch-icon" href="/assets/logo.jpg">
@@ -75,10 +75,11 @@
     <div class="sidebar-header">
       <div class="brand-title-wrap">
         <img src="/assets/logo.jpg" alt="DARK CHAT Logo" class="sidebar-logo-img">
-        <h1>DARK CHAT</h1>
+        <h1>NOVA Messenger</h1>
       </div>
       <div class="header-actions">
         <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
+        <button class="icon-btn" id="notifications-btn" title="Notifications" aria-label="Notifications">◌</button>
         <button class="me-avatar-btn" id="me-avatar" title="You"></button>
       </div>
     </div>
@@ -88,6 +89,11 @@
       <button data-tab="status">Status</button>
       <button data-tab="posts">Posts</button>
     </div>
+
+    <label class="conversation-search" for="conversation-search-input">
+      <span aria-hidden="true">⌕</span>
+      <input id="conversation-search-input" type="search" placeholder="Search conversations" autocomplete="off">
+    </label>
 
     <!-- CHATS TAB -->
     <div id="tab-chats">
@@ -130,11 +136,26 @@
           <div class="title" id="chat-title"></div>
           <div class="subtitle" id="chat-subtitle"></div>
         </div>
+        <div class="chat-header-actions" aria-label="Conversation actions">
+          <button class="back-btn chat-action-btn" id="chat-call-btn" title="Voice call" aria-label="Voice call">☎</button>
+          <button class="back-btn chat-action-btn" id="chat-video-btn" title="Video call" aria-label="Video call">▣</button>
+          <button class="back-btn chat-action-btn" id="chat-search-btn" title="Search this chat" aria-label="Search this chat">⌕</button>
+          <button class="back-btn chat-action-btn" id="chat-more-btn" title="More options" aria-label="More options">⋮</button>
+        </div>
         <button class="back-btn hidden" id="chat-manage-btn" title="Manage">⋮</button>
+      </div>
+      <div class="chat-tools-menu hidden" id="chat-tools-menu" role="menu">
+        <button data-chat-tool="media">Media, links &amp; docs</button>
+        <button data-chat-tool="mute">Mute notifications</button>
+        <button data-chat-tool="pin">Pin chat</button>
+        <button data-chat-tool="archive">Archive chat</button>
+        <button data-chat-tool="clear">Clear chat</button>
       </div>
       <div class="messages-area" id="messages-area"></div>
       <div class="composer">
         <input type="file" id="image-input" accept="image/*" class="hidden">
+        <input type="file" id="file-input" accept="image/*,video/*,audio/*,.pdf,.zip,.txt,.doc,.docx" class="hidden">
+        <button class="composer-icon-btn" id="file-btn" title="Attach file">＋</button>
         <button class="composer-icon-btn" id="image-btn" title="Send image">🖼</button>
         <button class="composer-icon-btn" id="voice-btn" title="Record voice note">🎙</button>
         <textarea id="composer-input" rows="1" placeholder="Message"></textarea>
@@ -142,6 +163,12 @@
       </div>
     </div>
   </div>
+  <nav class="mobile-nav" aria-label="Primary navigation">
+    <button data-tab="chats" class="active"><span>◉</span><small>Chats</small></button>
+    <button data-tab="status"><span>◌</span><small>Status</small></button>
+    <button data-tab="posts"><span>✦</span><small>Updates</small></button>
+    <button id="mobile-profile-btn"><span>○</span><small>Profile</small></button>
+  </nav>
 </div>
 
 <!-- NEW CHAT MODAL -->
@@ -244,6 +271,41 @@
 </div>
 
 <!-- ADMIN PANEL MODAL -->
+<!-- PROFILE + SETTINGS MODAL -->
+<div id="profile-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card profile-settings-card">
+    <button class="modal-close" id="profile-close-btn" type="button">Close</button>
+    <div class="profile-modal-heading">
+      <div class="avatar lg" id="profile-edit-avatar"></div>
+      <div>
+        <h2 id="profile-edit-title">Your profile</h2>
+        <p id="profile-edit-id" class="profile-id-label"></p>
+      </div>
+    </div>
+    <div id="profile-form-error" class="modal-error hidden"></div>
+    <form id="profile-edit-form">
+      <div class="field-group"><label for="profile-display-name">Display name</label><input id="profile-display-name" maxlength="60" required></div>
+      <div class="field-group"><label for="profile-bio">About</label><textarea id="profile-bio" maxlength="160" rows="3" placeholder="Tell people about yourself"></textarea></div>
+      <div class="field-group"><label for="profile-avatar-input">Profile photo</label><input id="profile-avatar-input" type="file" accept="image/*"></div>
+      <div class="settings-section-title">Privacy &amp; notifications</div>
+      <label class="setting-toggle"><span>Show online status</span><input id="setting-online" type="checkbox" checked><i></i></label>
+      <label class="setting-toggle"><span>Read receipts</span><input id="setting-receipts" type="checkbox" checked><i></i></label>
+      <label class="setting-toggle"><span>Message notifications</span><input id="setting-notifications" type="checkbox" checked><i></i></label>
+      <button class="btn-primary" id="profile-save-btn" type="submit">Save changes</button>
+    </form>
+    <button class="btn-danger profile-logout-btn" id="profile-logout-btn" type="button">Log out</button>
+  </div>
+</div>
+
+<div id="notifications-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card notifications-card">
+    <button class="modal-close" id="notifications-close-btn" type="button">Close</button>
+    <h2>Notifications</h2>
+    <div id="notifications-list" class="notifications-list"></div>
+    <button class="btn-ghost notifications-read-btn" id="notifications-read-btn" type="button">Mark all as read</button>
+  </div>
+</div>
+
 <div id="admin-modal" class="modal-backdrop hidden">
   <div class="modal-card" style="max-width:480px;">
     <button class="modal-close" id="close-admin-panel">Done</button>

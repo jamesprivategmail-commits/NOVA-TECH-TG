@@ -74,6 +74,20 @@ body { background: radial-gradient(circle at 10% 0%, rgba(255,49,49,.08), transp
 .chat-tools-menu button { display:block; width:100%; padding:10px 12px; border-radius:9px; text-align:left; color:#ddd; font-size:13px; }
 .chat-tools-menu button:hover { background:rgba(255,255,255,.08); }
 .empty-state.compact { min-height:180px; }
+.profile-settings-card { max-width:460px; max-height:min(760px, calc(100dvh - 32px)); overflow:auto; }
+.profile-modal-heading { display:flex; align-items:center; gap:14px; padding:6px 0 20px; }
+.profile-modal-heading h2 { margin:0; }
+.profile-id-label { color:var(--muted); font-size:12px; margin-top:4px; }
+.profile-settings-card textarea { width:100%; resize:vertical; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:rgba(255,255,255,.055); color:#fff; }
+.settings-section-title { margin:20px 0 8px; color:#888; font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.setting-toggle { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.06); color:#ddd; font-size:13px; }
+.setting-toggle input { position:absolute; opacity:0; pointer-events:none; }
+.setting-toggle i { width:38px; height:22px; border-radius:999px; padding:2px; background:#333; position:relative; transition:.2s ease; }
+.setting-toggle i::after { content:""; width:18px; height:18px; border-radius:50%; background:#aaa; display:block; transition:.2s ease; }
+.setting-toggle input:checked + i { background:#b52323; }
+.setting-toggle input:checked + i::after { transform:translateX(16px); background:#fff; }
+.profile-logout-btn { width:100%; margin-top:12px; padding:11px; border:1px solid rgba(255,69,58,.3); border-radius:12px; background:rgba(255,69,58,.12); color:#ff8a82; }
+.status-viewer-delete { position:absolute; right:48px; top:15px; padding:6px 9px; border-radius:8px; background:rgba(0,0,0,.24); color:#fff; font-size:11px; }
 .mobile-nav { display:none; }
 
 @media (max-width: 720px) {

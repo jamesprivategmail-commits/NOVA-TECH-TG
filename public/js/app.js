@@ -135,6 +135,85 @@ function logout() {
   location.reload();
 }
 
+function openProfileSettings() {
+  const user = state.me;
+  if (!user) return;
+  $('#profile-edit-title').textContent = user.displayName || 'Your profile';
+  $('#profile-edit-id').textContent = user.novaId || '';
+  $('#profile-display-name').value = user.displayName || '';
+  $('#profile-bio').value = user.bio || '';
+  const avatar = $('#profile-edit-avatar');
+  avatar.textContent = initials(user.displayName);
+  avatar.style.background = user.avatarColor || '#ff3131';
+  if (user.avatarUrl) avatar.style.backgroundImage = `url(${user.avatarUrl})`, avatar.style.backgroundSize = 'cover';
+  const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
+  $('#setting-online').checked = settings.online !== false;
+  $('#setting-receipts').checked = settings.receipts !== false;
+  $('#setting-notifications').checked = settings.notifications !== false;
+  $('#profile-modal').classList.remove('hidden');
+  $('#profile-modal').setAttribute('aria-hidden', 'false');
+}
+
+function initProfileSettings() {
+  const modal = $('#profile-modal');
+  if (!modal || modal.dataset.initialized === '1') return;
+  modal.dataset.initialized = '1';
+  $('#me-avatar')?.addEventListener('click', openProfileSettings);
+  $('#mobile-profile-btn')?.addEventListener('click', openProfileSettings);
+  $('#profile-close-btn')?.addEventListener('click', () => $('#profile-modal').classList.add('hidden'));
+  $('#profile-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'profile-modal') $('#profile-modal').classList.add('hidden');
+  });
+  $('#profile-logout-btn')?.addEventListener('click', () => {
+    if (confirm('Log out of NOVA Messenger?')) logout();
+  });
+  $('#profile-edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const error = $('#profile-form-error');
+    error.classList.add('hidden');
+    const body = { displayName: $('#profile-display-name').value.trim(), bio: $('#profile-bio').value.trim() };
+    const file = $('#profile-avatar-input').files?.[0];
+    try {
+      if (file) {
+        body.avatarMime = file.type || 'image/jpeg';
+        body.avatarData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+      const result = await api('/auth/me', { method: 'PUT', body });
+      state.me = result.user;
+      localStorage.setItem('nova_me', JSON.stringify(state.me));
+      $('#profile-modal').classList.add('hidden');
+      updateCurrentUserAvatar();
+      await loadConversations();
+    } catch (err) {
+      error.textContent = err.message;
+      error.classList.remove('hidden');
+    }
+  });
+  ['online', 'receipts', 'notifications'].forEach(key => $(`#setting-${key}`)?.addEventListener('change', () => {
+    const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
+    settings[key] = $(`#setting-${key}`).checked;
+    localStorage.setItem('nova_settings', JSON.stringify(settings));
+  }));
+}
+
+function updateCurrentUserAvatar() {
+  const avatar = $('#me-avatar');
+  if (!avatar || !state.me) return;
+  avatar.textContent = initials(state.me.displayName);
+  avatar.style.background = state.me.avatarColor || '#ff3131';
+  if (state.me.avatarUrl) {
+    avatar.style.backgroundImage = `url(${state.me.avatarUrl})`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.style.backgroundPosition = 'center';
+    avatar.textContent = '';
+  }
+}
+
 function selectTab(tab) {
   $$('.tabbar button, .mobile-nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
@@ -148,21 +227,8 @@ function selectTab(tab) {
 async function boot() {
   authScreen.classList.add('hidden');
   appScreen.classList.remove('hidden');
-  if (state.me.avatarUrl) {
-    $('#me-avatar').style.backgroundImage = `url(${state.me.avatarUrl})`;
-    $('#me-avatar').style.backgroundSize = 'cover';
-    $('#me-avatar').style.backgroundPosition = 'center';
-    $('#me-avatar').textContent = '';
-  } else {
-    $('#me-avatar').style.backgroundImage = 'none';
-    $('#me-avatar').style.background = state.me.avatarColor || '#ff3131';
-    $('#me-avatar').textContent = initials(state.me.displayName);
-  }
-  $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — tap to copy ID, click to logout`;
-  $('#me-avatar').onclick = () => {
-    navigator.clipboard?.writeText(state.me.novaId);
-    if (confirm(`You are ${state.me.displayName} (${state.me.novaId}).\n\nID copied to clipboard.\n\nLog out?`)) logout();
-  };
+  updateCurrentUserAvatar();
+  $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — open profile settings`;
 
   // Admin button visibility
   if (state.me.isAdmin) {
@@ -178,6 +244,7 @@ async function boot() {
   initAdminPanel();
   initCallControls();
   initChatHeaderActions();
+  initProfileSettings();
 }
 
 function connectSocket() {
@@ -216,7 +283,6 @@ function connectSocket() {
 
 // ---------------- TABS ----------------
 $$('.tabbar button, .mobile-nav button[data-tab]').forEach(btn => btn.addEventListener('click', () => selectTab(btn.dataset.tab)));
-$('#mobile-profile-btn')?.addEventListener('click', () => $('#me-avatar')?.click());
 $('#conversation-search-input')?.addEventListener('input', (e) => {
   state.conversationFilter = e.target.value.trim().toLowerCase();
   renderConvList();
@@ -419,6 +485,8 @@ function closeChatTools() {
 
 function initChatHeaderActions() {
   const menu = $('#chat-tools-menu');
+  if (!menu || menu.dataset.initialized === '1') return;
+  menu.dataset.initialized = '1';
   $('#chat-call-btn')?.addEventListener('click', () => startCall('voice'));
   $('#chat-video-btn')?.addEventListener('click', () => startCall('video'));
   $('#chat-search-btn')?.addEventListener('click', () => {
@@ -440,7 +508,10 @@ function initChatHeaderActions() {
     closeChatTools();
     if (action === 'clear') {
       if (!confirm('Clear this chat for you?')) return;
-      state.messages[conv.id] = [];
+      const messages = state.messages[conv.id] || [];
+      await Promise.all(messages.map(message => api(`/conversations/${conv.id}/messages/${message.id}`, { method: 'DELETE', body: { scope: 'me' } }).catch(() => null)));
+      const result = await api(`/conversations/${conv.id}/messages`);
+      state.messages[conv.id] = result.messages || [];
       renderMessages(conv.id);
       return;
     }
@@ -913,14 +984,26 @@ async function viewStatus(status, isMine) {
         <span>${escapeHtml(status.display_name)}${isMine ? ' (you)' : ''}</span>
       </div>
       <button class="status-viewer-close" id="status-viewer-close">✕</button>
+      ${isMine ? '<button class="status-viewer-delete" id="status-viewer-delete" type="button">Delete status</button>' : ''}
       <div style="font-size:20px; line-height:1.4; word-break:break-word;">${escapeHtml(status.content)}</div>
     </div>`;
   backdrop.classList.remove('hidden');
 
-  const close = () => backdrop.classList.add('hidden');
+  const close = () => {
+    backdrop.classList.add('hidden');
+    if (backdrop._timer) clearTimeout(backdrop._timer);
+  };
   $('#status-viewer-close').addEventListener('click', close);
+  $('#status-viewer-delete')?.addEventListener('click', async () => {
+    if (!confirm('Delete this status?')) return;
+    try {
+      await api(`/status/${status.id}`, { method: 'DELETE' });
+      close();
+      await loadStatuses();
+    } catch (err) { alert(err.message); }
+  });
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
-  setTimeout(close, 5000);
+  backdrop._timer = setTimeout(close, 5000);
 }
 
 // ---------------- POSTS (WITH FIREBASE STORAGE IMAGES) ----------------

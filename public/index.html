@@ -268,6 +268,32 @@
 </div>
 
 <!-- ADMIN PANEL MODAL -->
+<!-- PROFILE + SETTINGS MODAL -->
+<div id="profile-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card profile-settings-card">
+    <button class="modal-close" id="profile-close-btn" type="button">Close</button>
+    <div class="profile-modal-heading">
+      <div class="avatar lg" id="profile-edit-avatar"></div>
+      <div>
+        <h2 id="profile-edit-title">Your profile</h2>
+        <p id="profile-edit-id" class="profile-id-label"></p>
+      </div>
+    </div>
+    <div id="profile-form-error" class="modal-error hidden"></div>
+    <form id="profile-edit-form">
+      <div class="field-group"><label for="profile-display-name">Display name</label><input id="profile-display-name" maxlength="60" required></div>
+      <div class="field-group"><label for="profile-bio">About</label><textarea id="profile-bio" maxlength="160" rows="3" placeholder="Tell people about yourself"></textarea></div>
+      <div class="field-group"><label for="profile-avatar-input">Profile photo</label><input id="profile-avatar-input" type="file" accept="image/*"></div>
+      <div class="settings-section-title">Privacy &amp; notifications</div>
+      <label class="setting-toggle"><span>Show online status</span><input id="setting-online" type="checkbox" checked><i></i></label>
+      <label class="setting-toggle"><span>Read receipts</span><input id="setting-receipts" type="checkbox" checked><i></i></label>
+      <label class="setting-toggle"><span>Message notifications</span><input id="setting-notifications" type="checkbox" checked><i></i></label>
+      <button class="btn-primary" id="profile-save-btn" type="submit">Save changes</button>
+    </form>
+    <button class="btn-danger profile-logout-btn" id="profile-logout-btn" type="button">Log out</button>
+  </div>
+</div>
+
 <div id="admin-modal" class="modal-backdrop hidden">
   <div class="modal-card" style="max-width:480px;">
     <button class="modal-close" id="close-admin-panel">Done</button>

@@ -37,6 +37,24 @@ npm start
 
 Visit `http://localhost:3000`.
 
+## Telegram bot integration
+
+The first Telegram integration slice supports `/start`, `/menu`, `/ping`, `.ping`, and inline menu buttons. Telegram sends updates to the public webhook endpoint `/api/telegram/webhook`.
+
+Configure these environment variables on the deployment:
+
+- `TELEGRAM_BOT_TOKEN` — the token from BotFather; keep it server-side.
+- `TELEGRAM_WEBHOOK_SECRET` — a long random secret used to verify Telegram webhook requests.
+- `TELEGRAM_WEBHOOK_URL` — the full deployed URL ending in `/api/telegram/webhook`.
+
+After deployment, register the webhook and command menu with:
+
+```bash
+npm run telegram:register
+```
+
+The account-pairing flow and the larger command registry will be added after this base bot connection is verified.
+
 ## How accounts work
 
 - Sign up with just a display name + password. DARK CHAT generates you a unique ID

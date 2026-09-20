@@ -9,7 +9,9 @@
   "scripts": {
     "build": "echo 'Build complete'",
     "start": "node server.js",
-    "migrate": "node db/migrate.js"
+    "migrate": "node db/migrate.js",
+    "telegram:register": "node scripts/register-telegram.js",
+    "telegram:commands": "node services/telegramBot.js set-commands"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.2.0",

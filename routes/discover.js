@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllUsers } = require('../db/firebase');
+const { getAllUsers, getUserCount } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -8,8 +8,11 @@ router.use(requireAuth);
 router.get('/users', async (req, res) => {
   try {
     const search = String(req.query.search || '').trim();
-    const users = await getAllUsers(search, 100);
-    res.json({ users: users
+    const [users, totalUsers] = await Promise.all([
+      getAllUsers(search, 100),
+      getUserCount()
+    ]);
+    res.json({ totalUsers, users: users
       .filter(user => String(user.id) !== String(req.user.id) && !user.is_banned)
       .map(user => ({
         id: user.id,

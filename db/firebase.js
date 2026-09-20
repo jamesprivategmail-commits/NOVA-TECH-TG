@@ -243,6 +243,12 @@ async function getAllUsers(search = '', limitCount = 100) {
   return users.slice(0, limitCount);
 }
 
+async function getUserCount() {
+  await ensureInit();
+  const snap = await getDocs(collection(firestoreDb, 'users'));
+  return snap.docs.filter(d => !d.data().is_banned).length;
+}
+
 async function deleteUser(id) {
   await ensureInit();
   await deleteDoc(doc(firestoreDb, 'users', String(id)));
@@ -892,6 +898,7 @@ module.exports = {
   getUserByNovaId,
   updateUser,
   getAllUsers,
+  getUserCount,
   deleteUser,
   // Conversations
   createConversation,

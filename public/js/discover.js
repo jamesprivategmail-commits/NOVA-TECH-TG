@@ -9,7 +9,7 @@ let els = {};
 let seq = 0;
 
 export function initDiscover() {
-  els = { list: $('#discover-list'), search: $('#discover-search') };
+  els = { list: $('#discover-list'), search: $('#discover-search'), count: $('#discover-count') };
   els.search?.addEventListener('input', debounce(() => loadDiscover(), 260));
   renderIntro();
 }
@@ -34,6 +34,12 @@ export async function loadDiscover() {
   try {
     const res = await api.discover(term);
     if (local !== seq) return;
+    if (els.count) {
+      const totalUsers = Number(res.totalUsers);
+      els.count.textContent = Number.isFinite(totalUsers)
+        ? `Total users: ${totalUsers.toLocaleString()}`
+        : '';
+    }
     const users = (res.users || []).filter((u) => String(u.id) !== String(state.me?.id));
     if (!users.length) {
       els.list.innerHTML = emptyState({

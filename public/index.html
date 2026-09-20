@@ -78,8 +78,8 @@
         <h1>DARK CHAT</h1>
       </div>
       <div class="header-actions">
-        <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
-        <button class="icon-btn" id="notifications-btn" title="Notifications" aria-label="Notifications">◌</button>
+        <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel" aria-label="Admin panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8 3.5-2.05-.76a6.1 6.1 0 0 0-.66-1.6l.9-2-1.83-1.83-2 .9a6.1 6.1 0 0 0-1.6-.66L12 4h-2l-.76 2.05a6.1 6.1 0 0 0-1.6.66l-2-.9L3.81 7.64l.9 2a6.1 6.1 0 0 0-.66 1.6L2 12v2l2.05.76c.16.56.38 1.1.66 1.6l-.9 2 1.83 1.83 2-.9c.5.28 1.04.5 1.6.66L10 20h2l.76-2.05a6.1 6.1 0 0 0 1.6-.66l2 .9 1.83-1.83-.9-2c.28-.5.5-1.04.66-1.6L20 14v-2Z"/></svg></button>
+        <button class="icon-btn" id="notifications-btn" title="Notifications" aria-label="Notifications"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/></svg></button>
         <button class="me-avatar-btn" id="me-avatar" title="You"></button>
       </div>
     </div>
@@ -91,13 +91,13 @@
     </div>
 
     <label class="conversation-search" for="conversation-search-input">
-      <span aria-hidden="true">⌕</span>
+      <span aria-hidden="true" class="icon icon-search"></span>
       <input id="conversation-search-input" type="search" placeholder="Search conversations" autocomplete="off">
     </label>
 
     <!-- CHATS TAB -->
     <div id="tab-chats">
-      <button class="new-chat-btn" id="new-chat-btn">+ New Chat</button>
+      <button class="new-chat-btn" id="new-chat-btn"><span class="button-icon">+</span> New Chat</button>
       <div class="conv-list" id="conv-list"></div>
     </div>
 
@@ -113,7 +113,7 @@
         <img id="post-image-preview" class="post-image-preview">
         <div class="post-toolbar">
           <input type="file" id="post-image-input" accept="image/*" class="hidden">
-          <button class="composer-icon-btn" id="post-image-btn" title="Add image">🖼</button>
+          <button class="composer-icon-btn" id="post-image-btn" title="Add image" aria-label="Add image"><span class="icon icon-image"></span></button>
           <button class="btn-primary" id="new-post-btn">Post</button>
         </div>
       </div>
@@ -123,24 +123,24 @@
 
   <div class="chat-view" id="chat-view">
     <div class="empty-state" id="chat-empty">
-      <div class="icon">💬</div>
+      <div class="icon icon-chat" aria-hidden="true"></div>
       <div class="title">Select a conversation</div>
       <div class="subtitle">Pick a chat, or start a new one with a friend's DARK CHAT ID.</div>
     </div>
 
     <div id="chat-active" class="hidden" style="display:flex; flex-direction:column; height:100%;">
       <div class="chat-header">
-        <button class="back-btn" id="chat-back">‹</button>
+          <button class="back-btn" id="chat-back" aria-label="Back"><span class="icon icon-back"></span></button>
         <div class="avatar sm" id="chat-avatar"></div>
         <div style="flex:1;" id="chat-header-info">
           <div class="title" id="chat-title"></div>
           <div class="subtitle" id="chat-subtitle"></div>
         </div>
         <div class="chat-header-actions" aria-label="Conversation actions">
-          <button class="back-btn chat-action-btn" id="chat-call-btn" title="Voice call" aria-label="Voice call">☎</button>
-          <button class="back-btn chat-action-btn" id="chat-video-btn" title="Video call" aria-label="Video call">▣</button>
-          <button class="back-btn chat-action-btn" id="chat-search-btn" title="Search this chat" aria-label="Search this chat">⌕</button>
-          <button class="back-btn chat-action-btn" id="chat-more-btn" title="More options" aria-label="More options">⋮</button>
+          <button class="back-btn chat-action-btn" id="chat-call-btn" title="Voice call" aria-label="Voice call"><span class="icon icon-phone"></span></button>
+          <button class="back-btn chat-action-btn" id="chat-video-btn" title="Video call" aria-label="Video call"><span class="icon icon-video"></span></button>
+          <button class="back-btn chat-action-btn" id="chat-search-btn" title="Search this chat" aria-label="Search this chat"><span class="icon icon-search"></span></button>
+          <button class="back-btn chat-action-btn" id="chat-more-btn" title="More options" aria-label="More options"><span class="icon icon-more"></span></button>
         </div>
         <button class="back-btn hidden" id="chat-manage-btn" title="Manage">⋮</button>
       </div>
@@ -155,26 +155,26 @@
       <div class="composer">
         <input type="file" id="image-input" accept="image/*" class="hidden">
         <input type="file" id="file-input" accept="image/*,video/*,audio/*,.pdf,.zip,.txt,.doc,.docx" class="hidden">
-        <button class="composer-icon-btn" id="file-btn" title="Attach file">＋</button>
-        <button class="composer-icon-btn" id="image-btn" title="Send image">🖼</button>
-        <button class="composer-icon-btn" id="voice-btn" title="Record voice note">🎙</button>
+        <button class="composer-icon-btn" id="file-btn" title="Attach file" aria-label="Attach file"><span class="icon icon-clip"></span></button>
+        <button class="composer-icon-btn" id="image-btn" title="Send image" aria-label="Send image"><span class="icon icon-image"></span></button>
+        <button class="composer-icon-btn" id="voice-btn" title="Record voice note" aria-label="Record voice note"><span class="icon icon-mic"></span></button>
         <textarea id="composer-input" rows="1" placeholder="Message"></textarea>
-        <button class="send-btn" id="send-btn">↑</button>
+        <button class="send-btn" id="send-btn" aria-label="Send message"><span class="icon icon-send"></span></button>
       </div>
     </div>
   </div>
   <nav class="mobile-nav" aria-label="Primary navigation">
-    <button data-tab="chats" class="active"><span>◉</span><small>Chats</small></button>
-    <button data-tab="status"><span>◌</span><small>Status</small></button>
-    <button data-tab="posts"><span>✦</span><small>Updates</small></button>
-    <button id="mobile-profile-btn"><span>○</span><small>Profile</small></button>
+    <button data-tab="chats" class="active"><span class="icon icon-chat"></span><small>Chats</small></button>
+    <button data-tab="status"><span class="icon icon-status"></span><small>Status</small></button>
+    <button data-tab="posts"><span class="icon icon-updates"></span><small>Updates</small></button>
+    <button id="mobile-profile-btn"><span class="icon icon-user"></span><small>Profile</small></button>
   </nav>
 </div>
 
 <!-- NEW CHAT MODAL -->
 <div id="new-chat-modal" class="modal-backdrop hidden">
   <div class="modal-card">
-    <button class="modal-close" id="close-new-chat">Done</button>
+      <button class="modal-close" id="close-new-chat">Close</button>
     <h2>New</h2>
     <div class="modal-tabs">
       <button data-newtab="dm" class="active">Direct Message</button>

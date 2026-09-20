@@ -468,7 +468,7 @@ async function createMessage(convId, msgData) {
   let preview = message.content;
   if (!preview) {
     if (message.media_type === 'image') preview = '📷 Photo';
-    else if (message.media_type === 'voice' || message.media_type === 'audio') preview = '🎤 Voice note';
+    else if (message.media_type === 'voice' || message.media_type === 'audio') preview = 'Voice note';
     else preview = 'Attachment';
   }
   await updateDoc(doc(firestoreDb, 'conversations', String(convId)), {

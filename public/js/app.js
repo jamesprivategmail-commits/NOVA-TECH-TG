@@ -60,6 +60,23 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function icon(name, label = '') {
+  const paths = {
+    reply: '<path d="M9 8 4 12l5 4v-3c5 0 7 2 8 4-.2-5-2.5-8-8-8V8Z"/>',
+    react: '<circle cx="12" cy="12" r="8"/><path d="M8.5 10h.01M15.5 10h.01M8.5 14c1.8 1.8 5.2 1.8 7 0"/>',
+    star: '<path d="m12 4 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 4Z"/>',
+    more: '<circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/>',
+    close: '<path d="m6 6 12 12M18 6 6 18"/>',
+    copy: '<rect x="8" y="8" width="10" height="10" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>',
+    check: '<path d="m5 12 4 4L19 6"/>'
+  };
+  return `<svg class="inline-icon" ${label ? `role="img" aria-label="${escapeHtml(label)}"` : 'aria-hidden="true"'} viewBox="0 0 24 24">${paths[name] || paths.more}</svg>`;
+}
+
+function verifiedBadge(isVerified) {
+  return isVerified ? `<span class="verification-badge" title="Verified" aria-label="Verified">${icon('check')}</span>` : '';
+}
+
 // ---------------- AUTH ----------------
 const authScreen = $('#auth-screen');
 const appScreen = $('#app-screen');
@@ -249,10 +266,13 @@ function initNotifications() {
   modal.dataset.initialized = '1';
   $('#notifications-btn')?.addEventListener('click', async () => {
     modal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
     await loadNotifications();
   });
-  $('#notifications-close-btn')?.addEventListener('click', () => modal.classList.add('hidden'));
-  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+  const close = () => { modal.classList.add('hidden'); document.body.classList.remove('modal-open'); };
+  $('#notifications-close-btn')?.addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
   $('#notifications-read-btn')?.addEventListener('click', async () => {
     await api('/notifications/read', { method: 'POST', body: {} });
     await loadNotifications();
@@ -360,17 +380,17 @@ function renderConvList() {
     return haystack.includes(state.conversationFilter);
   });
   if (state.conversations.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="icon">👋</div><div class="title">No chats yet</div><div class="subtitle">Tap "+ New Chat" to message a friend.</div></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="icon icon-chat"></div><div class="title">No chats yet</div><div class="subtitle">Tap "+ New Chat" to message a friend.</div></div>`;
     return;
   }
   if (conversations.length === 0) {
-    list.innerHTML = `<div class="empty-state compact"><div class="icon">⌕</div><div class="title">No matching chats</div><div class="subtitle">Try another name or NOVA ID.</div></div>`;
+    list.innerHTML = `<div class="empty-state compact"><div class="icon icon-search"></div><div class="title">No matching chats</div><div class="subtitle">Try another name or NOVA ID.</div></div>`;
     return;
   }
   list.innerHTML = conversations.map(c => {
     const preview = c.last_message
       ? (String(c.last_sender_id) === String(state.me.id) ? 'You: ' : '') + escapeHtml(c.last_message)
-      : (c.type === 'channel' ? 'No posts yet' : 'Say hi 👋');
+      : (c.type === 'channel' ? 'No posts yet' : 'Say hi');
     const badge = c.type === 'group' ? '<span class="conv-badge group">Group</span>'
       : c.type === 'channel' ? '<span class="conv-badge channel">Channel</span>' : '';
     return `
@@ -378,7 +398,7 @@ function renderConvList() {
         <div class="avatar" style="background:${c.avatar_color || '#8E8E93'}">${initials(c.name || '?')}</div>
         <div class="conv-info">
           <div class="top-row">
-            <span class="name">${escapeHtml(c.name || 'Unnamed')} ${badge}</span>
+          <span class="name">${escapeHtml(c.name || 'Unnamed')} ${verifiedBadge(c.is_verified || c.other_user?.is_verified)} ${badge}</span>
             <span class="time">${c.last_message_at ? timeAgo(c.last_message_at) : ''}</span>
           </div>
           <div class="preview">${preview}</div>
@@ -462,10 +482,10 @@ function renderMessages(convId) {
           <div class="message-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${m.edited_at ? ' · edited' : ''}</div>
         </div>
         <div class="message-actions">
-          <button data-action="reply" data-id="${m.id}">↩</button>
-          <button data-action="react" data-id="${m.id}">☺</button>
-          <button data-action="save" data-id="${m.id}">${m.saved_by_me ? '★' : '☆'}</button>
-          <button data-action="more" data-id="${m.id}">⋯</button>
+          <button data-action="reply" data-id="${m.id}" aria-label="Reply">${icon('reply','Reply')}</button>
+          <button data-action="react" data-id="${m.id}" aria-label="React">${icon('react','React')}</button>
+          <button data-action="save" data-id="${m.id}" aria-label="${m.saved_by_me ? 'Unsave' : 'Save'}">${icon('star', m.saved_by_me ? 'Unsave' : 'Save')}</button>
+          <button data-action="more" data-id="${m.id}" aria-label="More message actions">${icon('more','More')}</button>
         </div>
       </div>`;
 
@@ -953,7 +973,7 @@ async function viewProfile(member) {
       <button class="modal-close" id="profile-close-btn">Close</button>
       <div style="text-align:center; padding:24px 16px;">
         <div class="avatar" style="background:${user.avatarColor}; width:72px; height:72px; font-size:28px; margin:0 auto 12px;">${initials(user.displayName)}</div>
-        <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)} ${user.isVerified ? '✓' : ''}</div>
+        <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)} ${verifiedBadge(user.isVerified)}</div>
         <div style="color:var(--text-secondary); margin-bottom:12px;">${escapeHtml(user.novaId)}</div>
         ${user.bio ? `<div style="padding:12px; background:rgba(255,255,255,0.05); border-radius:10px;">${escapeHtml(user.bio)}</div>` : ''}
         <button class="profile-block-btn" id="profile-block-btn" type="button">Block user</button>
@@ -1048,7 +1068,7 @@ async function loadStatuses() {
     </div>`;
 
   if (others.length === 0) {
-    html += `<div class="empty-state"><div class="icon">🌟</div><div class="title">No updates yet</div><div class="subtitle">When friends post a status, it'll show up here.</div></div>`;
+    html += `<div class="empty-state"><div class="icon icon-status" aria-hidden="true"></div><div class="title">No updates yet</div><div class="subtitle">When friends post a status, it'll show up here.</div></div>`;
   } else {
     html += others.map(s => `
       <div class="status-item" data-id="${s.id}">
@@ -1095,7 +1115,7 @@ async function viewStatus(status, isMine) {
         <div class="avatar sm" style="background:rgba(255,255,255,0.3)">${initials(status.display_name)}</div>
         <span>${escapeHtml(status.display_name)}${isMine ? ' (you)' : ''}</span>
       </div>
-      <button class="status-viewer-close" id="status-viewer-close">✕</button>
+      <button class="status-viewer-close" id="status-viewer-close" aria-label="Close status viewer">${icon('close','Close')}</button>
       ${isMine ? '<button class="status-viewer-delete" id="status-viewer-delete" type="button">Delete status</button>' : ''}
       ${status.media_url && status.media_type === 'video' ? `<video class="status-viewer-media" controls src="${status.media_url}"></video>` : status.media_url ? `<img class="status-viewer-media" src="${status.media_url}" alt="Status media">` : ''}
       ${status.content ? `<div style="font-size:20px; line-height:1.4; word-break:break-word;">${escapeHtml(status.content)}</div>` : ''}
@@ -1182,7 +1202,7 @@ async function loadPosts() {
       <div class="post-header">
         <div class="avatar sm" style="background:${p.avatar_color}">${initials(p.display_name)}</div>
         <div>
-          <div style="font-weight:600;">${escapeHtml(p.display_name)} ${p.is_verified ? '✓' : ''}</div>
+          <div style="font-weight:600;">${escapeHtml(p.display_name)} ${verifiedBadge(p.is_verified)}</div>
           <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
         </div>
       </div>
@@ -1269,7 +1289,7 @@ async function loadAdminUsers(search = '') {
         <div class="avatar sm" style="background:${u.avatarColor}">${initials(u.displayName)}</div>
         <div class="conv-info" style="flex:1;">
           <div class="top-row">
-            <span class="name">${escapeHtml(u.displayName)} ${u.isVerified ? '<span style="color:#30D158">✓</span>' : ''} ${u.isBanned ? '<span style="color:#FF453A">(BANNED)</span>' : ''}</span>
+            <span class="name">${escapeHtml(u.displayName)} ${verifiedBadge(u.isVerified)} ${u.isBanned ? '<span class="account-state banned">BANNED</span>' : '<span class="account-state active">ACTIVE</span>'}</span>
           </div>
           <div class="preview">${escapeHtml(u.novaId)}</div>
         </div>

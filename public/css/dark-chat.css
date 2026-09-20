@@ -14,10 +14,43 @@
 }
 
 html,body { background:#050505 !important; color:var(--text) !important; }
+body.modal-open { overflow:hidden !important; }
 body { font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
 button,input,textarea { -webkit-tap-highlight-color:transparent; }
 button { color:inherit; }
 .hidden { display:none !important; }
+svg { width:1em; height:1em; display:block; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.icon { display:inline-flex; width:1.15em; height:1.15em; position:relative; flex:none; }
+.icon::before,.icon::after { content:""; position:absolute; display:block; }
+.icon-search::before { inset:2px 4px 4px 2px; border:2px solid currentColor; border-radius:50%; }
+.icon-search::after { width:7px; height:2px; right:0; bottom:1px; background:currentColor; transform:rotate(45deg); border-radius:2px; }
+.icon-back::before { width:10px; height:10px; left:4px; top:3px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); }
+.icon-phone::before { inset:2px 4px; border:2px solid currentColor; border-top-color:transparent; border-bottom-color:transparent; border-radius:8px; transform:rotate(-42deg); }
+.icon-video::before { inset:3px 6px 3px 2px; border:2px solid currentColor; border-radius:3px; }
+.icon-video::after { right:0; top:6px; border-left:6px solid currentColor; border-top:4px solid transparent; border-bottom:4px solid transparent; }
+.icon-more::before { width:4px; height:4px; left:6px; top:1px; border-radius:50%; background:currentColor; box-shadow:0 7px currentColor,0 14px currentColor; }
+.icon-clip::before { width:8px; height:15px; left:4px; top:0; border:2px solid currentColor; border-radius:6px; transform:rotate(42deg); }
+.icon-image::before { inset:3px 1px 2px; border:2px solid currentColor; border-radius:3px; }
+.icon-image::after { width:7px; height:7px; left:5px; bottom:5px; border-left:2px solid currentColor; border-top:2px solid currentColor; transform:rotate(45deg); }
+.icon-mic::before { width:8px; height:13px; left:4px; top:0; border:2px solid currentColor; border-radius:6px; }
+.icon-mic::after { width:14px; height:9px; left:1px; top:9px; border:2px solid currentColor; border-top:0; border-radius:0 0 10px 10px; }
+.icon-send::before { inset:2px 1px 2px 2px; border-top:2px solid currentColor; border-right:2px solid currentColor; transform:skewY(-28deg) rotate(-14deg); }
+.icon-chat::before { inset:2px 1px 4px; border:2px solid currentColor; border-radius:5px; }
+.icon-chat::after { width:5px; height:5px; left:3px; bottom:1px; border-left:2px solid currentColor; transform:skew(-25deg); }
+.icon-status::before { inset:1px; border:2px solid currentColor; border-radius:50%; }
+.icon-status::after { width:5px; height:5px; left:5px; top:5px; border:2px solid currentColor; border-radius:50%; }
+.icon-updates::before { inset:2px; border:2px solid currentColor; border-radius:3px; }
+.icon-updates::after { width:8px; height:2px; left:4px; top:7px; background:currentColor; box-shadow:0 4px currentColor; }
+.icon-user::before { width:7px; height:7px; left:5px; top:1px; border:2px solid currentColor; border-radius:50%; }
+.icon-user::after { width:14px; height:7px; left:1px; bottom:1px; border:2px solid currentColor; border-radius:9px 9px 4px 4px; }
+.button-icon { font-size:1.35em; line-height:.8; vertical-align:-1px; }
+.verification-badge { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:4px; border-radius:50%; background:#2d8cff; color:#fff; vertical-align:1px; box-shadow:0 0 0 2px rgba(45,140,255,.12); }
+.verification-badge svg { width:10px; height:10px; stroke-width:2.5; }
+.inline-icon { width:16px; height:16px; vertical-align:middle; }
+.account-state { display:inline-flex; margin-left:6px; padding:2px 6px; border-radius:999px; font-size:9px; font-weight:800; letter-spacing:.05em; }
+.account-state.active { color:#68e39a; background:rgba(41,215,101,.12); }
+.account-state.banned { color:#ff7b82; background:rgba(255,48,56,.14); }
+.empty-state .icon.icon-chat,.empty-state .icon.icon-status,.empty-state .icon.icon-search { width:38px; height:38px; color:#777; font-size:30px; }
 
 #auth-screen { background:#050505 !important; }
 .auth-card,.modal-card { background:#101010 !important; border:1px solid var(--line) !important; box-shadow:0 24px 80px rgba(0,0,0,.55) !important; }
@@ -123,7 +156,7 @@ button { color:inherit; }
   .mobile-nav button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:#777; border-radius:12px; }
   .mobile-nav button.active { color:#ff6666; background:rgba(255,49,49,.08); }
   .mobile-nav button span { font-size:18px; line-height:1; }
-  .mobile-nav button small { font-size:10px; }
+.mobile-nav button small { font-size:10px; }
   #app-screen.chat-open .mobile-nav { display:none; }
 }
 

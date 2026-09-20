@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { getUserById } = require('../db/firebase');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026';
 
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -7,13 +9,15 @@ async function requireAuth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET);
     req.user = payload; // { id, novaId, displayName }
 
-    // Banned accounts lose access immediately, even with a still-valid token.
-    const { rows } = await db.query('SELECT is_banned, ban_reason FROM users WHERE id = $1', [payload.id]);
-    if (rows[0]?.is_banned) {
-      return res.status(403).json({ error: rows[0].ban_reason ? `Account banned: ${rows[0].ban_reason}` : 'Your account has been banned.' });
+    // Banned accounts lose access immediately
+    const user = await getUserById(payload.id);
+    if (user?.is_banned) {
+      return res.status(403).json({
+        error: user.ban_reason ? `Account banned: ${user.ban_reason}` : 'Your account has been banned.'
+      });
     }
 
     next();

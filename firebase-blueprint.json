@@ -1,0 +1,180 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile, credentials, and verification status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the user" },
+        "novaId": { "type": "string", "description": "User DARK CHAT phone/code ID e.g. NOVA-123456" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "passwordHash": { "type": "string", "description": "Bcrypt hashed password" },
+        "avatarColor": { "type": "string", "description": "Default hex color for user avatar" },
+        "avatarUrl": { "type": "string", "description": "Firebase Storage URL for profile picture" },
+        "bio": { "type": "string", "description": "Short bio or tagline" },
+        "isVerified": { "type": "boolean", "description": "Whether the user has a verified checkmark" },
+        "isBanned": { "type": "boolean", "description": "Whether the user account is banned" },
+        "banReason": { "type": "string", "description": "Reason for banning if applicable" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "lastSeen": { "type": "string", "format": "date-time", "description": "Last seen active timestamp" }
+      },
+      "required": ["id", "novaId", "displayName", "passwordHash", "avatarColor"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Chat channel, direct message, or group chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique conversation ID" },
+        "type": { "type": "string", "enum": ["dm", "group", "channel"], "description": "Conversation type" },
+        "name": { "type": "string", "description": "Title of the group or channel" },
+        "avatarColor": { "type": "string", "description": "Hex avatar background color" },
+        "ownerId": { "type": "string", "description": "User ID of conversation owner" },
+        "inviteCode": { "type": "string", "description": "Unique invite code for public join" },
+        "memberIds": { "type": "array", "description": "Array of user IDs who are members" },
+        "members": { "type": "object", "description": "Map of user ID to membership role and details" },
+        "lastMessage": { "type": "string", "description": "Snippet of the most recent message" },
+        "lastMessageAt": { "type": "string", "format": "date-time", "description": "Timestamp of most recent message" },
+        "lastSenderId": { "type": "string", "description": "User ID who sent the most recent message" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "type", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message containing text, media URL from Firebase Storage, voice, or reactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique message ID" },
+        "conversationId": { "type": "string", "description": "ID of parent conversation" },
+        "senderId": { "type": "string", "description": "User ID of sender" },
+        "content": { "type": "string", "description": "Text body of the message" },
+        "mediaType": { "type": "string", "enum": ["image", "voice"], "description": "Optional media type" },
+        "mediaUrl": { "type": "string", "description": "Firebase Storage download URL" },
+        "mediaMime": { "type": "string", "description": "MIME type of uploaded media" },
+        "mediaDuration": { "type": "number", "description": "Duration in seconds for voice notes" },
+        "replyToId": { "type": "string", "description": "ID of parent message if reply" },
+        "forwardedFromId": { "type": "string", "description": "ID of original message if forwarded" },
+        "deletedForEveryone": { "type": "boolean", "description": "Whether message was revoked for everyone" },
+        "deletedAt": { "type": "string", "format": "date-time", "description": "Timestamp of deletion" },
+        "pinnedAt": { "type": "string", "format": "date-time", "description": "Timestamp when message was pinned" },
+        "pinnedBy": { "type": "string", "description": "User ID who pinned message" },
+        "reactions": { "type": "array", "description": "Array of reaction objects" },
+        "savedBy": { "type": "array", "description": "User IDs who saved this message" },
+        "hiddenBy": { "type": "array", "description": "User IDs who hid this message for themselves" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Message creation timestamp" },
+        "editedAt": { "type": "string", "format": "date-time", "description": "Message edit timestamp" }
+      },
+      "required": ["id", "conversationId", "senderId", "createdAt"]
+    },
+    "Status": {
+      "title": "Status",
+      "description": "Ephemeral 24-hour status story update",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique status ID" },
+        "userId": { "type": "string", "description": "User ID who posted the status" },
+        "content": { "type": "string", "description": "Status text content" },
+        "bgColor": { "type": "string", "description": "Hex background color" },
+        "mediaUrl": { "type": "string", "description": "Optional Firebase Storage URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "expiresAt": { "type": "string", "format": "date-time", "description": "Expiration timestamp (24h)" },
+        "viewers": { "type": "array", "description": "List of user IDs who viewed this status" }
+      },
+      "required": ["id", "userId", "content", "createdAt", "expiresAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Feed post with optional photo stored in Firebase Storage and likes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique post ID" },
+        "userId": { "type": "string", "description": "Author user ID" },
+        "caption": { "type": "string", "description": "Post caption or description" },
+        "imageUrl": { "type": "string", "description": "Firebase Storage image URL" },
+        "imageMime": { "type": "string", "description": "Image MIME type" },
+        "likes": { "type": "array", "description": "Array of user IDs who liked the post" },
+        "commentCount": { "type": "number", "description": "Number of comments on this post" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "userId", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a feed post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique comment ID" },
+        "postId": { "type": "string", "description": "Target post ID" },
+        "userId": { "type": "string", "description": "Author user ID" },
+        "content": { "type": "string", "description": "Comment text body" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "postId", "userId", "content", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notification for incoming calls, mentions, reactions, or messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique notification ID" },
+        "userId": { "type": "string", "description": "Recipient user ID" },
+        "actorId": { "type": "string", "description": "User ID who triggered notification" },
+        "type": { "type": "string", "description": "Notification type tag" },
+        "payload": { "type": "object", "description": "Metadata payload" },
+        "readAt": { "type": "string", "format": "date-time", "description": "Read timestamp or null" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "userId", "type", "createdAt"]
+    },
+    "CallSession": {
+      "title": "CallSession",
+      "description": "Voice or video call session record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "UUID of call session" },
+        "conversationId": { "type": "string", "description": "Conversation ID" },
+        "initiatorId": { "type": "string", "description": "User ID of caller" },
+        "kind": { "type": "string", "enum": ["voice", "video"], "description": "Call mode" },
+        "state": { "type": "string", "description": "ringing | accepted | declined | ended | missed" },
+        "startedAt": { "type": "string", "format": "date-time", "description": "Call initiation timestamp" },
+        "endedAt": { "type": "string", "format": "date-time", "description": "Call end timestamp" }
+      },
+      "required": ["id", "initiatorId", "kind", "state", "startedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles, identity, and account credentials"
+    },
+    "/conversations/{convId}": {
+      "schema": "Conversation",
+      "description": "Direct message, group chat, and channel conversations"
+    },
+    "/conversations/{convId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages and media for a conversation"
+    },
+    "/statuses/{statusId}": {
+      "schema": "Status",
+      "description": "24-hour status stories"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Public social posts and media feed"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments attached to posts"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/call_sessions/{callId}": {
+      "schema": "CallSession",
+      "description": "Call session history and signaling state"
+    }
+  }
+}

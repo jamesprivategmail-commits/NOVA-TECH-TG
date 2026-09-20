@@ -7,14 +7,18 @@
     "node": ">=18.0.0"
   },
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node server.js",
     "migrate": "node db/migrate.js"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^9.2.0",
+    "@google-cloud/storage": "^8.2.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "firebase": "^12.19.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
     "socket.io": "^4.7.5"

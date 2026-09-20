@@ -1,4 +1,4 @@
-const db = require('./index');
+const { getUserByNovaId } = require('./firebase');
 
 const AVATAR_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#64D2FF', '#FF375F', '#5E5CE6'];
 
@@ -10,8 +10,8 @@ async function generateNovaId() {
   for (let attempt = 0; attempt < 20; attempt++) {
     const digits = Math.floor(100000 + Math.random() * 900000); // 6 digits
     const candidate = `+1-626-715-${String(digits).slice(-4)}`;
-    const { rows } = await db.query('SELECT 1 FROM users WHERE nova_id = $1', [candidate]);
-    if (rows.length === 0) return candidate;
+    const existing = await getUserByNovaId(candidate);
+    if (!existing) return candidate;
   }
   throw new Error('Could not generate a unique DARK CHAT ID, try again');
 }

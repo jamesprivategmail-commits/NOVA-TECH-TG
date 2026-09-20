@@ -1,5 +1,10 @@
 const express = require('express');
-const db = require('../db');
+const {
+  createStatus,
+  getActiveStatuses,
+  markStatusViewed,
+  deleteStatus
+} = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,44 +12,57 @@ router.use(requireAuth);
 
 // POST /api/status { content, bgColor }
 router.post('/', async (req, res) => {
-  const { content, bgColor } = req.body;
-  if (!content || !content.trim()) return res.status(400).json({ error: 'Status text is required' });
+  try {
+    const { content, bgColor } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Status text is required' });
+    }
 
-  const { rows } = await db.query(
-    `INSERT INTO statuses (user_id, content, bg_color, expires_at)
-     VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours') RETURNING *`,
-    [req.user.id, content.trim().slice(0, 300), bgColor || '#0A84FF']
-  );
-  res.json({ status: rows[0] });
+    const status = await createStatus({
+      userId: req.user.id,
+      content: content.trim().slice(0, 300),
+      bgColor: bgColor || '#0A84FF'
+    });
+
+    res.json({ status });
+  } catch (err) {
+    console.error('Create status error:', err);
+    res.status(500).json({ error: 'Failed to post status' });
+  }
 });
 
-// GET /api/status/feed - active statuses from everyone (friends model: everyone on the server)
+// GET /api/status/feed - active statuses from everyone
 router.get('/feed', async (req, res) => {
-  const { rows } = await db.query(
-    `SELECT s.id, s.content, s.bg_color, s.created_at, s.expires_at,
-            u.id as user_id, u.nova_id, u.display_name, u.avatar_color, u.is_verified,
-            EXISTS(SELECT 1 FROM status_views v WHERE v.status_id = s.id AND v.viewer_id = $1) AS viewed
-     FROM statuses s JOIN users u ON u.id = s.user_id
-     WHERE s.expires_at > NOW()
-     ORDER BY s.created_at DESC`,
-    [req.user.id]
-  );
-  res.json({ statuses: rows });
+  try {
+    const statuses = await getActiveStatuses(req.user.id);
+    res.json({ statuses });
+  } catch (err) {
+    console.error('Get status feed error:', err);
+    res.status(500).json({ error: 'Failed to load status updates' });
+  }
 });
 
 // POST /api/status/:id/view
 router.post('/:id/view', async (req, res) => {
-  await db.query(
-    `INSERT INTO status_views (status_id, viewer_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
-    [req.params.id, req.user.id]
-  );
-  res.json({ ok: true });
+  try {
+    await markStatusViewed(req.params.id, req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('View status error:', err);
+    res.status(500).json({ error: 'Failed to mark viewed' });
+  }
 });
 
 // DELETE /api/status/:id
 router.delete('/:id', async (req, res) => {
-  await db.query('DELETE FROM statuses WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
-  res.json({ ok: true });
+  try {
+    const ok = await deleteStatus(req.params.id, req.user.id);
+    if (!ok) return res.status(404).json({ error: 'Status not found or unauthorized' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete status error:', err);
+    res.status(500).json({ error: 'Failed to delete status' });
+  }
 });
 
 module.exports = router;

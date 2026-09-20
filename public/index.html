@@ -4,9 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
 <title>DARK CHAT</title>
+<meta name="description" content="Real-time messaging platform with DMs, groups, channels, stories, and posts">
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
+<link rel="shortcut icon" href="/assets/logo.jpg">
+<link rel="apple-touch-icon" href="/assets/logo.jpg">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#050505">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta property="og:title" content="DARK CHAT">
+<meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, stories, and posts">
+<meta property="og:image" content="https://i.postimg.cc/vmxGsS6k/b3c298e52eb495056209ebfefd8918d3.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://i.postimg.cc/vmxGsS6k/b3c298e52eb495056209ebfefd8918d3.jpg">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/dark-chat.css">
 </head>
@@ -15,7 +23,9 @@
 <!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">D</div>
+    <div class="auth-logo">
+      <img src="/assets/logo.jpg" alt="DARK CHAT" class="auth-logo-img">
+    </div>
     <div class="auth-title" id="auth-title">Welcome to DARK CHAT</div>
     <div class="auth-subtitle" id="auth-subtitle">Message your people, your way.</div>
 
@@ -43,7 +53,7 @@
     <form id="login-form" class="hidden">
       <div class="field-group">
         <label>DARK CHAT ID</label>
-        <input type="text" id="login-novaid" placeholder="+1-626-715-1xxx" required autocomplete="off">
+        <input type="text" id="login-novaid" placeholder="+1-999-234-8321" required autocomplete="off">
       </div>
       <div class="field-group">
         <label>Password</label>
@@ -63,7 +73,10 @@
 <div id="app-screen" class="hidden">
   <div class="sidebar">
     <div class="sidebar-header">
-      <h1>DARK CHAT</h1>
+      <div class="brand-title-wrap">
+        <img src="/assets/logo.jpg" alt="DARK CHAT Logo" class="sidebar-logo-img">
+        <h1>DARK CHAT</h1>
+      </div>
       <div class="header-actions">
         <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
         <button class="me-avatar-btn" id="me-avatar" title="You"></button>

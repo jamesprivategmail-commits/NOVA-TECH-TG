@@ -1,0 +1,6 @@
+{
+  "name": "DARK CHAT",
+  "description": "Real-time messaging platform with DMs, groups, channels, stories, and posts",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

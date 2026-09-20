@@ -1,14 +1,11 @@
-const { Pool } = require('pg');
-
-// Railway injects DATABASE_URL automatically when you add a Postgres plugin.
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway')
-    ? { rejectUnauthorized: false }
-    : (process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false)
-});
+// Re-export Firebase data module as the default database interface
+const firebase = require('./firebase');
 
 module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool
+  ...firebase,
+  // Backward compatibility query stub if needed
+  query: async () => {
+    console.warn('PostgreSQL db.query called, but DARK CHAT has migrated to Firebase!');
+    return { rows: [] };
+  }
 };

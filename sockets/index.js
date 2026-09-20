@@ -1,16 +1,26 @@
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const {
+  getUserById,
+  updateUser,
+  getConversationById,
+  getConversationsForUser,
+  createMessage,
+  uploadToStorage
+} = require('../db/firebase');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026';
 
 function initSockets(io) {
   const onlineSockets = new Map();
+
   // Auth middleware for socket connections
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('No token provided'));
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      const { rows } = await db.query('SELECT is_banned FROM users WHERE id = $1', [payload.id]);
-      if (rows[0]?.is_banned) return next(new Error('Account banned'));
+      const payload = jwt.verify(token, JWT_SECRET);
+      const user = await getUserById(payload.id);
+      if (user?.is_banned) return next(new Error('Account banned'));
       socket.user = payload;
       next();
     } catch (err) {
@@ -22,11 +32,12 @@ function initSockets(io) {
     const userId = socket.user.id;
 
     // Join a room for every conversation this user belongs to
-    const { rows: convs } = await db.query(
-      'SELECT conversation_id FROM conversation_members WHERE user_id = $1',
-      [userId]
-    );
-    convs.forEach((c) => socket.join(`conv:${c.conversation_id}`));
+    try {
+      const convs = await getConversationsForUser(userId);
+      convs.forEach((c) => socket.join(`conv:${c.id}`));
+    } catch (e) {
+      console.error('Socket join rooms error:', e);
+    }
     socket.join(`user:${userId}`);
 
     onlineSockets.set(userId, (onlineSockets.get(userId) || 0) + 1);
@@ -35,9 +46,11 @@ function initSockets(io) {
     socket.on('call:invite', ({ targetUserId, call }) => {
       if (targetUserId) io.to(`user:${targetUserId}`).emit('call:incoming', { call, fromUserId: userId });
     });
+
     socket.on('call:signal', ({ targetUserId, callId, signal }) => {
       if (targetUserId && callId && signal) io.to(`user:${targetUserId}`).emit('call:signal', { callId, signal, fromUserId: userId });
     });
+
     socket.on('call:state', ({ targetUserId, callId, state }) => {
       if (targetUserId && callId && state) io.to(`user:${targetUserId}`).emit('call:state', { callId, state, fromUserId: userId });
     });
@@ -49,34 +62,48 @@ function initSockets(io) {
         const hasMedia = media && media.data && media.type;
         if (!hasText && !hasMedia) return ack?.({ error: 'Empty message' });
 
-        const member = await db.query(
-          'SELECT role FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
-          [conversationId, userId]
-        );
-        if (!member.rows[0]) return ack?.({ error: 'Not a member of this conversation' });
+        const conv = await getConversationById(conversationId);
+        if (!conv) return ack?.({ error: 'Conversation not found' });
 
+        const isMember = (conv.member_ids || []).includes(userId);
+        if (!isMember && conv.type !== 'channel') {
+          return ack?.({ error: 'Not a member of this conversation' });
+        }
+
+        const role = conv.members?.[userId]?.role || (conv.owner_id === userId ? 'owner' : null);
         // Channels: only owner/admin can post
-        const conv = await db.query('SELECT type FROM conversations WHERE id=$1', [conversationId]);
-        if (conv.rows[0]?.type === 'channel' && !['owner', 'admin'].includes(member.rows[0].role)) {
+        if (conv.type === 'channel' && !['owner', 'admin'].includes(role)) {
           return ack?.({ error: 'Only channel admins can post here' });
         }
 
-        const { rows } = await db.query(
-          `INSERT INTO messages (conversation_id, sender_id, content, media_type, media_data, media_mime, media_duration, reply_to_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [
-            conversationId,
-            userId,
-            hasText ? content.trim().slice(0, 4000) : null,
-            hasMedia ? media.type : null,
-            hasMedia ? media.data : null,
-            hasMedia ? (media.mime || null) : null,
-            hasMedia ? (media.duration || null) : null,
-            replyToId || null
-          ]
-        );
-        const msg = rows[0];
-        const senderInfo = await db.query('SELECT display_name, avatar_color, is_verified FROM users WHERE id=$1', [userId]);
+        let mediaUrl = null;
+        let mediaMime = media?.mime || null;
+        if (hasMedia) {
+          // Upload media to Firebase Storage
+          const fallbackMime = media.type === 'voice' ? 'audio/webm' : 'image/jpeg';
+          const filename = media.type === 'voice' ? `voice_${Date.now()}.webm` : `photo_${Date.now()}.jpg`;
+          const uploadResult = await uploadToStorage({
+            data: media.data,
+            mimeType: mediaMime || fallbackMime,
+            filename,
+            userId
+          });
+          mediaUrl = uploadResult.url;
+          mediaMime = uploadResult.mimeType;
+        }
+
+        const msg = await createMessage(conversationId, {
+          senderId: userId,
+          content: hasText ? content.trim().slice(0, 4000) : null,
+          mediaType: hasMedia ? media.type : null,
+          mediaUrl: mediaUrl,
+          mediaData: mediaUrl, // provide URL so existing frontend renders immediately
+          mediaMime: mediaMime,
+          mediaDuration: media?.duration || null,
+          replyToId: replyToId || null
+        });
+
+        const senderInfo = await getUserById(userId);
 
         const payload = {
           id: msg.id,
@@ -84,22 +111,23 @@ function initSockets(io) {
           sender_id: userId,
           content: msg.content,
           media_type: msg.media_type,
-          media_data: msg.media_data,
+          media_url: mediaUrl,
+          media_data: mediaUrl,
           media_mime: msg.media_mime,
           media_duration: msg.media_duration,
           reply_to_id: msg.reply_to_id,
           edited_at: msg.edited_at,
           deleted_for_everyone: msg.deleted_for_everyone,
           created_at: msg.created_at,
-          display_name: senderInfo.rows[0].display_name,
-          avatar_color: senderInfo.rows[0].avatar_color,
-          is_verified: senderInfo.rows[0].is_verified
+          display_name: senderInfo?.display_name || 'User',
+          avatar_color: senderInfo?.avatar_color || '#0A84FF',
+          is_verified: senderInfo?.is_verified || false
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
         ack?.({ ok: true, message: payload });
       } catch (err) {
-        console.error(err);
+        console.error('Send message socket error:', err);
         ack?.({ error: 'Failed to send message' });
       }
     });
@@ -109,15 +137,18 @@ function initSockets(io) {
     });
 
     socket.on('conversation:join', async ({ conversationId }) => {
-      const member = await db.query(
-        'SELECT 1 FROM conversation_members WHERE conversation_id=$1 AND user_id=$2',
-        [conversationId, userId]
-      );
-      if (member.rows[0]) socket.join(`conv:${conversationId}`);
+      const conv = await getConversationById(conversationId);
+      if (conv && ((conv.member_ids || []).includes(userId) || conv.type === 'channel')) {
+        socket.join(`conv:${conversationId}`);
+      }
     });
 
     socket.on('disconnect', async () => {
-      await db.query('UPDATE users SET last_seen = NOW() WHERE id=$1', [userId]);
+      try {
+        await updateUser(userId, { last_seen: new Date().toISOString() });
+      } catch (e) {
+        // ignore
+      }
       const remaining = Math.max(0, (onlineSockets.get(userId) || 1) - 1);
       if (remaining) onlineSockets.set(userId, remaining);
       else onlineSockets.delete(userId);

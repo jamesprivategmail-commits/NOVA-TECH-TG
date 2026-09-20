@@ -1,13 +1,14 @@
 {
   "name": "DARK CHAT",
-  "short_name": "NOVA",
-  "description": "Message your people, your way.",
+  "short_name": "DARK CHAT",
+  "description": "Real-time messaging platform with DMs, groups, channels, stories, and posts.",
   "id": "/",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F2F2F7",
-  "theme_color": "#0A84FF",
+  "background_color": "#050505",
+  "theme_color": "#ff3131",
   "icons": [
+    { "src": "/assets/logo.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any maskable" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]

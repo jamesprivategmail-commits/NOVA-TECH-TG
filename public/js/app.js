@@ -12,6 +12,9 @@ let state = {
   socket: null,
   typingTimeout: null,
   myStatuses: [],
+  replyToId: null,
+  postImageData: null,
+  postImageMime: null
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -38,6 +41,7 @@ function initials(name) {
 }
 
 function timeAgo(dateStr) {
+  if (!dateStr) return '';
   const d = new Date(dateStr);
   const diff = (Date.now() - d.getTime()) / 1000;
   if (diff < 60) return 'now';
@@ -45,10 +49,6 @@ function timeAgo(dateStr) {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
   return d.toLocaleDateString();
-}
-
-function clockTime(dateStr) {
-  return new Date(dateStr).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 function escapeHtml(str) {
@@ -137,16 +137,35 @@ function logout() {
 async function boot() {
   authScreen.classList.add('hidden');
   appScreen.classList.remove('hidden');
-  $('#me-avatar').style.background = state.me.avatarColor;
-  $('#me-avatar').textContent = initials(state.me.displayName);
-  $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — tap to copy ID, long-press area for logout`;
+  if (state.me.avatarUrl) {
+    $('#me-avatar').style.backgroundImage = `url(${state.me.avatarUrl})`;
+    $('#me-avatar').style.backgroundSize = 'cover';
+    $('#me-avatar').style.backgroundPosition = 'center';
+    $('#me-avatar').textContent = '';
+  } else {
+    $('#me-avatar').style.backgroundImage = 'none';
+    $('#me-avatar').style.background = state.me.avatarColor || '#ff3131';
+    $('#me-avatar').textContent = initials(state.me.displayName);
+  }
+  $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — tap to copy ID, click to logout`;
   $('#me-avatar').addEventListener('click', () => {
     navigator.clipboard?.writeText(state.me.novaId);
     if (confirm(`You are ${state.me.displayName} (${state.me.novaId}).\n\nID copied to clipboard.\n\nLog out?`)) logout();
   });
+
+  // Admin button visibility
+  if (state.me.isAdmin) {
+    const adminBtn = $('#admin-panel-btn');
+    if (adminBtn) adminBtn.classList.remove('hidden');
+  }
+
   connectSocket();
   await loadConversations();
   initStatusColors();
+  initMediaButtons();
+  initPostMedia();
+  initAdminPanel();
+  initCallControls();
 }
 
 function connectSocket() {
@@ -154,15 +173,18 @@ function connectSocket() {
 
   state.socket.on('message:new', (msg) => {
     if (!state.messages[msg.conversation_id]) state.messages[msg.conversation_id] = [];
-    state.messages[msg.conversation_id].push(msg);
-    if (state.activeConvId === msg.conversation_id) {
+    // Avoid duplicates
+    if (!state.messages[msg.conversation_id].some(m => String(m.id) === String(msg.id))) {
+      state.messages[msg.conversation_id].push(msg);
+    }
+    if (String(state.activeConvId) === String(msg.conversation_id)) {
       renderMessages(msg.conversation_id);
     }
     loadConversations(); // refresh previews/order
   });
 
   state.socket.on('typing', ({ conversationId, userId, isTyping }) => {
-    if (conversationId !== state.activeConvId || userId === state.me.id) return;
+    if (String(conversationId) !== String(state.activeConvId) || String(userId) === String(state.me.id)) return;
     const area = $('#messages-area');
     let indicator = document.getElementById('typing-indicator-el');
     if (isTyping) {
@@ -197,10 +219,10 @@ $$('.tabbar button').forEach(btn => {
 // ---------------- CONVERSATIONS ----------------
 async function loadConversations() {
   const { conversations } = await api('/conversations');
-  state.conversations = conversations;
+  state.conversations = conversations || [];
   renderConvList();
   if (state.activeConvId) {
-    state.activeConv = state.conversations.find(c => c.id === state.activeConvId) || state.activeConv;
+    state.activeConv = state.conversations.find(c => String(c.id) === String(state.activeConvId)) || state.activeConv;
   }
 }
 
@@ -212,12 +234,12 @@ function renderConvList() {
   }
   list.innerHTML = state.conversations.map(c => {
     const preview = c.last_message
-      ? (c.last_sender_id === state.me.id ? 'You: ' : '') + escapeHtml(c.last_message)
+      ? (String(c.last_sender_id) === String(state.me.id) ? 'You: ' : '') + escapeHtml(c.last_message)
       : (c.type === 'channel' ? 'No posts yet' : 'Say hi 👋');
     const badge = c.type === 'group' ? '<span class="conv-badge group">Group</span>'
       : c.type === 'channel' ? '<span class="conv-badge channel">Channel</span>' : '';
     return `
-      <div class="conv-item ${c.id === state.activeConvId ? 'active' : ''}" data-id="${c.id}">
+      <div class="conv-item ${String(c.id) === String(state.activeConvId) ? 'active' : ''}" data-id="${c.id}">
         <div class="avatar" style="background:${c.avatar_color || '#8E8E93'}">${initials(c.name || '?')}</div>
         <div class="conv-info">
           <div class="top-row">
@@ -230,25 +252,24 @@ function renderConvList() {
   }).join('');
 
   $$('.conv-item').forEach(item => {
-    item.addEventListener('click', () => openConversation(parseInt(item.dataset.id, 10)));
+    item.addEventListener('click', () => openConversation(item.dataset.id));
   });
 }
 
 async function openConversation(id) {
-  state.activeConvId = id;
+  state.activeConvId = String(id);
   appScreen.classList.add('chat-open');
   $('#chat-empty').classList.add('hidden');
   $('#chat-active').classList.remove('hidden');
   renderConvList();
 
-  const conv = state.conversations.find(c => c.id === id);
+  const conv = state.conversations.find(c => String(c.id) === String(id));
   state.activeConv = conv;
   $('#chat-title').textContent = conv?.name || 'Chat';
   $('#chat-subtitle').textContent = conv?.type === 'channel' ? 'Channel' : conv?.type === 'group' ? 'Group' : conv?.other_user?.nova_id || '';
   $('#chat-avatar').style.background = conv?.avatar_color || '#8E8E93';
   $('#chat-avatar').textContent = initials(conv?.name || '?');
 
-  // Show the manage (⋮) button only for groups/channels, not DMs
   $('#chat-manage-btn').classList.toggle('hidden', !conv || conv.type === 'dm');
 
   state.socket.emit('conversation:join', { conversationId: id });
@@ -271,23 +292,25 @@ function renderMessages(convId) {
   let lastSender = null;
   let lastTime = null;
 
-  msgs.forEach((m, i) => {
-    const mine = m.sender_id === state.me.id;
+  msgs.forEach((m) => {
+    const mine = String(m.sender_id) === String(state.me.id);
     const showTimeStamp = !lastTime || (new Date(m.created_at) - new Date(lastTime)) > 30 * 60 * 1000;
 
     if (showTimeStamp) {
       html += `<div class="msg-time">${new Date(m.created_at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</div>`;
     }
 
-    const isFirstInGroup = lastSender !== m.sender_id || showTimeStamp;
+    const isFirstInGroup = String(lastSender) !== String(m.sender_id) || showTimeStamp;
     if (isFirstInGroup && !mine) {
       html += `<div class="msg-group-sender">${escapeHtml(m.display_name)}</div>`;
     }
 
-    const reply = m.reply_to_id ? msgs.find(x => x.id === m.reply_to_id) : null;
-    const media = m.media_data && m.media_type === 'image' ? `<img class="message-media" src="${m.media_data}" alt="Image attachment">`
-      : m.media_data && m.media_type === 'video' ? `<video class="message-media" controls src="${m.media_data}"></video>`
-      : m.media_data && m.media_type === 'audio' ? `<audio controls src="${m.media_data}"></audio>` : '';
+    const reply = m.reply_to_id ? msgs.find(x => String(x.id) === String(m.reply_to_id)) : null;
+    const mediaSrc = m.media_url || m.media_data;
+    const media = mediaSrc && m.media_type === 'image' ? `<img class="message-media" src="${mediaSrc}" alt="Attachment" style="max-width:240px;border-radius:10px;margin-top:6px;display:block;">`
+      : mediaSrc && m.media_type === 'video' ? `<video class="message-media" controls src="${mediaSrc}" style="max-width:240px;border-radius:10px;margin-top:6px;display:block;"></video>`
+      : mediaSrc && (m.media_type === 'audio' || m.media_type === 'voice') ? `<audio controls src="${mediaSrc}" style="max-width:240px;margin-top:6px;display:block;"></audio>` : '';
+
     const body = m.deleted_for_everyone ? '<em>This message was deleted</em>' : `${escapeHtml(m.content || '')}${media}`;
     const reactions = (m.reactions || []).map(r => `<span class="message-reaction">${escapeHtml(r.reaction)}</span>`).join('');
     html += `
@@ -298,7 +321,12 @@ function renderMessages(convId) {
           ${reactions ? `<div class="message-reactions">${reactions}</div>` : ''}
           <div class="message-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${m.edited_at ? ' · edited' : ''}</div>
         </div>
-        <div class="message-actions"><button data-action="reply" data-id="${m.id}">↩</button><button data-action="react" data-id="${m.id}">☺</button><button data-action="save" data-id="${m.id}">${m.saved_by_me ? '★' : '☆'}</button><button data-action="more" data-id="${m.id}">⋯</button></div>
+        <div class="message-actions">
+          <button data-action="reply" data-id="${m.id}">↩</button>
+          <button data-action="react" data-id="${m.id}">☺</button>
+          <button data-action="save" data-id="${m.id}">${m.saved_by_me ? '★' : '☆'}</button>
+          <button data-action="more" data-id="${m.id}">⋯</button>
+        </div>
       </div>`;
 
     lastSender = m.sender_id;
@@ -313,42 +341,52 @@ function renderMessages(convId) {
 function wireMessageActions(convId) {
   const area = $('#messages-area');
   area.querySelectorAll('[data-action="reply"]').forEach(btn => btn.addEventListener('click', () => {
-    state.replyToId = Number(btn.dataset.id);
-    const msg = (state.messages[convId] || []).find(m => m.id === state.replyToId);
+    state.replyToId = btn.dataset.id;
+    const msg = (state.messages[convId] || []).find(m => String(m.id) === String(state.replyToId));
     composerInput.value = '';
     composerInput.placeholder = `Reply to ${msg?.display_name || 'message'}…`;
     composerInput.focus();
   }));
+
   area.querySelectorAll('[data-action="react"]').forEach(btn => btn.addEventListener('click', async () => {
     const reaction = prompt('Reaction emoji', '❤️');
     if (!reaction) return;
     await api(`/conversations/${convId}/messages/${btn.dataset.id}/reactions`, { method: 'POST', body: { reaction } });
     const result = await api(`/conversations/${convId}/messages`);
-    state.messages[convId] = result.messages; renderMessages(convId);
+    state.messages[convId] = result.messages;
+    renderMessages(convId);
   }));
+
   area.querySelectorAll('[data-action="save"]').forEach(btn => btn.addEventListener('click', async () => {
     await api(`/conversations/${convId}/messages/${btn.dataset.id}/save`, { method: 'POST' });
     const result = await api(`/conversations/${convId}/messages`);
-    state.messages[convId] = result.messages; renderMessages(convId);
+    state.messages[convId] = result.messages;
+    renderMessages(convId);
   }));
+
   area.querySelectorAll('[data-action="more"]').forEach(btn => btn.addEventListener('click', async () => {
-    const msg = (state.messages[convId] || []).find(m => m.id === Number(btn.dataset.id));
-    const options = msg?.sender_id === state.me.id ? 'edit,delete,delete-everyone,cancel' : 'delete,save,cancel';
-    const choice = prompt(`Message actions: ${options}`);
+    const msg = (state.messages[convId] || []).find(m => String(m.id) === String(btn.dataset.id));
+    const isMine = String(msg?.sender_id) === String(state.me.id);
+    const options = isMine ? 'edit, delete, delete-everyone, cancel' : 'delete, save, cancel';
+    const choice = prompt(`Message actions (${options}):`);
     if (choice === 'edit' && msg) {
       const content = prompt('Edit message', msg.content || '');
       if (content) await api(`/conversations/${convId}/messages/${msg.id}`, { method: 'PATCH', body: { content } });
     } else if (choice === 'delete' || choice === 'delete-everyone') {
       await api(`/conversations/${convId}/messages/${msg.id}`, { method: 'DELETE', body: { scope: choice === 'delete-everyone' ? 'everyone' : 'me' } });
     } else return;
-    const result = await api(`/conversations/${convId}/messages`); state.messages[convId] = result.messages; renderMessages(convId);
+    const result = await api(`/conversations/${convId}/messages`);
+    state.messages[convId] = result.messages;
+    renderMessages(convId);
   }));
+
   area.querySelectorAll('.reply-preview').forEach(btn => btn.addEventListener('click', () => {
-    const target = area.querySelector(`[data-message-id="${btn.dataset.jumpTo}"]`); target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const target = area.querySelector(`[data-message-id="${btn.dataset.jumpTo}"]`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }));
 }
 
-// ---------------- COMPOSER ----------------
+// ---------------- COMPOSER & MEDIA (FIREBASE STORAGE) ----------------
 const composerInput = $('#composer-input');
 
 composerInput.addEventListener('input', () => {
@@ -378,7 +416,11 @@ function sendMessage() {
   const content = composerInput.value.trim();
   if (!content || !state.activeConvId) return;
 
-  state.socket.emit('message:send', { conversationId: state.activeConvId, content, replyToId: state.replyToId || null }, (res) => {
+  state.socket.emit('message:send', {
+    conversationId: state.activeConvId,
+    content,
+    replyToId: state.replyToId || null
+  }, (res) => {
     if (res?.error) alert(res.error);
   });
 
@@ -388,6 +430,102 @@ function sendMessage() {
   composerInput.style.height = 'auto';
   $('#send-btn').disabled = true;
   state.socket.emit('typing', { conversationId: state.activeConvId, isTyping: false });
+}
+
+// Attach image and voice note to chat (saved to Firebase Storage)
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecordingVoice = false;
+
+function initMediaButtons() {
+  const imageBtn = $('#image-btn');
+  const imageInput = $('#image-input');
+  const voiceBtn = $('#voice-btn');
+
+  if (imageBtn && imageInput) {
+    imageBtn.addEventListener('click', () => {
+      if (!state.activeConvId) return alert('Open a chat first');
+      imageInput.click();
+    });
+
+    imageInput.addEventListener('change', async () => {
+      const file = imageInput.files?.[0];
+      if (!file || !state.activeConvId) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result;
+        state.socket.emit('message:send', {
+          conversationId: state.activeConvId,
+          content: composerInput.value.trim() || null,
+          media: {
+            type: 'image',
+            data: base64,
+            mime: file.type || 'image/jpeg'
+          },
+          replyToId: state.replyToId || null
+        }, (res) => {
+          if (res?.error) alert(res.error);
+        });
+        composerInput.value = '';
+        state.replyToId = null;
+        imageInput.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', async () => {
+      if (!state.activeConvId) return alert('Open a chat first');
+
+      if (!isRecordingVoice) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onload = () => {
+              state.socket.emit('message:send', {
+                conversationId: state.activeConvId,
+                content: null,
+                media: {
+                  type: 'voice',
+                  data: reader.result,
+                  mime: 'audio/webm'
+                }
+              }, (res) => {
+                if (res?.error) alert(res.error);
+              });
+            };
+            reader.readAsDataURL(audioBlob);
+            stream.getTracks().forEach(t => t.stop());
+          };
+
+          mediaRecorder.start();
+          isRecordingVoice = true;
+          voiceBtn.style.color = '#FF453A';
+          voiceBtn.title = 'Recording... Tap to send';
+        } catch (err) {
+          alert('Microphone access denied: ' + err.message);
+        }
+      } else {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        isRecordingVoice = false;
+        voiceBtn.style.color = '';
+        voiceBtn.title = 'Record voice note';
+      }
+    });
+  }
 }
 
 // ---------------- NEW CHAT MODAL ----------------
@@ -457,7 +595,7 @@ $('#join-btn').addEventListener('click', async () => {
   } catch (err) { showModalError(err.message); }
 });
 
-// ---------------- MANAGE GROUP (add/remove members, rename, delete) ----------------
+// ---------------- MANAGE GROUP ----------------
 function showManageError(msg) {
   const el = $('#manage-group-error');
   el.textContent = msg;
@@ -475,7 +613,7 @@ async function openManageGroup() {
   $('#manage-group-title').textContent = conv.name || 'Manage';
   $('#manage-group-name').value = conv.name || '';
 
-  const isOwner = conv.owner_id === state.me.id;
+  const isOwner = String(conv.owner_id) === String(state.me.id);
   $('#manage-rename-group').classList.toggle('hidden', !isOwner);
   $('#manage-add-group').classList.toggle('hidden', conv.type !== 'group');
   $('#manage-delete-btn').classList.toggle('hidden', !isOwner);
@@ -488,7 +626,7 @@ async function openManageGroup() {
 async function renderManageMembers() {
   const conv = state.activeConv;
   const { members } = await api(`/conversations/${conv.id}/members`);
-  const myRole = members.find(m => m.id === state.me.id)?.role;
+  const myRole = members.find(m => String(m.id) === String(state.me.id))?.role;
   const canModerate = ['owner', 'admin'].includes(myRole);
 
   const list = $('#manage-members-list');
@@ -499,13 +637,13 @@ async function renderManageMembers() {
         <div class="top-row"><span class="name">${escapeHtml(m.display_name)} ${m.role !== 'member' ? `<span class="conv-badge group">${m.role}</span>` : ''}</span></div>
         <div class="preview">${escapeHtml(m.nova_id)}</div>
       </div>
-      ${canModerate && m.id !== state.me.id && m.role !== 'owner' ? `<button class="modal-close remove-member-btn" data-userid="${m.id}" style="position:static;">Remove</button>` : ''}
+      ${canModerate && String(m.id) !== String(state.me.id) && m.role !== 'owner' ? `<button class="modal-close remove-member-btn" data-userid="${m.id}" style="position:static;">Remove</button>` : ''}
     </div>`).join('');
 
   list.querySelectorAll('.profile-trigger').forEach(el => {
     el.addEventListener('click', () => {
-      const userId = parseInt(el.closest('[data-userid]').dataset.userid, 10);
-      const member = members.find(m => m.id === userId);
+      const userId = el.closest('[data-userid]').dataset.userid;
+      const member = members.find(m => String(m.id) === String(userId));
       if (member) viewProfile(member);
     });
   });
@@ -572,21 +710,22 @@ $('#manage-leave-btn').addEventListener('click', async () => {
 });
 
 // ---------------- PROFILE VIEW ----------------
-$('#profile-modal').addEventListener('click', (e) => {
+$('#profile-modal')?.addEventListener('click', (e) => {
   if (e.target.id === 'profile-modal') $('#profile-modal').classList.add('hidden');
 });
 
 async function viewProfile(member) {
   const card = $('#profile-card');
+  if (!card) return;
   card.innerHTML = `<div style="text-align:center;padding:16px;">Loading...</div>`;
-  $('#profile-modal').classList.remove('hidden');
+  $('#profile-modal')?.classList.remove('hidden');
   try {
     const { user } = await api(`/auth/lookup/${encodeURIComponent(member.nova_id)}`);
     card.innerHTML = `
       <button class="modal-close" id="profile-close-btn">Close</button>
       <div style="text-align:center; padding:24px 16px;">
         <div class="avatar" style="background:${user.avatarColor}; width:72px; height:72px; font-size:28px; margin:0 auto 12px;">${initials(user.displayName)}</div>
-        <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)}</div>
+        <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)} ${user.isVerified ? '✓' : ''}</div>
         <div style="color:var(--text-secondary); margin-bottom:12px;">${escapeHtml(user.novaId)}</div>
         ${user.bio ? `<div style="padding:12px; background:rgba(255,255,255,0.05); border-radius:10px;">${escapeHtml(user.bio)}</div>` : ''}
       </div>`;
@@ -601,24 +740,26 @@ const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#
 
 function initStatusColors() {
   const wrap = $('#status-colors');
+  if (!wrap) return;
   wrap.innerHTML = STATUS_COLORS.map((c, i) =>
-    `<button type="button" data-color="${c}" style="width:28px;height:28px;border-radius:50%;background:${c};border:${i === 0 ? '3px solid #333' : 'none'}"></button>`
+    `<button type="button" data-color="${c}" style="width:28px;height:28px;border-radius:50%;background:${c};border:${i === 0 ? '3px solid #fff' : 'none'}"></button>`
   ).join('');
   let selected = STATUS_COLORS[0];
   wrap.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => {
       selected = b.dataset.color;
       wrap.querySelectorAll('button').forEach(x => x.style.border = 'none');
-      b.style.border = '3px solid #333';
+      b.style.border = '3px solid #fff';
     });
   });
-  wrap.dataset.selected = selected;
 
   $('#status-post-btn').onclick = async () => {
     try {
       const content = $('#status-text').value.trim();
       if (!content) return showStatusError('Write something first');
-      await api('/status', { method: 'POST', body: { content, bgColor: wrap.querySelector('button[style*="3px"]')?.dataset.color || selected } });
+      const activeBtn = wrap.querySelector('button[style*="3px"]');
+      const color = activeBtn ? activeBtn.dataset.color : selected;
+      await api('/status', { method: 'POST', body: { content, bgColor: color } });
       $('#new-status-modal').classList.add('hidden');
       $('#status-text').value = '';
       loadStatuses();
@@ -637,8 +778,8 @@ $('#close-new-status').addEventListener('click', () => $('#new-status-modal').cl
 async function loadStatuses() {
   const { statuses } = await api('/status/feed');
   const list = $('#status-list');
-  const mine = statuses.filter(s => s.user_id === state.me.id);
-  const others = statuses.filter(s => s.user_id !== state.me.id);
+  const mine = (statuses || []).filter(s => String(s.user_id) === String(state.me.id));
+  const others = (statuses || []).filter(s => String(s.user_id) !== String(state.me.id));
   state.myStatuses = mine;
 
   let html = `
@@ -670,8 +811,6 @@ async function loadStatuses() {
 
   list.innerHTML = html;
 
-  // Tapping the row: view your own status if you have one, else open the composer.
-  // Tapping the + button always opens the composer to add another status.
   $('#add-status-row').addEventListener('click', (e) => {
     if (e.target.id === 'add-status-plus-btn') return;
     if (mine.length > 0) {
@@ -687,7 +826,7 @@ async function loadStatuses() {
   });
 
   list.querySelectorAll('.status-item[data-id]').forEach(item => {
-    item.addEventListener('click', () => viewStatus(others.find(s => s.id == item.dataset.id)));
+    item.addEventListener('click', () => viewStatus(others.find(s => String(s.id) === String(item.dataset.id))));
   });
 }
 
@@ -704,7 +843,7 @@ async function viewStatus(status, isMine) {
         <span>${escapeHtml(status.display_name)}${isMine ? ' (you)' : ''}</span>
       </div>
       <button class="status-viewer-close" id="status-viewer-close">✕</button>
-      <div>${escapeHtml(status.content)}</div>
+      <div style="font-size:20px; line-height:1.4; word-break:break-word;">${escapeHtml(status.content)}</div>
     </div>`;
   backdrop.classList.remove('hidden');
 
@@ -714,84 +853,276 @@ async function viewStatus(status, isMine) {
   setTimeout(close, 5000);
 }
 
-// ---------------- POSTS ----------------
-$('#new-post-btn').addEventListener('click', async () => {
-  const caption = $('#new-post-text').value.trim();
-  if (!caption) return;
-  await api('/posts', { method: 'POST', body: { caption } });
-  $('#new-post-text').value = '';
-  loadPosts();
-});
+// ---------------- POSTS (WITH FIREBASE STORAGE IMAGES) ----------------
+function initPostMedia() {
+  const postImageBtn = $('#post-image-btn');
+  const postImageInput = $('#post-image-input');
+  const postPreview = $('#post-image-preview');
+
+  if (postImageBtn && postImageInput) {
+    postImageBtn.addEventListener('click', () => postImageInput.click());
+    postImageInput.addEventListener('change', () => {
+      const file = postImageInput.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.postImageData = reader.result;
+        state.postImageMime = file.type || 'image/jpeg';
+        if (postPreview) {
+          postPreview.src = reader.result;
+          postPreview.style.display = 'block';
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('#new-post-btn').addEventListener('click', async () => {
+    const caption = $('#new-post-text').value.trim();
+    if (!caption && !state.postImageData) return alert('Add some text or an image');
+
+    await api('/posts', {
+      method: 'POST',
+      body: {
+        caption,
+        imageData: state.postImageData,
+        imageMime: state.postImageMime
+      }
+    });
+
+    $('#new-post-text').value = '';
+    state.postImageData = null;
+    state.postImageMime = null;
+    if (postPreview) {
+      postPreview.src = '';
+      postPreview.style.display = 'none';
+    }
+    if (postImageInput) postImageInput.value = '';
+    loadPosts();
+  });
+}
 
 async function loadPosts() {
   const { posts } = await api('/posts');
   const list = $('#posts-list');
-  if (posts.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="icon">📸</div><div class="title">No posts yet</div><div class="subtitle">Be the first to share something.</div></div>`;
+  if (!posts || posts.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📸</div><div class="title">No posts yet</div><div class="subtitle">Be the first to share something with Firebase Storage!</div></div>`;
     return;
   }
-  list.innerHTML = posts.map(p => `
+  list.innerHTML = posts.map(p => {
+    const imageSrc = p.image_url || p.image_data;
+    return `
     <div class="post-card" data-id="${p.id}">
       <div class="post-header">
         <div class="avatar sm" style="background:${p.avatar_color}">${initials(p.display_name)}</div>
         <div>
-          <div style="font-weight:600;">${escapeHtml(p.display_name)}</div>
+          <div style="font-weight:600;">${escapeHtml(p.display_name)} ${p.is_verified ? '✓' : ''}</div>
           <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
         </div>
       </div>
-      <div class="post-caption">${escapeHtml(p.caption || '')}</div>
-      <div class="post-actions-row"><button class="post-like-btn" data-like-id="${p.id}">♥ <span>${p.like_count || 0}</span></button><button class="post-comment-btn" data-comment-id="${p.id}">Comments (${p.comment_count || 0})</button></div>
-      <div class="post-comment-panel hidden" id="comments-${p.id}"><div class="comments-list"></div><form class="comment-form" data-comment-form="${p.id}"><input maxlength="500" placeholder="Write a comment..."><button type="submit">Send</button></form></div>
-    </div>`).join('');
+      ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
+      ${imageSrc ? `<img src="${imageSrc}" style="width:100%; border-radius:10px; margin:8px 0; max-height:400px; object-fit:cover;" alt="Post image">` : ''}
+      <div class="post-actions-row">
+        <button class="post-like-btn" data-like-id="${p.id}">♥ <span>${p.like_count || 0}</span></button>
+        <button class="post-comment-btn" data-comment-id="${p.id}">Comments (${p.comment_count || 0})</button>
+      </div>
+      <div class="post-comment-panel hidden" id="comments-${p.id}">
+        <div class="comments-list"></div>
+        <form class="comment-form" data-comment-form="${p.id}">
+          <input maxlength="500" placeholder="Write a comment...">
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Wire like buttons
+  $$('.post-like-btn').forEach(btn => btn.addEventListener('click', async () => {
+    const res = await api(`/posts/${btn.dataset.likeId}/like`, { method: 'POST' });
+    const countSpan = btn.querySelector('span');
+    let count = parseInt(countSpan.textContent, 10) || 0;
+    countSpan.textContent = res.liked ? count + 1 : Math.max(0, count - 1);
+  }));
+
   wirePostComments();
 }
 
-// ---------------- POST COMMENTS ----------------
 function wirePostComments() {
   $$('.post-comment-btn').forEach(btn => btn.addEventListener('click', async () => {
     const panel = document.querySelector('#comments-' + btn.dataset.commentId);
     panel.classList.toggle('hidden');
     if (panel.dataset.loaded) return;
     const result = await api('/posts/' + btn.dataset.commentId + '/comments');
-    panel.querySelector('.comments-list').innerHTML = result.comments.map(c => '<div class="post-comment"><strong>' + escapeHtml(c.display_name) + '</strong> ' + escapeHtml(c.content) + '</div>').join('') || '<div class="post-comment">No comments yet.</div>';
+    panel.querySelector('.comments-list').innerHTML = (result.comments || []).map(c => '<div class="post-comment"><strong>' + escapeHtml(c.display_name) + '</strong> ' + escapeHtml(c.content) + '</div>').join('') || '<div class="post-comment">No comments yet.</div>';
     panel.dataset.loaded = '1';
   }));
+
   $$('.comment-form').forEach(form => form.addEventListener('submit', async e => {
-    e.preventDefault(); const input = form.querySelector('input'); if (!input.value.trim()) return;
-    await api('/posts/' + form.dataset.commentForm + '/comments', { method:'POST', body:{ content: input.value.trim() } });
-    input.value = ''; await loadPosts();
+    e.preventDefault();
+    const input = form.querySelector('input');
+    if (!input.value.trim()) return;
+    await api('/posts/' + form.dataset.commentForm + '/comments', { method: 'POST', body: { content: input.value.trim() } });
+    input.value = '';
+    loadPosts();
   }));
 }
+
+// ---------------- ADMIN PANEL ----------------
+function initAdminPanel() {
+  const adminBtn = $('#admin-panel-btn');
+  const closeBtn = $('#close-admin-panel');
+  const modal = $('#admin-modal');
+  const searchInput = $('#admin-search');
+
+  if (adminBtn && modal) {
+    adminBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      loadAdminUsers();
+    });
+  }
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  }
+  if (searchInput) {
+    let timeout = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => loadAdminUsers(searchInput.value.trim()), 300);
+    });
+  }
+}
+
+async function loadAdminUsers(search = '') {
+  try {
+    const { users } = await api(`/admin/users?search=${encodeURIComponent(search)}`);
+    const list = $('#admin-users-list');
+    if (!list) return;
+
+    list.innerHTML = (users || []).map(u => `
+      <div class="conv-item" style="cursor:default; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+        <div class="avatar sm" style="background:${u.avatarColor}">${initials(u.displayName)}</div>
+        <div class="conv-info" style="flex:1;">
+          <div class="top-row">
+            <span class="name">${escapeHtml(u.displayName)} ${u.isVerified ? '<span style="color:#30D158">✓</span>' : ''} ${u.isBanned ? '<span style="color:#FF453A">(BANNED)</span>' : ''}</span>
+          </div>
+          <div class="preview">${escapeHtml(u.novaId)}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          ${u.isBanned
+            ? `<button class="modal-close" data-unban="${u.id}" style="position:static; padding:4px 8px; font-size:12px; background:#30D158;">Unban</button>`
+            : `<button class="modal-close" data-ban="${u.id}" style="position:static; padding:4px 8px; font-size:12px; background:#FF453A;">Ban</button>`}
+          ${u.isVerified
+            ? `<button class="modal-close" data-unverify="${u.id}" style="position:static; padding:4px 8px; font-size:12px;">Unverify</button>`
+            : `<button class="modal-close" data-verify="${u.id}" style="position:static; padding:4px 8px; font-size:12px;">Verify</button>`}
+        </div>
+      </div>
+    `).join('') || '<div style="text-align:center; padding:16px; color:var(--text-secondary);">No users found</div>';
+
+    list.querySelectorAll('[data-ban]').forEach(btn => btn.addEventListener('click', async () => {
+      const reason = prompt('Ban reason:', 'Terms violation');
+      await api(`/admin/users/${btn.dataset.ban}/ban`, { method: 'POST', body: { reason } });
+      loadAdminUsers(search);
+    }));
+
+    list.querySelectorAll('[data-unban]').forEach(btn => btn.addEventListener('click', async () => {
+      await api(`/admin/users/${btn.dataset.unban}/unban`, { method: 'POST' });
+      loadAdminUsers(search);
+    }));
+
+    list.querySelectorAll('[data-verify]').forEach(btn => btn.addEventListener('click', async () => {
+      await api(`/admin/users/${btn.dataset.verify}/verify`, { method: 'POST' });
+      loadAdminUsers(search);
+    }));
+
+    list.querySelectorAll('[data-unverify]').forEach(btn => btn.addEventListener('click', async () => {
+      await api(`/admin/users/${btn.dataset.unverify}/unverify`, { method: 'POST' });
+      loadAdminUsers(search);
+    }));
+  } catch (err) {
+    const el = $('#admin-error');
+    if (el) {
+      el.textContent = err.message;
+      el.classList.remove('hidden');
+    }
+  }
+}
+
 // ---------------- REAL WEBRTC CALLS ----------------
 let activeCall = null;
+
 async function startCall(kind) {
   const target = state.activeConv?.other_user?.id;
   if (!target || !state.activeConvId) return alert('Calls are available for direct chats.');
-  const { call } = await api('/calls', { method:'POST', body:{ conversationId: state.activeConvId, kind } });
-  const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:kind === 'video' });
-  const peer = new RTCPeerConnection({ iceServers:[{ urls:'stun:stun.l.google.com:19302' }] });
+  const { call } = await api('/calls', { method: 'POST', body: { conversationId: state.activeConvId, kind } });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === 'video' });
+  const peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
   stream.getTracks().forEach(track => peer.addTrack(track, stream));
-  peer.onicecandidate = e => e.candidate && state.socket.emit('call:signal', { targetUserId:target, callId:call.id, signal:{ candidate:e.candidate } });
-  const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
-  activeCall = { call, peer, stream, targetUserId:target };
-  state.socket.emit('call:invite', { targetUserId:target, call });
-  state.socket.emit('call:signal', { targetUserId:target, callId:call.id, signal:{ sdp:peer.localDescription } });
-  showCallBar(`Calling ${state.activeConv.name}…`, async () => { stream.getTracks().forEach(t=>t.stop()); peer.close(); await api(`/calls/${call.id}`, { method:'PATCH', body:{ state:'ended' } }); activeCall=null; });
+
+  peer.onicecandidate = e => e.candidate && state.socket.emit('call:signal', { targetUserId: target, callId: call.id, signal: { candidate: e.candidate } });
+  const offer = await peer.createOffer();
+  await peer.setLocalDescription(offer);
+
+  activeCall = { call, peer, stream, targetUserId: target };
+  state.socket.emit('call:invite', { targetUserId: target, call });
+  state.socket.emit('call:signal', { targetUserId: target, callId: call.id, signal: { sdp: peer.localDescription } });
+
+  showCallBar(`Calling ${state.activeConv.name}…`, async () => {
+    stream.getTracks().forEach(t => t.stop());
+    peer.close();
+    await api(`/calls/${call.id}`, { method: 'PATCH', body: { state: 'ended' } });
+    activeCall = null;
+  });
 }
-function showCallBar(label, end) { const old=$('#call-bar'); old?.remove(); const bar=document.createElement('div'); bar.id='call-bar'; bar.className='call-bar'; bar.innerHTML=`<span>${escapeHtml(label)}</span><button id="end-call">End call</button>`; document.body.appendChild(bar); $('#end-call').onclick=async()=>{await end();bar.remove();}; }
+
+function showCallBar(label, end) {
+  const old = $('#call-bar');
+  old?.remove();
+  const bar = document.createElement('div');
+  bar.id = 'call-bar';
+  bar.className = 'call-bar';
+  bar.innerHTML = `<span>${escapeHtml(label)}</span><button id="end-call">End call</button>`;
+  document.body.appendChild(bar);
+  $('#end-call').onclick = async () => { await end(); bar.remove(); };
+}
+
 function initCallControls() {
-  const header=$('#chat-header'); if (!header || $('#voice-call-btn')) return;
-  const voice=document.createElement('button'); voice.id='voice-call-btn'; voice.className='back-btn'; voice.textContent='☎'; voice.title='Voice call';
-  const video=document.createElement('button'); video.id='video-call-btn'; video.className='back-btn'; video.textContent='▣'; video.title='Video call';
-  header.append(voice, video); voice.onclick=()=>startCall('voice'); video.onclick=()=>startCall('video');
-  state.socket.on('call:incoming', ({call, fromUserId}) => { if (!confirm(`${call.kind} call incoming. Accept?`)) return state.socket.emit('call:state',{targetUserId:fromUserId,callId:call.id,state:'declined'}); alert('Call accepted. WebRTC negotiation is ready.'); state.socket.emit('call:state',{targetUserId:fromUserId,callId:call.id,state:'accepted'}); });
-  state.socket.on('call:state', ({state:callState}) => { if (callState==='ended'||callState==='declined') { $('#call-bar')?.remove(); activeCall?.peer.close(); activeCall=null; } });
+  const header = $('#chat-header');
+  if (!header || $('#voice-call-btn')) return;
+  const voice = document.createElement('button');
+  voice.id = 'voice-call-btn';
+  voice.className = 'back-btn';
+  voice.textContent = '☎';
+  voice.title = 'Voice call';
+  const video = document.createElement('button');
+  video.id = 'video-call-btn';
+  video.className = 'back-btn';
+  video.textContent = '▣';
+  video.title = 'Video call';
+  header.append(voice, video);
+
+  voice.onclick = () => startCall('voice');
+  video.onclick = () => startCall('video');
+
+  state.socket.on('call:incoming', ({ call, fromUserId }) => {
+    if (!confirm(`${call.kind} call incoming. Accept?`)) {
+      return state.socket.emit('call:state', { targetUserId: fromUserId, callId: call.id, state: 'declined' });
+    }
+    alert('Call accepted. WebRTC negotiation is ready.');
+    state.socket.emit('call:state', { targetUserId: fromUserId, callId: call.id, state: 'accepted' });
+  });
+
+  state.socket.on('call:state', ({ state: callState }) => {
+    if (callState === 'ended' || callState === 'declined') {
+      $('#call-bar')?.remove();
+      activeCall?.peer?.close();
+      activeCall = null;
+    }
+  });
 }
 
 // ---------------- INIT ----------------
 if (state.token && state.me) {
   boot();
-  initCallControls();
 }
 
 // ---------------- PWA SERVICE WORKER ----------------

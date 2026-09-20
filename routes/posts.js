@@ -1,5 +1,13 @@
 const express = require('express');
-const db = require('../db');
+const {
+  getPosts,
+  createPost,
+  deletePost,
+  togglePostLike,
+  getPostComments,
+  addPostComment,
+  uploadToStorage
+} = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,68 +15,101 @@ router.use(requireAuth);
 
 // GET /api/posts - feed, newest first
 router.get('/', async (req, res) => {
-  const { rows } = await db.query(
-    `SELECT p.id, p.caption, p.image_data, p.image_mime, p.created_at,
-            u.id AS user_id, u.nova_id, u.display_name, u.avatar_color, u.is_verified,
-            (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id)::int AS like_count,
-            EXISTS(SELECT 1 FROM post_likes l WHERE l.post_id = p.id AND l.user_id = $1) AS liked_by_me,
-            (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id)::int AS comment_count
-     FROM posts p JOIN users u ON u.id = p.user_id
-     ORDER BY p.created_at DESC LIMIT 50`,
-    [req.user.id]
-  );
-  res.json({ posts: rows });
+  try {
+    const posts = await getPosts(req.user.id);
+    res.json({ posts });
+  } catch (err) {
+    console.error('Get posts error:', err);
+    res.status(500).json({ error: 'Failed to load posts' });
+  }
 });
 
 // POST /api/posts { caption, imageData, imageMime }
 router.post('/', async (req, res) => {
-  const { caption, imageData, imageMime } = req.body;
-  if ((!caption || !caption.trim()) && !imageData) return res.status(400).json({ error: 'Add a caption or an image' });
-  const { rows } = await db.query(
-    `INSERT INTO posts (user_id, caption, image_data, image_mime) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [req.user.id, caption ? caption.trim().slice(0, 500) : null, imageData || null, imageData ? (imageMime || 'image/jpeg') : null]
-  );
-  res.json({ post: rows[0] });
+  try {
+    const { caption, imageData, imageMime } = req.body;
+    if ((!caption || !caption.trim()) && !imageData) {
+      return res.status(400).json({ error: 'Add a caption or an image' });
+    }
+
+    let imageUrl = null;
+    let detectedMime = imageMime || 'image/jpeg';
+    if (imageData) {
+      // Upload image to Firebase Storage
+      const uploaded = await uploadToStorage({
+        data: imageData,
+        mimeType: detectedMime,
+        filename: `post_${req.user.id}_${Date.now()}.jpg`,
+        userId: req.user.id
+      });
+      imageUrl = uploaded.url;
+      detectedMime = uploaded.mimeType;
+    }
+
+    const post = await createPost({
+      userId: req.user.id,
+      caption: caption ? caption.trim().slice(0, 500) : '',
+      imageUrl,
+      imageMime: detectedMime
+    });
+
+    res.json({ post });
+  } catch (err) {
+    console.error('Create post error:', err);
+    res.status(500).json({ error: 'Failed to create post' });
+  }
 });
 
 // DELETE /api/posts/:id - only your own post
 router.delete('/:id', async (req, res) => {
-  const { rows } = await db.query('DELETE FROM posts WHERE id=$1 AND user_id=$2 RETURNING id', [req.params.id, req.user.id]);
-  if (!rows[0]) return res.status(404).json({ error: 'Post not found' });
-  res.json({ ok: true });
+  try {
+    const ok = await deletePost(req.params.id, req.user.id);
+    if (!ok) return res.status(404).json({ error: 'Post not found or unauthorized' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete post error:', err);
+    res.status(500).json({ error: 'Failed to delete post' });
+  }
 });
 
 // POST /api/posts/:id/like (toggle)
 router.post('/:id/like', async (req, res) => {
-  const existing = await db.query('SELECT 1 FROM post_likes WHERE post_id=$1 AND user_id=$2', [req.params.id, req.user.id]);
-  if (existing.rows[0]) {
-    await db.query('DELETE FROM post_likes WHERE post_id=$1 AND user_id=$2', [req.params.id, req.user.id]);
-    return res.json({ liked: false });
+  try {
+    const liked = await togglePostLike(req.params.id, req.user.id);
+    res.json({ liked });
+  } catch (err) {
+    console.error('Like post error:', err);
+    res.status(500).json({ error: 'Failed to like post' });
   }
-  await db.query('INSERT INTO post_likes (post_id, user_id) VALUES ($1,$2)', [req.params.id, req.user.id]);
-  res.json({ liked: true });
 });
 
 // GET /api/posts/:id/comments
 router.get('/:id/comments', async (req, res) => {
-  const { rows } = await db.query(
-    `SELECT c.id, c.content, c.created_at, u.display_name, u.avatar_color, u.is_verified
-     FROM post_comments c JOIN users u ON u.id = c.user_id
-     WHERE c.post_id = $1 ORDER BY c.created_at ASC`,
-    [req.params.id]
-  );
-  res.json({ comments: rows });
+  try {
+    const comments = await getPostComments(req.params.id);
+    res.json({ comments });
+  } catch (err) {
+    console.error('Get comments error:', err);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
 });
 
 // POST /api/posts/:id/comments { content }
 router.post('/:id/comments', async (req, res) => {
-  const { content } = req.body;
-  if (!content || !content.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
-  const { rows } = await db.query(
-    `INSERT INTO post_comments (post_id, user_id, content) VALUES ($1,$2,$3) RETURNING *`,
-    [req.params.id, req.user.id, content.trim().slice(0, 500)]
-  );
-  res.json({ comment: rows[0] });
+  try {
+    const { content } = req.body;
+    if (!content || !content.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+
+    const comment = await addPostComment(req.params.id, {
+      userId: req.user.id,
+      content: content.trim()
+    });
+
+    res.json({ comment });
+  } catch (err) {
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Failed to post comment' });
+  }
 });
 
 module.exports = router;

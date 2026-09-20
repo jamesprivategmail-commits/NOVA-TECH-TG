@@ -14,7 +14,9 @@ let state = {
   myStatuses: [],
   replyToId: null,
   postImageData: null,
-  postImageMime: null
+  postImageMime: null,
+  conversationFilter: '',
+  openMessageId: null
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -133,6 +135,15 @@ function logout() {
   location.reload();
 }
 
+function selectTab(tab) {
+  $$('.tabbar button, .mobile-nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
+  $('#tab-status').classList.toggle('hidden', tab !== 'status');
+  $('#tab-posts').classList.toggle('hidden', tab !== 'posts');
+  if (tab === 'status') loadStatuses();
+  if (tab === 'posts') loadPosts();
+}
+
 // ---------------- BOOT ----------------
 async function boot() {
   authScreen.classList.add('hidden');
@@ -148,10 +159,10 @@ async function boot() {
     $('#me-avatar').textContent = initials(state.me.displayName);
   }
   $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — tap to copy ID, click to logout`;
-  $('#me-avatar').addEventListener('click', () => {
+  $('#me-avatar').onclick = () => {
     navigator.clipboard?.writeText(state.me.novaId);
     if (confirm(`You are ${state.me.displayName} (${state.me.novaId}).\n\nID copied to clipboard.\n\nLog out?`)) logout();
-  });
+  };
 
   // Admin button visibility
   if (state.me.isAdmin) {
@@ -166,6 +177,7 @@ async function boot() {
   initPostMedia();
   initAdminPanel();
   initCallControls();
+  initChatHeaderActions();
 }
 
 function connectSocket() {
@@ -203,17 +215,11 @@ function connectSocket() {
 }
 
 // ---------------- TABS ----------------
-$$('.tabbar button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.tabbar button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    $('#tab-chats').classList.toggle('hidden', tab !== 'chats');
-    $('#tab-status').classList.toggle('hidden', tab !== 'status');
-    $('#tab-posts').classList.toggle('hidden', tab !== 'posts');
-    if (tab === 'status') loadStatuses();
-    if (tab === 'posts') loadPosts();
-  });
+$$('.tabbar button, .mobile-nav button[data-tab]').forEach(btn => btn.addEventListener('click', () => selectTab(btn.dataset.tab)));
+$('#mobile-profile-btn')?.addEventListener('click', () => $('#me-avatar')?.click());
+$('#conversation-search-input')?.addEventListener('input', (e) => {
+  state.conversationFilter = e.target.value.trim().toLowerCase();
+  renderConvList();
 });
 
 // ---------------- CONVERSATIONS ----------------
@@ -228,11 +234,20 @@ async function loadConversations() {
 
 function renderConvList() {
   const list = $('#conv-list');
+  const conversations = state.conversations.filter(c => {
+    if (!state.conversationFilter) return true;
+    const haystack = [c.name, c.last_message, c.other_user?.nova_id].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(state.conversationFilter);
+  });
   if (state.conversations.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="icon">👋</div><div class="title">No chats yet</div><div class="subtitle">Tap "+ New Chat" to message a friend.</div></div>`;
     return;
   }
-  list.innerHTML = state.conversations.map(c => {
+  if (conversations.length === 0) {
+    list.innerHTML = `<div class="empty-state compact"><div class="icon">⌕</div><div class="title">No matching chats</div><div class="subtitle">Try another name or NOVA ID.</div></div>`;
+    return;
+  }
+  list.innerHTML = conversations.map(c => {
     const preview = c.last_message
       ? (String(c.last_sender_id) === String(state.me.id) ? 'You: ' : '') + escapeHtml(c.last_message)
       : (c.type === 'channel' ? 'No posts yet' : 'Say hi 👋');
@@ -258,6 +273,7 @@ function renderConvList() {
 
 async function openConversation(id) {
   state.activeConvId = String(id);
+  closeChatTools();
   appScreen.classList.add('chat-open');
   $('#chat-empty').classList.add('hidden');
   $('#chat-active').classList.remove('hidden');
@@ -335,6 +351,17 @@ function renderMessages(convId) {
 
   area.innerHTML = html || `<div class="empty-state"><div class="icon">✨</div><div class="title">No messages yet</div><div class="subtitle">Say something!</div></div>`;
   wireMessageActions(convId);
+  area.querySelectorAll('.msg-row[data-message-id]').forEach(row => {
+    const open = (event) => {
+      if (event.target.closest('button, a, input, textarea')) return;
+      event.preventDefault();
+      area.querySelectorAll('.msg-row.message-menu-open').forEach(item => item.classList.remove('message-menu-open'));
+      row.classList.add('message-menu-open');
+      state.openMessageId = row.dataset.messageId;
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('contextmenu', open);
+  });
   area.scrollTop = area.scrollHeight;
 }
 
@@ -384,6 +411,49 @@ function wireMessageActions(convId) {
     const target = area.querySelector(`[data-message-id="${btn.dataset.jumpTo}"]`);
     target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }));
+}
+
+function closeChatTools() {
+  $('#chat-tools-menu')?.classList.add('hidden');
+}
+
+function initChatHeaderActions() {
+  const menu = $('#chat-tools-menu');
+  $('#chat-call-btn')?.addEventListener('click', () => startCall('voice'));
+  $('#chat-video-btn')?.addEventListener('click', () => startCall('video'));
+  $('#chat-search-btn')?.addEventListener('click', () => {
+    const query = prompt('Search this conversation');
+    if (!query?.trim() || !state.activeConvId) return;
+    const needle = query.trim().toLowerCase();
+    const hit = (state.messages[state.activeConvId] || []).find(m => (m.content || '').toLowerCase().includes(needle));
+    if (!hit) return alert('No matching messages in this chat.');
+    document.querySelector(`[data-message-id="${hit.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  $('#chat-more-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu?.classList.toggle('hidden');
+  });
+  menu?.querySelectorAll('[data-chat-tool]').forEach(btn => btn.addEventListener('click', async () => {
+    const action = btn.dataset.chatTool;
+    const conv = state.activeConv;
+    if (!conv) return;
+    closeChatTools();
+    if (action === 'clear') {
+      if (!confirm('Clear this chat for you?')) return;
+      state.messages[conv.id] = [];
+      renderMessages(conv.id);
+      return;
+    }
+    if (action === 'pin' || action === 'archive' || action === 'mute') {
+      await api(`/conversations/${conv.id}`, { method: 'PUT', body: { [action === 'pin' ? 'pinned' : action === 'archive' ? 'archived' : 'muted']: true } });
+      await loadConversations();
+      return;
+    }
+    if (action === 'media') alert('Shared media will appear here once this conversation has attachments.');
+  }));
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#chat-tools-menu, #chat-more-btn')) closeChatTools();
+  });
 }
 
 // ---------------- COMPOSER & MEDIA (FIREBASE STORAGE) ----------------

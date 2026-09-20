@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-<title>DARK CHAT</title>
-<meta name="description" content="Real-time messaging platform with DMs, groups, channels, stories, and posts">
+<title>NOVA Messenger</title>
+<meta name="description" content="NOVA Messenger — private chats, groups, channels, statuses, and posts">
 <link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
 <link rel="shortcut icon" href="/assets/logo.jpg">
 <link rel="apple-touch-icon" href="/assets/logo.jpg">
@@ -75,7 +75,7 @@
     <div class="sidebar-header">
       <div class="brand-title-wrap">
         <img src="/assets/logo.jpg" alt="DARK CHAT Logo" class="sidebar-logo-img">
-        <h1>DARK CHAT</h1>
+        <h1>NOVA Messenger</h1>
       </div>
       <div class="header-actions">
         <button class="icon-btn admin-btn hidden" id="admin-panel-btn" title="Admin panel">⚙</button>
@@ -88,6 +88,11 @@
       <button data-tab="status">Status</button>
       <button data-tab="posts">Posts</button>
     </div>
+
+    <label class="conversation-search" for="conversation-search-input">
+      <span aria-hidden="true">⌕</span>
+      <input id="conversation-search-input" type="search" placeholder="Search conversations" autocomplete="off">
+    </label>
 
     <!-- CHATS TAB -->
     <div id="tab-chats">
@@ -130,7 +135,20 @@
           <div class="title" id="chat-title"></div>
           <div class="subtitle" id="chat-subtitle"></div>
         </div>
+        <div class="chat-header-actions" aria-label="Conversation actions">
+          <button class="back-btn chat-action-btn" id="chat-call-btn" title="Voice call" aria-label="Voice call">☎</button>
+          <button class="back-btn chat-action-btn" id="chat-video-btn" title="Video call" aria-label="Video call">▣</button>
+          <button class="back-btn chat-action-btn" id="chat-search-btn" title="Search this chat" aria-label="Search this chat">⌕</button>
+          <button class="back-btn chat-action-btn" id="chat-more-btn" title="More options" aria-label="More options">⋮</button>
+        </div>
         <button class="back-btn hidden" id="chat-manage-btn" title="Manage">⋮</button>
+      </div>
+      <div class="chat-tools-menu hidden" id="chat-tools-menu" role="menu">
+        <button data-chat-tool="media">Media, links &amp; docs</button>
+        <button data-chat-tool="mute">Mute notifications</button>
+        <button data-chat-tool="pin">Pin chat</button>
+        <button data-chat-tool="archive">Archive chat</button>
+        <button data-chat-tool="clear">Clear chat</button>
       </div>
       <div class="messages-area" id="messages-area"></div>
       <div class="composer">
@@ -142,6 +160,12 @@
       </div>
     </div>
   </div>
+  <nav class="mobile-nav" aria-label="Primary navigation">
+    <button data-tab="chats" class="active"><span>◉</span><small>Chats</small></button>
+    <button data-tab="status"><span>◌</span><small>Status</small></button>
+    <button data-tab="posts"><span>✦</span><small>Updates</small></button>
+    <button id="mobile-profile-btn"><span>○</span><small>Profile</small></button>
+  </nav>
 </div>
 
 <!-- NEW CHAT MODAL -->

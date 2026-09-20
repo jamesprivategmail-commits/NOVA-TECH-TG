@@ -131,19 +131,22 @@ function initSockets(io) {
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
-        if ((conv.member_ids || []).includes('u_dark_pair') && hasText && (content.trim().startsWith('/') || /^\d{6}$/.test(content.trim()))) {
+        const isDarkPairConversation = (conv.member_ids || []).includes('u_dark_pair') || String(conversationId).startsWith('dm_dark_pair_');
+        let assistantPayload = null;
+        if (isDarkPairConversation && hasText && (content.trim().startsWith('/') || /^\d{6}$/.test(content.trim()))) {
           const reply = await getDarkPairReply(content.trim(), userId);
           const assistantMsg = await createMessage(conversationId, {
             senderId: 'u_dark_pair',
             content: reply
           });
-          io.to(`conv:${conversationId}`).emit('message:new', {
+          assistantPayload = {
             ...assistantMsg,
             display_name: 'DARK PAIR',
             avatar_color: '#7C3AED',
             avatar_url: '/assets/logo.jpg',
             is_verified: true
-          });
+          };
+          io.to(`conv:${conversationId}`).emit('message:new', assistantPayload);
         }
         const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(userId));
         void Promise.allSettled(recipients.map(async (recipientId) => {
@@ -162,7 +165,7 @@ function initSockets(io) {
             actor_name: senderInfo?.display_name || 'Someone'
           });
         }));
-        ack?.({ ok: true, message: payload });
+        ack?.({ ok: true, message: payload, assistantMessage: assistantPayload });
       } catch (err) {
         console.error('Send message socket error:', err);
         ack?.({ error: 'Failed to send message' });

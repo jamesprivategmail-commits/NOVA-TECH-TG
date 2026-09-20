@@ -47,12 +47,12 @@ export function joinConversation(conversationId) {
   if (socket) socket.emit('conversation:join', { conversationId });
 }
 
-export function sendMessage({ conversationId, content, media, replyToId }) {
+export function sendMessage({ conversationId, content, media, replyToId, clientMessageId }) {
   return new Promise((resolve) => {
     if (!socket) return resolve({ error: 'Not connected' });
     let settled = false;
-    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 30000);
-    socket.emit('message:send', { conversationId, content, media, replyToId }, (ack) => {
+    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 5000);
+    socket.emit('message:send', { conversationId, content, media, replyToId, clientMessageId }, (ack) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);

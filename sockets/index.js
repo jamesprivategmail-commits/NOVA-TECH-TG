@@ -57,7 +57,7 @@ function initSockets(io) {
     });
 
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
-    socket.on('message:send', async ({ conversationId, content, media, replyToId }, ack) => {
+    socket.on('message:send', async ({ conversationId, content, media, replyToId, clientMessageId }, ack) => {
       try {
         const hasText = content && content.trim();
         const hasMedia = media && media.data && media.type;
@@ -95,6 +95,7 @@ function initSockets(io) {
         }
 
         const msg = await createMessage(conversationId, {
+          id: clientMessageId || undefined,
           senderId: userId,
           content: hasText ? content.trim().slice(0, 4000) : null,
           mediaType: hasMedia ? media.type : null,

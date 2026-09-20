@@ -19,6 +19,7 @@ let recording = false;
 let recStart = 0;
 let loadingOlder = false;
 let searchSeq = 0;
+let messagePollTimer = null;
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
@@ -108,6 +109,7 @@ export async function openConversation(conv) {
     markConversationRead(conv.id);
     state.hasMore[conv.id] = (res.messages || []).length >= 50;
     renderMessages(true);
+    startMessagePolling(conv.id);
   } catch (err) {
     els.messages.innerHTML = errorState({ title: 'Could not load messages', subtitle: err.message, retryId: 'retry-messages' });
     $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
@@ -116,6 +118,8 @@ export async function openConversation(conv) {
 }
 
 export function closeConversation() {
+  clearInterval(messagePollTimer);
+  messagePollTimer = null;
   state.activeConv = null;
   els.screen.hidden = true;
   document.querySelectorAll('.screen-list').forEach((s) => s.classList.remove('chat-open'));
@@ -380,6 +384,33 @@ async function loadOlder() {
   }
 }
 
+function startMessagePolling(conversationId) {
+  clearInterval(messagePollTimer);
+  const poll = async () => {
+    if (!state.activeConv || state.activeConv.id !== conversationId) return;
+    try {
+      const res = await api.messages(conversationId);
+      const remote = res.messages || [];
+      const remoteIds = new Set(remote.map((m) => m.id));
+      const local = state.messages[conversationId] || [];
+      const pending = local.filter((m) => m._status && m._status !== 'sent' && !remoteIds.has(m.id));
+      const previousKey = local.map((m) => `${m.id}:${m.read_at || ''}`).join('|');
+      state.messages[conversationId] = [...remote, ...pending];
+      const nextKey = state.messages[conversationId].map((m) => `${m.id}:${m.read_at || ''}`).join('|');
+      if (previousKey !== nextKey) {
+        renderMessages(false);
+        if (document.visibilityState === 'visible') {
+          markRead(conversationId);
+          markConversationRead(conversationId);
+        }
+      }
+    } catch {
+      // Retry quietly on the next tick while Socket.IO remains the primary path.
+    }
+  };
+  messagePollTimer = setInterval(poll, 2000);
+}
+
 function onMessagesScroll() {
   renderTyping();
   if (els.messages.scrollTop < 40 && state.hasMore[state.activeConv?.id]) loadOlder();
@@ -554,12 +585,26 @@ async function deliverTemp(convId, temp) {
     }
   }
 
-  const ack = await socketSend({
+  let ack = await socketSend({
     conversationId: convId,
     content: temp._content || null,
     media: mediaData,
-    replyToId: temp._reply?.id || null
+    replyToId: temp._reply?.id || null,
+    clientMessageId: temp.id
   });
+
+  if ((!ack || ack.error) && temp._content && !temp._attachment) {
+    try {
+      const fallback = await api.sendMessage(convId, {
+        clientMessageId: temp.id,
+        content: temp._content,
+        replyToId: temp._reply?.id || null
+      });
+      ack = { ok: true, message: fallback.message };
+    } catch {
+      // Keep the optimistic bubble marked failed for retry.
+    }
+  }
 
   const i = list.findIndex((m) => m.id === temp.id);
   if (i > -1) list.splice(i, 1);

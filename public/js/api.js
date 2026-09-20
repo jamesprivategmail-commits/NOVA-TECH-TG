@@ -66,6 +66,7 @@ export const api = {
   updateConversation: (id, patch) => request(`/conversations/${encodeURIComponent(id)}`, { method: 'PUT', body: patch }),
   deleteConversation: (id) => request(`/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   messages: (id, before) => request(`/conversations/${encodeURIComponent(id)}/messages${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+  sendMessage: (id, payload) => request(`/conversations/${encodeURIComponent(id)}/messages`, { method: 'POST', body: payload }),
   markConversationRead: (id) => request(`/conversations/${encodeURIComponent(id)}/read`, { method: 'POST', body: {} }),
   searchMessages: (id, q) => request(`/conversations/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`),
   editMessage: (id, messageId, content) => request(`/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}`, { method: 'PATCH', body: { content } }),

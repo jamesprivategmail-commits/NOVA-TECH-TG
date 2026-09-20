@@ -12,6 +12,7 @@ const {
   getUserByNovaId,
   getUserById,
   getMessages,
+  createMessage,
   getMessageById,
   updateMessage,
   markConversationRead,
@@ -300,6 +301,40 @@ router.get('/:id/messages', async (req, res) => {
   } catch (err) {
     console.error('Get messages error:', err);
     res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+// POST /api/conversations/:id/messages - HTTP fallback for serverless deployments
+router.post('/:id/messages', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
+    const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
+    if (conv.type === 'channel' && !['owner', 'admin'].includes(role)) {
+      return res.status(403).json({ error: 'Only channel admins can post here' });
+    }
+    const content = String(req.body?.content || '').trim();
+    if (!content) return res.status(400).json({ error: 'Only text messages are supported by the HTTP fallback' });
+    const message = await createMessage(req.params.id, {
+      id: req.body?.clientMessageId || undefined,
+      senderId: req.user.id,
+      content: content.slice(0, 4000),
+      replyToId: req.body?.replyToId || null
+    });
+    const sender = await getUserById(req.user.id);
+    res.json({ message: {
+      ...message,
+      display_name: sender?.display_name || 'User',
+      avatar_color: sender?.avatar_color || '#0A84FF',
+      avatar_url: sender?.avatar_url || null,
+      is_verified: sender?.is_verified || false
+    }});
+  } catch (err) {
+    console.error('HTTP send message error:', err);
+    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 

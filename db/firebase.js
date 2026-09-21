@@ -287,7 +287,6 @@ function getDarkPairMenu() {
     '║ 👑 𝗢𝗪𝗡𝗘𝗥',
     '║ ┠ .ping',
     '║ ┠ .uptime',
-    '║ ┠ .mode public|self',
     '║ ┠ .self',
     '║ ┠ .block <user>',
     '║ ┠ .unblock <user>',
@@ -298,17 +297,9 @@ function getDarkPairMenu() {
     '║ ┖ .chatjid',
     '╠══════════════════╣',
     '║ 🛡️ 𝗚𝗥𝗢𝗨𝗣 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧',
-    '║ ┠ .antilink on|off',
-    '║ ┠ .welcome on|off',
-    '║ ┠ .warn <user>',
-    '║ ┠ .resetwarn <user>',
     '║ ┠ .promote <user>',
     '║ ┠ .demote <user>',
     '║ ┠ .kick <user>',
-    '║ ┠ .mute',
-    '║ ┠ .unmute',
-    '║ ┠ .tagall <msg>',
-    '║ ┠ .hidetag <msg>',
     '║ ┖ .groupinfo',
     '╠══════════════════╣',
     '║ 🛠️ 𝗧𝗢𝗢𝗟𝗦',
@@ -328,7 +319,6 @@ async function getDarkBotCommandReply(content, userId, conversationId) {
   const role = conv?.members?.[userId]?.role || (conv?.owner_id === userId ? 'owner' : null);
   const isGroup = conv?.type === 'group';
   const isChannel = conv?.type === 'channel';
-  const ownerOnly = () => role === 'owner' || Boolean(user?.nova_id === '+1-999-234-8321');
   const target = parts[1] ? await getUserByNovaId(parts[1].replace(/[<>@]/g, '').toUpperCase()) : null;
   const requireGroupAdmin = () => {
     if (!isGroup) return 'This command only works in a group.';
@@ -349,12 +339,6 @@ async function getDarkBotCommandReply(content, userId, conversationId) {
     if (!parts[1]) return 'Use .getchanneljid <invite-code>';
     return conv?.invite_code === parts[1].toUpperCase() ? `Channel JID: ${conv.id}` : 'That channel code does not match this channel.';
   }
-  if (command === '.mode') {
-    const mode = parts[1]?.toLowerCase();
-    if (!['public', 'self'].includes(mode)) return 'Use .mode public or .mode self';
-    await updateUser(userId, { dark_bot_mode: mode });
-    return `DARK BOT mode set to ${mode}.`;
-  }
   if (command === '.block') {
     if (!target) return 'Use .block <DARK-CHAT-ID>';
     if (target.id === userId) return 'You cannot block yourself.';
@@ -366,7 +350,7 @@ async function getDarkBotCommandReply(content, userId, conversationId) {
     await updateUser(userId, { blocked_user_ids: (user.blocked_user_ids || []).filter(id => String(id) !== String(target.id)) });
     return `${target.display_name} has been unblocked.`;
   }
-  if (['.promote', '.demote', '.kick', '.warn', '.resetwarn'].includes(command)) {
+  if (['.promote', '.demote', '.kick'].includes(command)) {
     const denied = requireGroupAdmin();
     if (denied) return denied;
     if (!target) return `Use ${command} <DARK-CHAT-ID>`;
@@ -387,36 +371,10 @@ async function getDarkBotCommandReply(content, userId, conversationId) {
       await removeConversationMember(conv.id, target.id);
       return `${target.display_name} was removed from the group.`;
     }
-    const warnings = Number(conv.members?.[target.id]?.warnings || 0) + (command === '.warn' ? 1 : 0);
-    await updateConversation(conv.id, { [`members.${target.id}.warnings`]: command === '.resetwarn' ? 0 : warnings });
-    return command === '.resetwarn' ? `${target.display_name}'s warnings were reset.` : `${target.display_name} now has ${warnings} warning${warnings === 1 ? '' : 's'}.`;
   }
   if (command === '.groupinfo') {
     if (!isGroup) return 'This command only works in a group.';
     return `Group: ${conv.name || 'Unnamed'}\nMembers: ${(conv.member_ids || []).length}\nOwner: ${conv.owner_id || 'unknown'}${conv.invite_code ? `\nInvite: ${conv.invite_code}` : ''}`;
-  }
-  if (command === '.antilink' || command === '.welcome') {
-    const denied = requireGroupAdmin();
-    if (denied) return denied;
-    const setting = command === '.antilink' ? 'antilink' : 'welcome';
-    const value = parts[1]?.toLowerCase();
-    if (!['on', 'off'].includes(value)) return `Use ${command} on or off`;
-    await updateConversation(conv.id, { [`settings.${setting}`]: value === 'on' });
-    return `${setting} is now ${value}.`;
-  }
-  if (command === '.mute' || command === '.unmute') {
-    if (!conv) return 'Chat context unavailable.';
-    await updateConversation(conv.id, { [`muted_by.${userId}`]: command === '.mute' });
-    return command === '.mute' ? 'This chat is muted for you.' : 'This chat is unmuted for you.';
-  }
-  if (command === '.tagall' || command === '.hidetag') {
-    if (!isGroup) return 'This command only works in a group.';
-    const names = [];
-    for (const memberId of conv.member_ids || []) {
-      const member = await getUserById(memberId);
-      if (member && memberId !== userId) names.push(`@${member.display_name}`);
-    }
-    return `${parts.slice(1).join(' ') || 'Attention everyone'}\n${names.join(' ') || 'No other members.'}`;
   }
   return null;
 }

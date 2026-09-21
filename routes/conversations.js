@@ -320,7 +320,7 @@ router.post('/:id/messages', async (req, res) => {
     }
     const content = String(req.body?.content || '').trim();
     if (!content) return res.status(400).json({ error: 'Only text messages are supported by the HTTP fallback' });
-    const startedAt = Date.now();
+    const startedAt = process.hrtime.bigint();
     const message = await createMessage(req.params.id, {
       id: req.body?.clientMessageId || undefined,
       senderId: req.user.id,
@@ -349,7 +349,15 @@ router.post('/:id/messages', async (req, res) => {
     if (isDarkPairConversation && (commandText.startsWith('/') || /^\d{6}$/.test(commandText))) {
       assistantReply = await getDarkPairReply(content, req.user.id);
     } else if (sender?.dark_pair_linked && commandText === '.ping') {
-      assistantReply = `${Math.max(1, Date.now() - startedAt)}ms`;
+      const latencyMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+      assistantReply = [
+        '╭━━〔 DARK BOT 〕━━┈⊷',
+        '┃ ⚡ *Speed Test Completed!*',
+        '┃',
+        `┃ 📡 *Latency:* ${latencyMs.toFixed(4)} ms`,
+        '┃ 🟢 Status: Stable & Responsive',
+        '╰━━━━━━━━━━━━━━'
+      ].join('\n');
     } else if (sender?.dark_pair_linked && commandText === '.menu') {
       assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
     }

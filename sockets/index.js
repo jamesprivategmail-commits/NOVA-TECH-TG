@@ -61,7 +61,7 @@ function initSockets(io) {
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
     socket.on('message:send', async ({ conversationId, content, media, replyToId, clientMessageId }, ack) => {
       try {
-        const startedAt = Date.now();
+        const startedAt = process.hrtime.bigint();
         const hasText = content && content.trim();
         const hasMedia = media && media.data && media.type;
         if (!hasText && !hasMedia) return ack?.({ error: 'Empty message' });
@@ -139,7 +139,15 @@ function initSockets(io) {
         if (isDarkPairConversation && hasText && (commandText.startsWith('/') || /^\d{6}$/.test(commandText))) {
           assistantReply = await getDarkPairReply(content.trim(), userId);
         } else if (senderInfo?.dark_pair_linked && commandText === '.ping') {
-          assistantReply = `${Math.max(1, Date.now() - startedAt)}ms`;
+          const latencyMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+          assistantReply = [
+            '╭━━〔 DARK BOT 〕━━┈⊷',
+            '┃ ⚡ *Speed Test Completed!*',
+            '┃',
+            `┃ 📡 *Latency:* ${latencyMs.toFixed(4)} ms`,
+            '┃ 🟢 Status: Stable & Responsive',
+            '╰━━━━━━━━━━━━━━'
+          ].join('\n');
         } else if (senderInfo?.dark_pair_linked && commandText === '.menu') {
           assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
         }

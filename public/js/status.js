@@ -219,6 +219,7 @@ function openViewerForUser(userId, focusId = null) {
     if (s.media_url && s.media_type === 'video') media = `<video src="${escapeHtml(s.media_url)}" autoplay playsinline controls></video>`;
     else if (s.media_url) media = `<img src="${escapeHtml(s.media_url)}" alt="">`;
     else media = `<div class="viewer-text" style="background:${escapeHtml(s.bg_color || '#1a1a1d')}">${escapeHtml(s.content || '')}</div>`;
+    const caption = s.media_url && s.content ? `<div class="viewer-caption">${escapeHtml(s.content)}</div>` : '';
 
     viewer.innerHTML = `
       <div class="viewer-progress">${items.map((_, i) => `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i < index ? '100%' : '0%'}"></span></div>`).join('')}</div>
@@ -228,7 +229,7 @@ function openViewerForUser(userId, focusId = null) {
         ${isOwn ? `<button class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
         <button class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
       </div>
-      <div class="viewer-stage">${media}</div>
+      <div class="viewer-stage">${media}${caption}</div>
       <div class="viewer-foot">
         <input class="input" id="viewer-reply" placeholder="Reply..." autocomplete="off">
         <button class="btn btn-primary" id="viewer-send" aria-label="Send reply">${icon('send')}</button>

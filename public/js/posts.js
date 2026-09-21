@@ -104,8 +104,8 @@ function renderPosts() {
 }
 
 function postHtml(p) {
-  const own = String(p.user_id) === String(state.me?.id);
-  const canDelete = own || !!state.me?.isAdmin;
+  const own = String(p.user_id) === String(state.me?.id) || (p.nova_id && String(p.nova_id).toUpperCase() === String(state.me?.novaId || '').toUpperCase());
+  const canDelete = own || !!state.me?.isAdmin || !!state.me?.is_admin;
   const image = p.image_url || p.image_data;
   const isVideo = String(p.image_mime || '').startsWith('video/');
   return `<article class="post" data-post="${escapeHtml(p.id)}">
@@ -115,7 +115,7 @@ function postHtml(p) {
         <div class="post-author truncate">${escapeHtml(p.display_name || 'User')} ${verifyBadge(p.is_verified)}</div>
         <div class="post-time">${escapeHtml(timeAgo(p.created_at))}</div>
       </div>
-      ${canDelete ? `<button class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete post">${icon('trash')}</button>` : ''}
+      ${canDelete ? `<button type="button" class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete update" title="Delete update">${icon('trash')}</button>` : ''}
     </div>
     ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
     ${image ? (isVideo ? `<div class="post-image"><video src="${escapeHtml(image)}" controls preload="metadata" style="width:100%;max-height:480px;border-radius:12px"></video></div>` : `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>`) : ''}

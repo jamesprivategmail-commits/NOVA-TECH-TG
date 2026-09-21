@@ -24,6 +24,13 @@ const {
   arrayUnion,
   arrayRemove
 } = require('firebase/firestore');
+const {
+  getStorage,
+  ref: storageRef,
+  uploadBytes,
+  getBytes,
+  deleteObject
+} = require('firebase/storage');
 
 // Load config from firebase-applet-config.json
 const configPath = path.join(__dirname, '..', 'firebase-applet-config.json');
@@ -35,6 +42,7 @@ if (fs.existsSync(configPath)) {
 let firebaseApp = null;
 let firestoreDb = null;
 let firebaseAuth = null;
+let firebaseStorage = null;
 let isInitialized = false;
 let initPromise = null;
 
@@ -49,6 +57,7 @@ async function ensureInit() {
       firebaseApp = getApps()[0];
     }
     firebaseAuth = getAuth(firebaseApp);
+    firebaseStorage = getStorage(firebaseApp);
 
     // Authenticate backend service account
     const email = 'service-backend@darkchat.internal';
@@ -170,15 +179,23 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
 
   const byteLength = Buffer.from(base64Data, 'base64').length;
 
-  await setDoc(doc(firestoreDb, 'storage_files', fileId), {
+  const metadata = {
     id: fileId,
     filename,
     mimeType: detectedMime,
     size: byteLength,
-    data: base64Data,
     userId,
     createdAt: new Date().toISOString()
-  });
+  };
+  // Firestore documents are limited to 1 MiB. Keep small legacy uploads inline,
+  // but put videos and other large files in Firebase Storage.
+  if (byteLength > 700 * 1024) {
+    const storagePath = `dark-chat/${userId || 'system'}/${fileId}/${filename}`;
+    await uploadBytes(storageRef(firebaseStorage, storagePath), Buffer.from(base64Data, 'base64'), { contentType: detectedMime });
+    await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, storagePath });
+  } else {
+    await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, data: base64Data });
+  }
 
   const downloadUrl = `/api/storage/files/${fileId}`;
   return { fileId, url: downloadUrl, mimeType: detectedMime, size: byteLength };
@@ -189,6 +206,10 @@ async function getStorageFile(fileId) {
   const snap = await getDoc(doc(firestoreDb, 'storage_files', fileId));
   if (!snap.exists()) return null;
   const file = snap.data();
+  if (file.storagePath) {
+    const bytes = await getBytes(storageRef(firebaseStorage, file.storagePath));
+    return { ...file, buffer: Buffer.from(bytes) };
+  }
   return {
     ...file,
     buffer: Buffer.from(file.data, 'base64')
@@ -197,7 +218,10 @@ async function getStorageFile(fileId) {
 
 async function deleteStorageFile(fileId) {
   await ensureInit();
-  await deleteDoc(doc(firestoreDb, 'storage_files', fileId));
+  const ref = doc(firestoreDb, 'storage_files', fileId);
+  const snap = await getDoc(ref);
+  if (snap.exists() && snap.data().storagePath) await deleteObject(storageRef(firebaseStorage, snap.data().storagePath));
+  await deleteDoc(ref);
 }
 
 // ---------------- USERS ----------------

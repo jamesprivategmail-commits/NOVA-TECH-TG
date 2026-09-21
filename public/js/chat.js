@@ -49,6 +49,7 @@ export function initChat() {
     darkPairCodeInput: $('#dark-pair-code-input'),
     darkPairCodeSubmit: $('#dark-pair-code-submit'),
     blockedNotice: $('#blocked-chat-notice'),
+    emojiPicker: $('#emoji-picker'),
     composer: $('#composer'),
     input: $('#composer-input'),
     sendBtn: $('#send-btn'),
@@ -84,7 +85,7 @@ export function initChat() {
   els.attachBtn?.addEventListener('click', () => els.attachInput.click());
   els.attachInput?.addEventListener('change', onAttachSelected);
   els.voiceBtn?.addEventListener('click', toggleRecording);
-  els.emojiBtn?.addEventListener('click', () => insertText('🙂'));
+  els.emojiBtn?.addEventListener('click', toggleEmojiPicker);
 
   els.searchInput?.addEventListener('input', onSearchInput);
 
@@ -514,6 +515,27 @@ function insertText(text) {
   els.input.value += text;
   els.input.focus();
   autoGrow();
+}
+
+const CUSTOM_EMOJIS = {
+  Faces: ['😀','😂','😍','🥰','😎','😭','😡','🤔','😴','🤯','🥳','🤍'],
+  Hands: ['👍','👎','👏','🙏','✌️','🤝','💪','👋','🙌','👌','🤞','🫶'],
+  Symbols: ['❤️','🔥','✨','💯','✅','❌','⭐','⚡','💔','🎉','💎','☠️'],
+  Animals: ['🐶','🐱','🦊','🐻','🐼','🐸','🐵','🦁','🐯','🐨','🐰','🦄']
+};
+
+function toggleEmojiPicker() {
+  if (!els.emojiPicker) return;
+  if (!els.emojiPicker.innerHTML) {
+    els.emojiPicker.innerHTML = Object.entries(CUSTOM_EMOJIS).map(([name, values]) => `
+      <div class="emoji-section"><div class="emoji-section-title">${name}</div>
+      <div class="emoji-grid">${values.map((value) => `<button type="button" class="emoji-choice" data-emoji="${value}" aria-label="${value}">${value}</button>`).join('')}</div></div>`).join('');
+    els.emojiPicker.querySelectorAll('[data-emoji]').forEach((button) => button.addEventListener('click', () => {
+      insertText(button.dataset.emoji);
+      els.emojiPicker.classList.add('hidden');
+    }));
+  }
+  els.emojiPicker.classList.toggle('hidden');
 }
 
 function clearReply() {

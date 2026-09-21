@@ -17,12 +17,15 @@ const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#
 export function initStatus() {
   els = {
     list: $('#status-list'),
+    channels: $('#channel-list'),
     newBtn: $('#new-status-btn'),
     viewer: $('#viewer')
   };
   els.newBtn?.addEventListener('click', openNewStatusSheet);
   on('status:changed', () => renderStatus());
+  on('conversations:changed', renderChannels);
   renderStatus();
+  renderChannels();
 }
 
 export async function loadStatuses() {
@@ -100,6 +103,24 @@ function renderStatus() {
   els.list.querySelectorAll('[data-status-id]').forEach((row) => row.addEventListener('click', () => {
     const s = state.statuses.find((x) => x.id === row.dataset.statusId);
     if (s) openViewerForUser(s.user_id, s.id);
+  }));
+}
+
+function renderChannels() {
+  if (!els.channels) return;
+  const channels = (state.conversations || []).filter((conversation) => conversation.type === 'channel');
+  if (!channels.length) {
+    els.channels.innerHTML = '<div class="channel-empty">Channels you create or follow will appear here.</div>';
+    return;
+  }
+  els.channels.innerHTML = channels.map((channel) => `<button class="channel-row" data-channel-id="${escapeHtml(channel.id)}">
+    ${avatar({ displayName: channel.name || 'Channel', avatarUrl: channel.avatar_url, avatarColor: channel.avatar_color }, { size: 'sm' })}
+    <span class="channel-info"><span class="channel-name truncate">${escapeHtml(channel.name || 'Channel')}</span><span class="channel-meta truncate">${escapeHtml(channel.last_message?.content || 'Channel updates')}</span></span>
+    <span class="channel-chevron">${icon('chevron-right')}</span>
+  </button>`).join('');
+  els.channels.querySelectorAll('[data-channel-id]').forEach((button) => button.addEventListener('click', () => {
+    const channel = channels.find((item) => item.id === button.dataset.channelId);
+    if (channel) emit('chat:open', channel);
   }));
 }
 

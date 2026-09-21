@@ -48,6 +48,7 @@ export function initChat() {
     darkPairCodeBar: $('#dark-pair-code-bar'),
     darkPairCodeInput: $('#dark-pair-code-input'),
     darkPairCodeSubmit: $('#dark-pair-code-submit'),
+    blockedNotice: $('#blocked-chat-notice'),
     composer: $('#composer'),
     input: $('#composer-input'),
     sendBtn: $('#send-btn'),
@@ -108,6 +109,7 @@ export async function openConversation(conv) {
   document.querySelectorAll('.screen-list').forEach((s) => s.classList.add('chat-open'));
   renderHeader();
   els.darkPairCodeBar?.classList.toggle('hidden', conv.other_user?.id !== 'u_dark_pair');
+  updateBlockedChatState(conv);
   markRead(conv.id);
   els.messages.innerHTML = `<div style="padding:20px">${emptyState({ iconName: 'message', title: 'Loading messages', subtitle: '' })}</div>`;
   joinConversation(conv.id);
@@ -123,6 +125,31 @@ export async function openConversation(conv) {
     $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
   }
   setTimeout(() => els.input?.focus(), 80);
+}
+
+function updateBlockedChatState(conv) {
+  const blockedByMe = Boolean(conv?.blocked_by_me);
+  const blockedMe = Boolean(conv?.blocked_me);
+  const blocked = blockedByMe || blockedMe;
+  els.blockedNotice?.classList.toggle('hidden', !blocked);
+  els.composer?.classList.toggle('hidden', blocked);
+  els.darkPairCodeBar?.classList.toggle('hidden', blocked || conv?.other_user?.id !== 'u_dark_pair');
+  if (!els.blockedNotice || !blocked) return;
+  if (blockedByMe) {
+    const name = escapeHtml(conv.other_user?.display_name || 'this user');
+    els.blockedNotice.innerHTML = `<span>You blocked ${name}.</span><button class="btn btn-ghost btn-sm" id="unblock-chat-user">Unblock</button>`;
+    els.blockedNotice.querySelector('#unblock-chat-user')?.addEventListener('click', async () => {
+      try {
+        await api.unblock(conv.other_user.id);
+        conv.blocked_by_me = false;
+        state.settings.blockedUserIds = (state.settings.blockedUserIds || []).filter((id) => id !== conv.other_user.id);
+        updateBlockedChatState(conv);
+        toast('User unblocked', 'success');
+      } catch (err) { toast(err.message || 'Could not unblock'); }
+    });
+  } else {
+    els.blockedNotice.textContent = 'This user has blocked you.';
+  }
 }
 
 function submitDarkPairCode() {
@@ -533,6 +560,7 @@ function showAttachmentPreview() {
 async function handleSend() {
   const conv = state.activeConv;
   if (!conv) return;
+  if (conv.blocked_by_me || conv.blocked_me) return;
   if (els.input.disabled) return;
   const content = els.input.value.trim();
   if (!content && !attachment) return;
@@ -1068,7 +1096,13 @@ async function openConversationInfo() {
           closeSheet();
           const ok = await confirmSheet({ title: 'Block user', message: `Block ${u.display_name || 'this user'}?`, confirmText: 'Block', danger: true });
           if (!ok) return;
-          try { await api.block(u.nova_id); toast('User blocked', 'success'); } catch (err) { toast(err.message || 'Could not block'); }
+          try {
+            await api.block(u.nova_id);
+            conv.blocked_by_me = true;
+            state.settings.blockedUserIds = Array.from(new Set([...(state.settings.blockedUserIds || []), u.id]));
+            updateBlockedChatState(conv);
+            toast('User blocked', 'success');
+          } catch (err) { toast(err.message || 'Could not block'); }
         });
       }
     });

@@ -70,10 +70,19 @@ function initSockets(io) {
 
         const conv = await getConversationById(conversationId);
         if (!conv) return ack?.({ error: 'Conversation not found' });
+        const senderInfo = await getUserById(userId);
 
         const isMember = (conv.member_ids || []).includes(userId);
         if (!isMember && conv.type !== 'channel') {
           return ack?.({ error: 'Not a member of this conversation' });
+        }
+
+        if (conv.type === 'dm') {
+          const otherId = (conv.member_ids || []).find((id) => String(id) !== String(userId));
+          const otherUser = otherId ? await getUserById(otherId) : null;
+          if (senderInfo?.blocked_user_ids?.includes(String(otherId)) || otherUser?.blocked_user_ids?.includes(String(userId))) {
+            return ack?.({ error: 'Messaging is unavailable because this user is blocked.' });
+          }
         }
 
         const role = conv.members?.[userId]?.role || (conv.owner_id === userId ? 'owner' : null);
@@ -110,8 +119,6 @@ function initSockets(io) {
           mediaDuration: media?.duration || null,
           replyToId: replyToId || null
         });
-
-        const senderInfo = await getUserById(userId);
 
         const payload = {
           id: msg.id,

@@ -316,6 +316,14 @@ router.post('/:id/messages', async (req, res) => {
     if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
+    if (conv.type === 'dm') {
+      const otherId = (conv.member_ids || []).find((id) => String(id) !== String(req.user.id));
+      const senderUser = await getUserById(req.user.id);
+      const otherUser = otherId ? await getUserById(otherId) : null;
+      if (senderUser?.blocked_user_ids?.includes(String(otherId)) || otherUser?.blocked_user_ids?.includes(String(req.user.id))) {
+        return res.status(403).json({ error: 'Messaging is unavailable because this user is blocked.' });
+      }
+    }
     const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
     if (conv.type === 'channel' && !['owner', 'admin'].includes(role)) {
       return res.status(403).json({ error: 'Only channel admins can post here' });

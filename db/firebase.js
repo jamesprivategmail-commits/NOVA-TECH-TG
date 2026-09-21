@@ -475,6 +475,7 @@ async function getConversationsForUser(userId) {
   );
   const snap = await getDocs(q);
   const list = snap.docs.map(d => d.data());
+  const currentUser = await getUserById(userId);
 
   // Populate DMs with other user's identity
   for (const conv of list) {
@@ -494,6 +495,8 @@ async function getConversationsForUser(userId) {
             avatar_url: other.avatar_url,
             is_verified: other.is_verified
           };
+          conv.blocked_by_me = (currentUser?.blocked_user_ids || []).includes(String(other.id));
+          conv.blocked_me = (other.blocked_user_ids || []).includes(String(userId));
         }
       }
     }

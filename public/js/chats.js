@@ -67,7 +67,7 @@ function filteredConversations() {
   return state.conversations.filter((conv) => {
     if (state.filter === 'unread' && !isUnread(conv)) return false;
     if (state.filter === 'groups' && conv.type !== 'group') return false;
-    if (state.filter === 'channels' && conv.type !== 'channel') return false;
+    if (conv.type === 'channel') return false;
     if (!term) return true;
     const hay = [
       conversationTitle(conv),

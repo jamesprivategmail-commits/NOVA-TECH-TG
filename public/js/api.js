@@ -107,6 +107,9 @@ export const api = {
 
   // admin
   adminUsers: (search) => request(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  adminChannels: (search) => request(`/admin/channels${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  adminVerifyChannel: (id) => request(`/admin/channels/${encodeURIComponent(id)}/verify`, { method: 'POST', body: {} }),
+  adminUnverifyChannel: (id) => request(`/admin/channels/${encodeURIComponent(id)}/unverify`, { method: 'POST', body: {} }),
   adminBan: (id, reason) => request(`/admin/users/${encodeURIComponent(id)}/ban`, { method: 'POST', body: { reason } }),
   adminUnban: (id) => request(`/admin/users/${encodeURIComponent(id)}/unban`, { method: 'POST', body: {} }),
   adminVerify: (id) => request(`/admin/users/${encodeURIComponent(id)}/verify`, { method: 'POST', body: {} }),

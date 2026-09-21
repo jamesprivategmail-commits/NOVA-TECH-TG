@@ -87,23 +87,9 @@ function renderStatus() {
   html += others.map((g) => ringHtml(g, false)).join('');
   html += '</div>';
 
-  html += '<div class="settings-group-title" style="padding-left:16px">Recent updates</div>';
-  html += state.statuses.map((s) => `<button class="status-row" data-status-id="${escapeHtml(s.id)}">
-    <span class="avatar-wrap">${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color })}</span>
-    <span class="status-info">
-      <span class="status-name truncate">${escapeHtml(s.display_name || 'User')}</span>
-      <span class="status-time truncate">${escapeHtml(timeAgo(s.created_at))} · ${escapeHtml(s.content || (s.media_type === 'video' ? 'Video' : 'Photo'))}</span>
-    </span>
-    ${s.user_id === state.me?.id ? `<span class="pill">${s.viewed ? 'Viewed' : 'Mine'}</span>` : ''}
-  </button>`).join('');
-
   els.list.innerHTML = html;
   els.list.querySelector('[data-new-status]')?.addEventListener('click', openNewStatusSheet);
   els.list.querySelectorAll('[data-status-user]').forEach((btn) => btn.addEventListener('click', () => openViewerForUser(btn.dataset.statusUser)));
-  els.list.querySelectorAll('[data-status-id]').forEach((row) => row.addEventListener('click', () => {
-    const s = state.statuses.find((x) => x.id === row.dataset.statusId);
-    if (s) openViewerForUser(s.user_id, s.id);
-  }));
 }
 
 function renderChannels() {
@@ -115,7 +101,7 @@ function renderChannels() {
   }
   els.channels.innerHTML = channels.map((channel) => `<button class="channel-row" data-channel-id="${escapeHtml(channel.id)}">
     ${avatar({ displayName: channel.name || 'Channel', avatarUrl: channel.avatar_url, avatarColor: channel.avatar_color }, { size: 'sm' })}
-    <span class="channel-info"><span class="channel-name truncate">${escapeHtml(channel.name || 'Channel')}</span><span class="channel-meta truncate">${escapeHtml(channel.last_message?.content || 'Channel updates')}</span></span>
+    <span class="channel-info"><span class="channel-name truncate">${escapeHtml(channel.name || 'Channel')} ${channel.is_verified ? icon('badge-check') : ''}</span><span class="channel-meta truncate">${escapeHtml(channel.last_message?.content || 'Channel updates')}</span></span>
     <span class="channel-chevron">${icon('chevron-right')}</span>
   </button>`).join('');
   els.channels.querySelectorAll('[data-channel-id]').forEach((button) => button.addEventListener('click', () => {
@@ -194,24 +180,27 @@ function openNewStatusSheet() {
 
 // ---------------- viewer ----------------
 function openViewerForUser(userId, focusId = null) {
-  const items = state.statuses.filter((s) => String(s.user_id) === String(userId)).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  if (!items.length) return;
+  const groups = groupByUser();
+  let userIndex = Math.max(0, groups.findIndex((g) => String(g.userId) === String(userId)));
+  if (userIndex < 0) return;
+  let items = groups[userIndex].items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   let index = focusId ? Math.max(0, items.findIndex((s) => s.id === focusId)) : 0;
-  const isOwn = String(userId) === String(state.me?.id);
   const viewer = els.viewer;
   viewer.hidden = false;
 
   const render = () => {
+    items = groups[userIndex].items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     const s = items[index];
+    const isOwn = String(s.user_id) === String(state.me?.id);
     const canPrev = index > 0;
-    const canNext = index < items.length - 1;
+    const canNext = index < items.length - 1 || userIndex < groups.length - 1;
     let media = '';
     if (s.media_url && s.media_type === 'video') media = `<video src="${escapeHtml(s.media_url)}" autoplay playsinline controls></video>`;
     else if (s.media_url) media = `<img src="${escapeHtml(s.media_url)}" alt="">`;
     else media = `<div class="viewer-text" style="background:${escapeHtml(s.bg_color || '#1a1a1d')}">${escapeHtml(s.content || '')}</div>`;
 
     viewer.innerHTML = `
-      <div class="viewer-progress">${items.map((_, i) => `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i === index ? '0%' : '0%'}"></span></div>`).join('')}</div>
+      <div class="viewer-progress">${items.map((_, i) => `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i < index ? '100%' : '0%'}"></span></div>`).join('')}</div>
       <div class="viewer-head">
         ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
         <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
@@ -228,18 +217,16 @@ function openViewerForUser(userId, focusId = null) {
     `;
     viewer.querySelector('#viewer-close').addEventListener('click', closeViewer);
     viewer.querySelector('#viewer-prev')?.addEventListener('click', () => { index--; render(); });
-    viewer.querySelector('#viewer-next')?.addEventListener('click', () => { index++; render(); });
+    viewer.querySelector('#viewer-next')?.addEventListener('click', () => advance());
     viewer.querySelector('#viewer-delete')?.addEventListener('click', async () => {
       const ok = await confirmSheet({ title: 'Delete status', message: 'Delete this status?', confirmText: 'Delete', danger: true });
       if (!ok) return;
       try { await api.deleteStatus(s.id); toast('Deleted'); closeViewer(); loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
     });
     viewer.querySelector('#viewer-send').addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
-    const stage = viewer.querySelector('.viewer-stage');
-    stage?.addEventListener('pointerdown', pauseProgress);
-    stage?.addEventListener('pointerup', resumeProgress);
-    stage?.addEventListener('pointercancel', resumeProgress);
-    stage?.addEventListener('pointerleave', resumeProgress);
+    viewer.addEventListener('pointerdown', pauseProgress);
+    viewer.addEventListener('pointerup', resumeProgress);
+    viewer.addEventListener('pointercancel', resumeProgress);
 
     if (!s.viewed && !isOwn) api.viewStatus(s.id).catch(() => {});
     startProgress(s);
@@ -256,9 +243,13 @@ function openViewerForUser(userId, focusId = null) {
       requestAnimationFrame(() => { seg.style.transition = `width ${duration}ms linear`; seg.style.width = '100%'; });
     }
     viewerTimer = setTimeout(() => {
-      if (index < items.length - 1) { index++; render(); }
-      else closeViewer();
+      advance();
     }, duration);
+  }
+  function advance() {
+    if (index < items.length - 1) { index++; render(); return; }
+    if (userIndex < groups.length - 1) { userIndex++; index = 0; render(); return; }
+    closeViewer();
   }
   function pauseProgress() {
     if (progressPaused) return;
@@ -273,8 +264,7 @@ function openViewerForUser(userId, focusId = null) {
     progressStartedAt = Date.now();
     viewer.querySelector('video')?.play().catch(() => {});
     viewerTimer = setTimeout(() => {
-      if (index < items.length - 1) { index++; render(); }
-      else closeViewer();
+      advance();
     }, progressRemaining || 1);
   }
 
@@ -293,7 +283,12 @@ async function replyToStatus(status, text) {
   if (String(status.user_id) === String(state.me?.id)) { toast('That is your own status'); return; }
   try {
     const dm = await api.createDm(status.nova_id);
-    emit('chat:needs-send', { conversationId: dm.conversationId, content: value, novaId: status.nova_id });
+    emit('chat:needs-send', {
+      conversationId: dm.conversationId,
+      content: value,
+      novaId: status.nova_id,
+      statusReply: { id: status.id, author: status.display_name, content: status.content || (status.media_type === 'video' ? 'Video' : 'Photo'), created_at: status.created_at }
+    });
     closeViewer();
     toast('Reply sent', 'success');
   } catch (err) {

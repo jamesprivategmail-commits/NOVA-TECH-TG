@@ -435,7 +435,9 @@ async function createConversation(data) {
     type: data.type, // 'dm' | 'group' | 'channel'
     name: data.name || null,
     avatar_color: data.avatarColor || data.avatar_color || '#8E8E93',
+    avatar_url: data.avatarUrl || data.avatar_url || null,
     owner_id: data.ownerId || data.owner_id || null,
+    is_verified: Boolean(data.isVerified || data.is_verified),
     invite_code: data.inviteCode || data.invite_code || null,
     member_ids: data.memberIds || data.member_ids || [],
     members: data.members || {}, // map: { [userId]: { role: 'owner'|'admin'|'member', joined_at: ... } }
@@ -464,6 +466,13 @@ async function getConversationById(id) {
   await ensureInit();
   const snap = await getDoc(doc(firestoreDb, 'conversations', String(id)));
   return snap.exists() ? snap.data() : null;
+}
+
+async function getAllChannels(search = '') {
+  await ensureInit();
+  const snap = await getDocs(query(collection(firestoreDb, 'conversations'), where('type', '==', 'channel')));
+  const term = String(search || '').trim().toLowerCase();
+  return snap.docs.map((d) => d.data()).filter((channel) => !term || `${channel.name || ''} ${channel.invite_code || ''}`.toLowerCase().includes(term));
 }
 
 async function getConversationsForUser(userId) {
@@ -636,6 +645,7 @@ async function createMessage(convId, msgData) {
     media_mime: msgData.mediaMime || msgData.media_mime || null,
     media_duration: msgData.mediaDuration || msgData.media_duration || null,
     reply_to_id: msgData.replyToId || msgData.reply_to_id || null,
+    status_reply: msgData.statusReply || msgData.status_reply || null,
     forwarded_from_id: msgData.forwardedFromId || msgData.forwarded_from_id || null,
     deleted_for_everyone: false,
     deleted_at: null,
@@ -1098,6 +1108,7 @@ module.exports = {
   // Conversations
   createConversation,
   getConversationById,
+  getAllChannels,
   getConversationsForUser,
   findDmBetween,
   updateConversation,

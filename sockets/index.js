@@ -61,7 +61,7 @@ function initSockets(io) {
     });
 
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
-    socket.on('message:send', async ({ conversationId, content, media, replyToId, clientMessageId }, ack) => {
+    socket.on('message:send', async ({ conversationId, content, media, replyToId, statusReply, clientMessageId }, ack) => {
       try {
         const startedAt = process.hrtime.bigint();
         const hasText = content && content.trim();
@@ -117,7 +117,8 @@ function initSockets(io) {
           mediaData: mediaUrl, // provide URL so existing frontend renders immediately
           mediaMime: mediaMime,
           mediaDuration: media?.duration || null,
-          replyToId: replyToId || null
+          replyToId: replyToId || null,
+          statusReply: statusReply || null
         });
 
         const payload = {
@@ -131,6 +132,7 @@ function initSockets(io) {
           media_mime: msg.media_mime,
           media_duration: msg.media_duration,
           reply_to_id: msg.reply_to_id,
+          status_reply: msg.status_reply,
           edited_at: msg.edited_at,
           deleted_for_everyone: msg.deleted_for_everyone,
           created_at: msg.created_at,

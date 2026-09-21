@@ -23,14 +23,18 @@ export function openAdminPanel() {
           <input class="input" id="admin-search" placeholder="Search by name or DARK CHAT ID" autocomplete="off">
         </label>
       </div>
-      <div class="sheet-body" id="admin-users"></div>`,
+      <div class="settings-group-title">Users</div>
+      <div class="sheet-body" id="admin-users"></div>
+      <div class="settings-group-title">Channels</div>
+      <div class="sheet-body" id="admin-channels"></div>`,
     onMount(sheet) {
       let t;
       sheet.querySelector('#admin-search').addEventListener('input', (e) => {
         clearTimeout(t);
-        t = setTimeout(() => loadAdminUsers(e.target.value.trim()), 300);
+        t = setTimeout(() => { loadAdminUsers(e.target.value.trim()); loadAdminChannels(e.target.value.trim()); }, 300);
       });
       loadAdminUsers('');
+      loadAdminChannels('');
     }
   });
 }
@@ -68,6 +72,33 @@ async function loadAdminUsers(search) {
     list.innerHTML = errorState({ title: 'Could not load users', subtitle: error.message, retryId: 'retry-admin' });
     $('#retry-admin')?.addEventListener('click', () => loadAdminUsers(search));
   }
+}
+
+async function loadAdminChannels(search) {
+  const list = $('#admin-channels');
+  if (!list) return;
+  list.innerHTML = skeletonList(3);
+  try {
+    const res = await api.adminChannels(search);
+    const channels = res.channels || [];
+    if (!channels.length) { list.innerHTML = '<div class="sheet-pad muted">No channels found.</div>'; return; }
+    list.innerHTML = channels.map(channelRow).join('');
+    list.querySelectorAll('[data-channel-verify]').forEach((button) => button.addEventListener('click', () => runChannel(() => api.adminVerifyChannel(button.dataset.channelVerify), 'Channel verified', search)));
+    list.querySelectorAll('[data-channel-unverify]').forEach((button) => button.addEventListener('click', () => runChannel(() => api.adminUnverifyChannel(button.dataset.channelUnverify), 'Channel verification removed', search)));
+  } catch (error) { list.innerHTML = `<div class="sheet-pad alert alert-error">${escapeHtml(error.message || 'Could not load channels')}</div>`; }
+}
+
+function channelRow(channel) {
+  return `<div class="discover-card">
+    <span class="avatar-wrap">${avatar({ displayName: channel.name, avatarUrl: channel.avatarUrl }, { size: 'sm' })}</span>
+    <div class="discover-info"><div class="discover-name truncate">${escapeHtml(channel.name || 'Channel')} ${channel.isVerified ? verifyBadge(true) : ''}</div><div class="discover-handle truncate">${escapeHtml(channel.inviteCode || '')}</div></div>
+    ${channel.isVerified ? `<button class="btn btn-ghost btn-sm" data-channel-unverify="${escapeHtml(channel.id)}">Unverify</button>` : `<button class="btn btn-ghost btn-sm" data-channel-verify="${escapeHtml(channel.id)}">Verify</button>`}
+  </div>`;
+}
+
+async function runChannel(action, successMessage, search) {
+  try { await action(); toast(successMessage, 'success'); await loadAdminChannels(search); }
+  catch (err) { toast(err.message || 'Action failed'); }
 }
 
 function adminRow(u) {

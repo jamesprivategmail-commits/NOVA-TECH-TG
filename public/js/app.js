@@ -148,12 +148,12 @@ function wireEvents() {
     history.pushState({ app: true, tab: currentTab, chat: true }, '', `#${currentTab}/chat`);
     openConversation(conv);
   });
-  on('chat:needs-send', async ({ conversationId, content }) => {
+  on('chat:needs-send', async ({ conversationId, content, statusReply }) => {
     try {
       await refreshConversations();
       const conv = state.conversations.find((c) => c.id === conversationId);
       if (conv) openConversation(conv);
-      const ack = await sendMessage({ conversationId, content });
+      const ack = await sendMessage({ conversationId, content, statusReply });
       if (!ack || ack.error) toast('Could not send reply');
     } catch { toast('Could not send reply'); }
   });

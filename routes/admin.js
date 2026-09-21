@@ -1,9 +1,12 @@
 const express = require('express');
 const {
   getAllUsers,
+  getAllChannels,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  getConversationById,
+  updateConversation
 } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
 const { requireAdmin, isAdminNovaId } = require('../middleware/admin');
@@ -39,6 +42,41 @@ router.get('/users', async (req, res) => {
   } catch (err) {
     console.error('Admin get users error:', err);
     res.status(500).json({ error: 'Failed to load users' });
+  }
+});
+
+router.get('/channels', async (req, res) => {
+  try {
+    const channels = await getAllChannels(req.query.search || '');
+    res.json({ channels: channels.map((channel) => ({
+      id: channel.id, name: channel.name, avatarUrl: channel.avatar_url || null,
+      inviteCode: channel.invite_code || null, isVerified: Boolean(channel.is_verified), ownerId: channel.owner_id
+    })) });
+  } catch (err) {
+    console.error('Admin get channels error:', err);
+    res.status(500).json({ error: 'Failed to load channels' });
+  }
+});
+
+router.post('/channels/:id/verify', async (req, res) => {
+  try {
+    const channel = await getConversationById(req.params.id);
+    if (!channel || channel.type !== 'channel') return res.status(404).json({ error: 'Channel not found' });
+    res.json({ channel: await updateConversation(channel.id, { is_verified: true }) });
+  } catch (err) {
+    console.error('Admin verify channel error:', err);
+    res.status(500).json({ error: 'Failed to verify channel' });
+  }
+});
+
+router.post('/channels/:id/unverify', async (req, res) => {
+  try {
+    const channel = await getConversationById(req.params.id);
+    if (!channel || channel.type !== 'channel') return res.status(404).json({ error: 'Channel not found' });
+    res.json({ channel: await updateConversation(channel.id, { is_verified: false }) });
+  } catch (err) {
+    console.error('Admin unverify channel error:', err);
+    res.status(500).json({ error: 'Failed to remove channel verification' });
   }
 });
 

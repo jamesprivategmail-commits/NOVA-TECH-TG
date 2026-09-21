@@ -1,7 +1,61 @@
 // api.js - typed fetch wrapper over /api with the JWT and error normalisation
 import { state, emit } from './state.js';
 
-const BASE = '/api';
+function resolveApiBase() {
+  const PROD_API = 'https://nova-tech-tg.vercel.app/api';
+  try {
+    if (typeof window !== 'undefined' && window.__API_BASE__) return String(window.__API_BASE__).replace(/\/$/, '');
+    const meta = typeof document !== 'undefined' ? document.querySelector('meta[name="api-base"]') : null;
+    if (meta?.content) return meta.content.replace(/\/$/, '');
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('apiBase') : null;
+    if (stored) return stored.replace(/\/$/, '');
+    // Browser on same origin (normal web deploy)
+    if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
+        && !location.hostname.includes('appassets.androidplatform.net')
+        && location.hostname !== 'localhost'
+        && location.hostname !== '127.0.0.1') {
+      return '/api';
+    }
+    // APK WebView / local file — use production API
+    if (typeof location !== 'undefined' && (
+      location.hostname.includes('appassets.androidplatform.net')
+      || location.protocol === 'file:'
+      || location.hostname === 'localhost'
+      || location.hostname === '127.0.0.1'
+    )) {
+      return PROD_API;
+    }
+  } catch { /* ignore */ }
+  return PROD_API;
+}
+
+const BASE = resolveApiBase();
+
+/** Origin of the API host (no trailing slash), e.g. https://nova-tech-tg.vercel.app */
+export function apiOrigin() {
+  try {
+    if (/^https?:\/\//i.test(BASE)) {
+      return BASE.replace(/\/api\/?$/, '');
+    }
+  } catch { /* ignore */ }
+  if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
+      && !location.hostname.includes('appassets.androidplatform.net')) {
+    return location.origin;
+  }
+  return 'https://nova-tech-tg.vercel.app';
+}
+
+/** Make media/storage URLs absolute so APK WebView and web both load them */
+export function mediaSrc(url) {
+  if (!url) return '';
+  const u = String(url);
+  if (u.startsWith('data:') || u.startsWith('blob:') || /^https?:\/\//i.test(u)) return u;
+  if (u.startsWith('/')) return apiOrigin() + u;
+  return u;
+}
+
+export function apiBase() { return BASE; }
+
 
 export class ApiError extends Error {
   constructor(message, status = 0, data = null) {
@@ -98,10 +152,14 @@ export const api = {
   unreadCount: () => request('/notifications/unread-count'),
   markRead: (id) => request('/notifications/read', { method: 'POST', body: id ? { id } : {} }),
 
+  reactStatus: (id, emoji) => request(`/status/${encodeURIComponent(id)}/react`, { method: 'POST', body: { emoji } }),
+
   // profile
   profileSettings: () => request('/profile/settings'),
   updateProfileSettings: (patch) => request('/profile/settings', { method: 'PUT', body: patch }),
   block: (novaId) => request('/profile/block', { method: 'POST', body: { novaId } }),
+  stickerPacks: () => request('/profile/stickers'),
+  addSticker: (payload) => request('/profile/stickers', { method: 'POST', body: payload }),
   unblock: (userId) => request('/profile/unblock', { method: 'POST', body: { userId } }),
 
   // discover

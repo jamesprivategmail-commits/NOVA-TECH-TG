@@ -3,7 +3,8 @@ const {
   createStatus,
   getActiveStatuses,
   markStatusViewed,
-  deleteStatus
+  deleteStatus,
+  reactToStatus
 } = require('../db/firebase');
 const { uploadToStorage } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
@@ -33,6 +34,7 @@ router.post('/', async (req, res) => {
         mediaUrl = uploaded.url;
       } catch (uploadErr) {
         console.error('Status media upload failed:', uploadErr);
+        // Surface a specific, actionable message instead of a generic 500 later.
         return res.status(502).json({
           error: normalizedMediaType === 'video'
             ? 'Could not upload video. Check that Firebase Storage is enabled and its rules allow writes.'
@@ -76,6 +78,20 @@ router.post('/:id/view', async (req, res) => {
   } catch (err) {
     console.error('View status error:', err);
     res.status(500).json({ error: 'Failed to mark viewed' });
+  }
+});
+
+// POST /api/status/:id/react { emoji }
+router.post('/:id/react', async (req, res) => {
+  try {
+    const emoji = (req.body?.emoji || req.body?.reaction || '').trim();
+    if (!emoji) return res.status(400).json({ error: 'Emoji is required' });
+    const result = await reactToStatus(req.params.id, req.user.id, emoji);
+    if (!result) return res.status(404).json({ error: 'Status not found' });
+    res.json(result);
+  } catch (err) {
+    console.error('React status error:', err);
+    res.status(500).json({ error: 'Failed to react' });
   }
 });
 

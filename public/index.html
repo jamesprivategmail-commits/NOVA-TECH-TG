@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DARK CHAT</title>
 <meta name="description" content="DARK CHAT - private chats, groups, channels, statuses and updates.">
-<link rel="icon" type="image/jpeg" href="/assets/logo.jpg?v=2">
-<link rel="shortcut icon" type="image/jpeg" href="/assets/logo.jpg?v=2">
-<link rel="apple-touch-icon" href="/assets/logo.jpg?v=2">
-<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/jpeg" href="assets/logo.jpg?v=2">
+<link rel="shortcut icon" type="image/jpeg" href="assets/logo.jpg?v=2">
+<link rel="apple-touch-icon" href="assets/logo.jpg?v=2">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#050505">
+<!-- Set content to your live API root including /api, e.g. https://your-host.com/api -->
+<meta name="api-base" content="https://nova-tech-tg.vercel.app/api">
 <meta name="color-scheme" content="dark">
 <meta property="og:title" content="DARK CHAT">
 <meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, statuses and posts">
-<link rel="stylesheet" href="/css/app.css?v=3">
+<link rel="stylesheet" href="css/app.css?v=3">
 </head>
 <body>
 
@@ -39,6 +41,7 @@
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2A3.4 3.4 0 0 1 16 12M18 20a6.6 6.6 0 0 0-1.6-4.3"/></symbol>
     <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.6"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M19 6v6M16 9h6"/></symbol>
+    <symbol id="i-user-minus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.6"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 9h6"/></symbol>
     <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 20V4M6 10l6-6 6 6"/></symbol>
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 4v16M6 14l6 6 6-6"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9Z"/><path d="M10.5 20a2 2 0 0 0 3 0"/></symbol>
@@ -95,7 +98,7 @@
   <div class="auth-bg" aria-hidden="true"></div>
   <div class="auth-card">
     <div class="auth-brand">
-      <img src="/assets/logo.jpg?v=2" alt="" class="auth-logo">
+      <img src="assets/logo.jpg?v=2" alt="" class="auth-logo">
       <div>
         <div class="auth-title">DARK CHAT</div>
         <div class="auth-sub">Message your people, your way.</div>
@@ -178,9 +181,10 @@
       <input id="chats-search" type="search" placeholder="Search conversations" autocomplete="off">
     </label>
     <div class="chips" id="chat-filters">
-      <button class="chip active" data-filter="all">All</button>
-      <button class="chip" data-filter="unread">Unread</button>
-      <button class="chip" data-filter="groups">Groups</button>
+      <button class="chip active" data-filter="all" data-label="All">All</button>
+      <button class="chip" data-filter="unread" data-label="Unread">Unread</button>
+      <button class="chip" data-filter="groups" data-label="Groups">Groups</button>
+      <button class="chip" data-filter="archived" data-label="Archived">Archived</button>
     </div>
     <div class="content scroll" id="chats-list" aria-live="polite"></div>
   </section>
@@ -314,6 +318,7 @@
         <div class="composer-left-controls">
           <button type="button" class="composer-icon-btn" id="composer-attach" aria-label="Add attachment"><svg class="icon"><use href="#i-plus"></use></svg></button>
           <button type="button" class="composer-icon-btn" id="composer-emoji" aria-label="Emoji"><span aria-hidden="true">😊</span></button>
+          <button type="button" class="composer-icon-btn" id="composer-sticker" aria-label="Stickers" title="Stickers"><span aria-hidden="true">🎨</span></button>
         </div>
         <div class="composer-right-controls">
           <button type="button" class="composer-icon-btn" id="composer-voice" aria-label="Record voice note"><svg class="icon"><use href="#i-mic"></use></svg></button>
@@ -377,6 +382,6 @@
 
 <div class="toast-host" id="toast-host" aria-live="polite"></div>
 
-<script type="module" src="/js/app.js"></script>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

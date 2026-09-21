@@ -195,6 +195,9 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
     try {
       await uploadBytes(storageRef(firebaseStorage, storagePath), Buffer.from(base64Data, 'base64'), { contentType: detectedMime });
     } catch (storageErr) {
+      // Re-throw with the real Firebase Storage error code/message intact so
+      // callers (e.g. routes/status.js) can show something useful instead of
+      // a generic "Failed to post status".
       const wrapped = new Error(`Firebase Storage upload failed (${storageErr.code || 'unknown'}): ${storageErr.message}`);
       wrapped.cause = storageErr;
       throw wrapped;
@@ -204,7 +207,12 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
     await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, data: base64Data });
   }
 
-  const downloadUrl = `/api/storage/files/${fileId}`;
+  const publicBase = (process.env.PUBLIC_BASE_URL || process.env.VERCEL_URL
+    ? (process.env.PUBLIC_BASE_URL || `https://${process.env.VERCEL_URL}`)
+    : '').replace(/\/$/, '');
+  const downloadUrl = publicBase
+    ? `${publicBase}/api/storage/files/${fileId}`
+    : `/api/storage/files/${fileId}`;
   return { fileId, url: downloadUrl, mimeType: detectedMime, size: byteLength };
 }
 
@@ -589,6 +597,30 @@ async function findDmBetween(user1Id, user2Id) {
   return null;
 }
 
+
+async function findNotesForUser(userId) {
+  await ensureInit();
+  const q = query(
+    collection(firestoreDb, 'conversations'),
+    where('type', '==', 'notes'),
+    where('member_ids', 'array-contains', String(userId))
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    // fallback scan if member_ids field naming differs
+    const all = await getDocs(query(collection(firestoreDb, 'conversations'), where('type', '==', 'notes')));
+    for (const d of all.docs) {
+      const c = d.data();
+      const members = c.member_ids || c.memberIds || Object.keys(c.members || {});
+      if (members.map(String).includes(String(userId))) return { id: d.id, ...c };
+    }
+    return null;
+  }
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() };
+}
+
+
 async function updateConversation(id, updates) {
   await ensureInit();
   const ref = doc(firestoreDb, 'conversations', String(id));
@@ -697,8 +729,10 @@ async function createMessage(convId, msgData) {
   // Update conversation last_message preview
   let preview = message.content;
   if (!preview) {
-    if (message.media_type === 'image') preview = '📷 Photo';
+    if (message.media_type === 'sticker') preview = 'Sticker';
+    else if (message.media_type === 'image') preview = '📷 Photo';
     else if (message.media_type === 'voice' || message.media_type === 'audio') preview = 'Voice note';
+    else if (message.media_type === 'video') preview = '🎥 Video';
     else preview = 'Attachment';
   }
   await updateDoc(doc(firestoreDb, 'conversations', String(convId)), {
@@ -818,7 +852,8 @@ async function createStatus({ userId, content, bgColor, mediaUrl, mediaType, med
     media_mime: mediaMime || null,
     created_at: now.toISOString(),
     expires_at: expiresAt,
-    viewers: []
+    viewers: [],
+    reactions: {} // { [userId]: emoji }
   };
   await setDoc(doc(firestoreDb, 'statuses', id), status);
   return status;
@@ -848,7 +883,10 @@ async function getActiveStatuses(viewerUserId) {
         avatar_color: author?.avatar_color || '#0A84FF',
         avatar_url: author?.avatar_url || null,
         is_verified: author?.is_verified || false,
-        viewed: viewerUserId ? (s.viewers || []).includes(String(viewerUserId)) : false
+        viewed: viewerUserId ? (s.viewers || []).includes(String(viewerUserId)) : false,
+        reactions: s.reactions || {},
+        reaction_count: Object.keys(s.reactions || {}).length,
+        my_reaction: viewerUserId ? (s.reactions || {})[String(viewerUserId)] || null : null
       });
     }
   }
@@ -876,6 +914,65 @@ async function deleteStatus(statusId, userId) {
   if (snap.data().user_id !== String(userId)) return false;
   await deleteDoc(ref);
   return true;
+}
+
+async function reactToStatus(statusId, userId, emoji) {
+  await ensureInit();
+  const ref = doc(firestoreDb, 'statuses', String(statusId));
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const clean = String(emoji || '').trim().slice(0, 16);
+  if (!clean) return null;
+  const reactions = { ...(snap.data().reactions || {}) };
+  // Toggle off if same emoji
+  if (reactions[String(userId)] === clean) delete reactions[String(userId)];
+  else reactions[String(userId)] = clean;
+  await updateDoc(ref, { reactions });
+  return {
+    reactions,
+    reaction_count: Object.keys(reactions).length,
+    my_reaction: reactions[String(userId)] || null
+  };
+}
+
+async function getUserStickerPacks(userId) {
+  await ensureInit();
+  const user = await getUserById(userId);
+  const packs = user?.sticker_packs || [];
+  if (!packs.length) {
+    return [{ id: 'default', name: 'My stickers', stickers: [] }];
+  }
+  return packs;
+}
+
+async function saveUserStickerPacks(userId, packs) {
+  await ensureInit();
+  await updateUser(userId, { sticker_packs: packs });
+  return packs;
+}
+
+async function addStickerToPack(userId, { packId, packName, sticker }) {
+  await ensureInit();
+  const packs = await getUserStickerPacks(userId);
+  let pack = packs.find((p) => p.id === packId || (packName && p.name === packName));
+  if (!pack) {
+    pack = {
+      id: packId || ('pack_' + Date.now()),
+      name: (packName || 'My stickers').slice(0, 40),
+      stickers: []
+    };
+    packs.push(pack);
+  }
+  const entry = {
+    id: sticker.id || ('stk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)),
+    url: sticker.url,
+    mime: sticker.mime || 'image/png',
+    type: sticker.type || 'image', // image | video
+    created_at: new Date().toISOString()
+  };
+  pack.stickers = [entry, ...(pack.stickers || []).filter((s) => s.url !== entry.url)].slice(0, 80);
+  await saveUserStickerPacks(userId, packs);
+  return { packs, sticker: entry, pack };
 }
 
 // ---------------- POSTS & COMMENTS ----------------
@@ -1144,6 +1241,7 @@ module.exports = {
   getAllChannels,
   getConversationsForUser,
   findDmBetween,
+  findNotesForUser,
   updateConversation,
   deleteConversation,
   addConversationMember,
@@ -1161,6 +1259,9 @@ module.exports = {
   getActiveStatuses,
   markStatusViewed,
   deleteStatus,
+  reactToStatus,
+  getUserStickerPacks,
+  addStickerToPack,
   // Posts & Comments
   createPost,
   getPosts,

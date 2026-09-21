@@ -1,5 +1,5 @@
 {
-  "name": "nova-chat",
+  "name": "dark-chat",
   "version": "1.0.0",
   "description": "DARK CHAT - real-time messaging platform (DMs, groups, channels)",
   "main": "server.js",
@@ -9,7 +9,13 @@
   "scripts": {
     "build": "echo 'Build complete'",
     "start": "node server.js",
-    "migrate": "node db/migrate.js"
+    "migrate": "node db/migrate.js",
+    "cap:sync": "npx cap sync",
+    "cap:add:android": "npx cap add android",
+    "cap:open:android": "npx cap open android",
+    "build:android": "npx cap sync android",
+    "build:arm64": "bash scripts/build-arm64.sh",
+    "docker:arm64": "docker buildx build --platform linux/arm64 -f Dockerfile.arm64 -t dark-chat:arm64 --load ."
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.2.0",
@@ -22,5 +28,10 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@capacitor/core": "6.2.0",
+    "@capacitor/cli": "6.2.0",
+    "@capacitor/android": "6.2.0"
   }
 }

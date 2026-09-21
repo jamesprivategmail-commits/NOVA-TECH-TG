@@ -98,6 +98,16 @@ export function isUnread(conv) {
   return new Date(lastAt).getTime() > new Date(seen).getTime();
 }
 
+/** Sum of real unread message counts across non-archived conversations. */
+export function totalUnreadCount() {
+  let total = 0;
+  for (const conv of state.conversations || []) {
+    if (conv.archived) continue;
+    total += state.unread[conv.id] || (isUnread(conv) ? 1 : 0);
+  }
+  return total;
+}
+
 // -------- event bus --------
 const handlers = new Map();
 

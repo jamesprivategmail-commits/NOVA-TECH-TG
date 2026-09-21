@@ -1,11 +1,13 @@
 // chat.js - conversation screen: history, realtime, sending, media, actions
-import { api, ApiError } from './api.js';
+import { api, mediaSrc, apiBase, ApiError } from './api.js';
+import { pref } from './settings.js';
+import { openStickerPicker, saveSentStickerToPack } from './stickers.js';
 import { state, emit, on, markRead } from './state.js';
 import { joinConversation, sendMessage as socketSend, sendTyping, markConversationRead } from './socket.js';
 import {
   $, avatar, icon, escapeHtml, formatTime, dayLabel, lastSeenLabel, conversationTitle, conversationIsVerified, verifyBadge,
   conversationAvatarUser, toast, openSheet, closeSheet, confirmSheet, promptSheet,
-  emptyState, errorState, setBusy, fileToDataUrl, humanSize
+  emptyState, errorState, setBusy, fileToDataUrl, humanSize, linkify
 } from './ui.js';
 
 let els = {};
@@ -72,6 +74,23 @@ export function initChat() {
   els.moreBtn?.addEventListener('click', openChatMenu);
   els.replyCancel?.addEventListener('click', clearReply);
   els.attachCancel?.addEventListener('click', clearAttachment);
+  // Scroll-to-bottom control
+  if (!document.getElementById('scroll-bottom-fab')) {
+    const fab = document.createElement('button');
+    fab.id = 'scroll-bottom-fab';
+    fab.type = 'button';
+    fab.className = 'scroll-bottom-fab hidden';
+    fab.setAttribute('aria-label', 'Scroll to latest');
+    fab.innerHTML = '↓';
+    (els.messages?.parentElement || document.body).appendChild(fab);
+    fab.addEventListener('click', () => scrollToEnd());
+  }
+  els.messages?.addEventListener('scroll', () => {
+    const fab = document.getElementById('scroll-bottom-fab');
+    if (!fab || !els.messages) return;
+    const dist = els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight;
+    fab.classList.toggle('hidden', dist < 120);
+  });
   els.darkPairCodeSubmit?.addEventListener('click', submitDarkPairCode);
   els.darkPairCodeInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); submitDarkPairCode(); }
@@ -80,12 +99,35 @@ export function initChat() {
   els.composer?.addEventListener('submit', (e) => { e.preventDefault(); handleSend(); });
   els.input?.addEventListener('input', onInput);
   els.input?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); handleSend(); }
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && pref('enterToSend', true)) {
+      e.preventDefault();
+      handleSend();
+    }
   });
   els.attachBtn?.addEventListener('click', () => els.attachInput.click());
   els.attachInput?.addEventListener('change', onAttachSelected);
   els.voiceBtn?.addEventListener('click', toggleRecording);
   els.emojiBtn?.addEventListener('click', toggleEmojiPicker);
+  $('#composer-sticker')?.addEventListener('click', () => {
+    openStickerPicker({
+      onPick: async (sticker) => {
+        // Send sticker immediately as a sticker message
+        const conv = state.activeConv;
+        if (!conv) return;
+        attachment = {
+          type: 'sticker',
+          name: 'sticker',
+          mime: sticker.mime || 'image/png',
+          dataUrl: sticker.url, // may be remote URL — handleSend uploads if data URL else send url
+          size: 0,
+          duration: null,
+          remoteUrl: sticker.url.startsWith('data:') ? null : sticker.url
+        };
+        showAttachmentPreview();
+        await handleSend();
+      }
+    });
+  });
 
   els.searchInput?.addEventListener('input', onSearchInput);
 
@@ -310,7 +352,10 @@ function onMessagesRead(payload) {
 function messageMediaUrl(msg) {
   const url = msg.media_url || msg.media_data;
   if (typeof url !== 'string' || !url) return null;
-  if (url.startsWith('/') || url.startsWith('data:')) return url;
+  // Absolute http(s), data URLs, and relative /api/storage paths (made absolute via mediaSrc)
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/') || /^https?:\/\//i.test(url)) {
+    return mediaSrc(url);
+  }
   return null;
 }
 
@@ -318,6 +363,13 @@ function mediaHtml(msg) {
   const url = messageMediaUrl(msg);
   const type = msg.media_type;
   if (!type || !url) return '';
+  if (type === 'sticker') {
+    const isVideo = (msg.media_mime || '').startsWith('video/');
+    const media = isVideo
+      ? `<video class="sticker-media" src="${escapeHtml(url)}" autoplay loop muted playsinline></video>`
+      : `<img class="sticker-media" src="${escapeHtml(url)}" alt="Sticker" loading="lazy">`;
+    return `<div class="sticker-bubble" data-save-sticker="${escapeHtml(msg.id || '')}" data-sticker-url="${escapeHtml(url)}" data-sticker-mime="${escapeHtml(msg.media_mime || '')}" data-sticker-type="${isVideo ? 'video' : 'image'}">${media}</div>`;
+  }
   if (type === 'image') {
     return `<div class="media"><img src="${escapeHtml(url)}" alt="Photo" loading="lazy" data-open-media="${escapeHtml(url)}" onerror="this.closest('.media').style.display='none'"></div>`;
   }
@@ -336,8 +388,8 @@ function replyQuoteHtml(msg) {
   const status = msg.status_reply;
   const statusMedia = status?.media_url
     ? (status.media_type === 'video'
-      ? `<video class="status-reply-media" src="${escapeHtml(status.media_url)}" muted playsinline preload="metadata"></video>`
-      : `<img class="status-reply-media" src="${escapeHtml(status.media_url)}" alt="Replied status">`)
+      ? `<video class="status-reply-media" src="${escapeHtml(mediaSrc(status.media_url))}" muted playsinline preload="metadata"></video>`
+      : `<img class="status-reply-media" src="${escapeHtml(mediaSrc(status.media_url))}" alt="Replied status">`)
     : '';
   const statusQuote = status ? `<div class="status-reply-quote"><span class="who">Replying to ${escapeHtml(status.author || 'status')}</span>${statusMedia}<div class="status-reply-text">${escapeHtml(status.content || 'Status post')}</div></div>` : '';
   if (!msg.reply_to_id) return statusQuote;
@@ -396,7 +448,7 @@ function messageHtml(msg, index, list) {
   if (deleted) bubbleClass.push('deleted');
   const inner = deleted
     ? `<span class="text">${icon('alert')} This message was deleted</span>`
-    : `${sender}${replyQuoteHtml(msg)}${mediaHtml(msg)}${msg.content ? `<span class="text">${escapeHtml(msg.content)}</span>` : ''}`;
+    : `${sender}${replyQuoteHtml(msg)}${mediaHtml(msg)}${msg.content ? `<span class="text">${linkify(msg.content)}</span>` : ''}`;
   const cls = ['message'];
   if (own) cls.push('own');
   if (grouped) cls.push('grouped');
@@ -427,6 +479,21 @@ export function renderMessages(scrollToBottom = false) {
   els.messages.innerHTML = html;
   const older = $('#load-older');
   if (older) older.addEventListener('click', loadOlder);
+  els.messages.querySelectorAll('[data-save-sticker]').forEach((node) => {
+    node.addEventListener('contextmenu', async (e) => {
+      e.preventDefault();
+      try {
+        await saveSentStickerToPack({
+          url: node.dataset.stickerUrl,
+          mime: node.dataset.stickerMime,
+          type: node.dataset.stickerType
+        });
+      } catch (err) {
+        toast(err.message || 'Could not save sticker');
+      }
+    });
+    node.title = 'Long-press / right-click to save to a pack';
+  });
   renderPinned(list);
   if (scrollToBottom) scrollToEnd();
 }
@@ -537,6 +604,11 @@ export function onIncomingMessage(msg) {
     conv.last_message = msg.content || (msg.media_type ? 'Attachment' : '');
     conv.last_message_at = msg.created_at;
     conv.last_sender_id = msg.sender_id;
+    // Optional: pull archived chat back when a new message arrives
+    if (conv.archived && pref('unarchiveOnNewMessage', true) && String(msg.sender_id) !== String(state.me?.id)) {
+      conv.archived = false;
+      api.updateConversation(convId, { archived: false }).catch(() => {});
+    }
     emit('conversations:changed');
   } else {
     emit('data:refresh-conversations');
@@ -623,8 +695,8 @@ function showAttachmentPreview() {
   if (!attachment) return;
   const { type, dataUrl, name, size } = attachment;
   let thumb = '';
-  if (type === 'image') thumb = `<img src="${escapeHtml(dataUrl)}" alt="">`;
-  else if (type === 'video') thumb = `<video src="${escapeHtml(dataUrl)}" muted></video>`;
+  if (type === 'image' || type === 'sticker') thumb = `<img src="${escapeHtml(dataUrl)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px">`;
+  else if (type === 'video') thumb = `<video src="${escapeHtml(dataUrl)}" muted style="width:48px;height:48px;object-fit:cover;border-radius:10px"></video>`;
   else thumb = `<span class="option-icon">${icon(type === 'audio' ? 'music' : 'file')}</span>`;
   els.attachPreviewInner.innerHTML = `${thumb}<span class="name truncate">${escapeHtml(name)} · ${escapeHtml(humanSize(size))}</span>`;
   els.attachPreview.classList.remove('hidden');
@@ -696,14 +768,20 @@ async function deliverTemp(convId, temp) {
 
   let mediaData = null;
   if (temp._attachment) {
-    // real upload with progress, so failures and progress are honest
     try {
-      const uploaded = await uploadAttachment(temp._attachment, (pct) => {
-        els.attachProgress.querySelector('span').style.width = `${pct}%`;
-      });
-      // The upload endpoint already persisted the bytes. Send its URL through
-      // the socket instead of uploading the same large base64 payload again.
-      mediaData = { type: temp._attachment.type, url: uploaded.url, mime: uploaded.mimeType || temp._attachment.mime, duration: temp._attachment.duration };
+      if (temp._attachment.remoteUrl) {
+        mediaData = {
+          type: temp._attachment.type,
+          url: temp._attachment.remoteUrl,
+          mime: temp._attachment.mime,
+          duration: temp._attachment.duration
+        };
+      } else {
+        const uploaded = await uploadAttachment(temp._attachment, (pct) => {
+          els.attachProgress.querySelector('span').style.width = `${pct}%`;
+        });
+        mediaData = { type: temp._attachment.type, url: uploaded.url, mime: uploaded.mimeType || temp._attachment.mime, duration: temp._attachment.duration };
+      }
     } catch (err) {
       temp._status = 'failed';
       update();
@@ -770,7 +848,7 @@ async function deliverTemp(convId, temp) {
 function uploadAttachment(att, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/storage/upload');
+    xhr.open('POST', (typeof apiBase === 'function' ? apiBase() : '/api') + '/storage/upload');
     xhr.setRequestHeader('Content-Type', 'application/json');
     if (state.token) xhr.setRequestHeader('Authorization', `Bearer ${state.token}`);
     xhr.upload.onprogress = (e) => {
@@ -819,7 +897,17 @@ function onMessagesClick(event) {
     openLightbox(media.getAttribute('data-open-media'));
     return;
   }
-  const reaction = event.target.closest('[data-react]');
+
+  const textNode = event.target.closest('.message .text');
+  if (textNode && event.type === 'contextmenu') {
+    event.preventDefault();
+    const text = textNode.textContent || '';
+    if (text && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast('Copied', 'success')).catch(() => {});
+    }
+    return;
+  }
+const reaction = event.target.closest('[data-react]');
   if (reaction) {
     toggleReaction(reaction.getAttribute('data-react-msg'), reaction.getAttribute('data-react'));
     return;
@@ -1066,6 +1154,7 @@ function openChatMenu() {
   options.push(`<button class="option" data-act="search">${icon('search')}<span class="option-copy">Search in conversation</span></button>`);
   options.push(`<button class="option" data-act="mute">${icon('bell')}<span class="option-copy">${conv.muted ? 'Unmute' : 'Mute'} notifications</span></button>`);
   options.push(`<button class="option" data-act="pin">${icon('pin')}<span class="option-copy">${conv.pinned ? 'Unpin' : 'Pin'} conversation</span></button>`);
+  options.push(`<button class="option" data-act="archive">${icon('bookmark')}<span class="option-copy">${conv.archived ? 'Unarchive chat' : 'Archive chat'}</span></button>`);
   options.push(`<button class="option danger" data-act="clear">${icon('trash')}<span class="option-copy">Clear messages (for me)</span></button>`);
   if ((isGroup || isChannel) && !canManage) options.push(`<button class="option danger" data-act="leave">${icon('logout')}<span class="option-copy">Leave</span></button>`);
   if ((isGroup || isChannel) && canManage) options.push(`<button class="option danger" data-act="delete">${icon('trash')}<span class="option-copy">Delete conversation</span></button>`);
@@ -1115,6 +1204,15 @@ async function handleChatAction(act, conv, role) {
       conv.pinned = !conv.pinned;
       emit('conversations:changed');
       toast(conv.pinned ? 'Pinned' : 'Unpinned');
+      return;
+    }
+    if (act === 'archive') {
+      const next = !conv.archived;
+      await api.updateConversation(conv.id, { archived: next });
+      conv.archived = next;
+      emit('conversations:changed');
+      toast(next ? 'Chat archived' : 'Chat unarchived', 'success');
+      if (next) closeConversation();
       return;
     }
     if (act === 'clear') {
@@ -1233,16 +1331,23 @@ async function openConversationInfo() {
     const canChangeRoles = actorRole === 'owner';
     openSheet({
       title: escapeHtml(conversationTitle(conv)),
-      body: `<div class="sheet-body">${members.map((m) => `<div class="option member-management-row">
+      body: `<div class="sheet-pad"><div class="settings-group-title">${members.length} member${members.length === 1 ? '' : 's'}</div></div>
+      <div class="sheet-body">${members.map((m) => {
+        const roleLabel = m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Member';
+        const muted = Boolean(m.muted_until);
+        return `<div class="option member-management-row">
         ${avatar({ displayName: m.display_name, avatarUrl: m.avatar_url, avatarColor: m.avatar_color }, { size: 'sm' })}
-        <span class="option-copy">${escapeHtml(m.display_name)} ${verifyBadge(m.is_verified)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
+        <span class="option-copy">${escapeHtml(m.display_name || 'User')} ${verifyBadge(m.is_verified)}<small>${escapeHtml(m.nova_id || '')} · ${roleLabel}${muted ? ' · muted' : ''}</small></span>
+        ${String(m.id) === String(conv.owner_id) ? '<span class="pill">Owner</span>' : ''}
         ${m.id !== conv.owner_id && canManage ? `<span class="member-actions">
-          ${canChangeRoles ? `<button class="member-action-btn" data-member-role="${escapeHtml(m.id)}" data-role="${m.role === 'admin' ? 'member' : 'admin'}" aria-label="${m.role === 'admin' ? 'Demote' : 'Promote'}" title="${m.role === 'admin' ? 'Demote' : 'Promote'}">${icon(m.role === 'admin' ? 'arrow-down' : 'arrow-up')}<span>${m.role === 'admin' ? 'Demote' : 'Promote'}</span></button>` : ''}
-          ${canChangeRoles ? `<button class="member-action-btn" data-transfer-owner="${escapeHtml(m.id)}" aria-label="Transfer ownership" title="Transfer ownership">${icon('share')}<span>Transfer</span></button>` : ''}
-          <button class="member-action-btn" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="${m.muted_until ? 'unmute' : 'mute'}" aria-label="${m.muted_until ? 'Unmute' : 'Mute'}" title="${m.muted_until ? 'Unmute' : 'Mute'}">${icon(m.muted_until ? 'volume' : 'volume-off')}<span>${m.muted_until ? 'Unmute' : 'Mute'}</span></button>
-          <button class="member-action-btn danger" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="ban" aria-label="Ban" title="Ban">${icon('ban')}<span>Ban</span></button>
+          ${canChangeRoles ? `<button type="button" class="btn btn-ghost btn-sm" data-member-role="${escapeHtml(m.id)}" data-role="${m.role === 'admin' ? 'member' : 'admin'}" title="${m.role === 'admin' ? 'Demote' : 'Promote'}">${icon(m.role === 'admin' ? 'arrow-down' : 'arrow-up')}${m.role === 'admin' ? 'Demote' : 'Promote'}</button>` : ''}
+          ${canChangeRoles ? `<button type="button" class="btn btn-ghost btn-sm" data-transfer-owner="${escapeHtml(m.id)}">${icon('share')}Make owner</button>` : ''}
+          <button type="button" class="btn btn-ghost btn-sm" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="${muted ? 'unmute' : 'mute'}" title="${muted ? 'Unmute' : 'Mute'}">${icon(muted ? 'volume' : 'volume-off')}${muted ? 'Unmute' : 'Mute'}</button>
+          <button type="button" class="btn btn-ghost btn-sm danger-text" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="kick" title="Remove">${icon('user-minus')}Remove</button>
+          <button type="button" class="btn btn-ghost btn-sm danger-text" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="ban" title="Ban">${icon('ban')}Ban</button>
         </span>` : ''}
-      </div>`).join('')}</div>`,
+      </div>`;
+      }).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
         ${conv.type === 'group' && canManage ? `<button class="btn btn-primary btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
         ${['group', 'channel'].includes(conv.type) && canManage ? `<button class="btn btn-ghost btn-block" id="toggle-conversation-lock">${icon(conv.is_locked ? 'unlock' : 'lock')} ${conv.is_locked ? (conv.type === 'channel' ? 'Resume channel' : 'Unlock group') : (conv.type === 'channel' ? 'Pause channel' : 'Lock group')}</button>` : ''}
@@ -1266,12 +1371,38 @@ async function openConversationInfo() {
           } catch (err) { toast(err.message || 'Could not update role'); }
         }));
         sheet.querySelectorAll('[data-member-moderation]').forEach((button) => button.addEventListener('click', async () => {
+          const action = button.dataset.moderationAction;
+          const targetId = button.dataset.memberModeration;
           try {
-            await api.moderateMember(conv.id, button.dataset.memberModeration, button.dataset.moderationAction);
-            toast(button.dataset.moderationAction === 'ban' ? 'Member banned' : button.dataset.moderationAction === 'mute' ? 'Member muted' : 'Member unmuted', 'success');
+            if (action === 'kick') {
+              const member = members.find((item) => String(item.id) === String(targetId));
+              const ok = await confirmSheet({
+                title: 'Remove member',
+                message: `Remove ${member?.display_name || 'this member'} from the group?`,
+                confirmText: 'Remove',
+                danger: true
+              });
+              if (!ok) return;
+              await api.removeMember(conv.id, targetId);
+              toast('Member removed', 'success');
+            } else {
+              if (action === 'ban') {
+                const member = members.find((item) => String(item.id) === String(targetId));
+                const ok = await confirmSheet({
+                  title: 'Ban member',
+                  message: `Ban ${member?.display_name || 'this member'}? They will be removed and cannot rejoin.`,
+                  confirmText: 'Ban',
+                  danger: true
+                });
+                if (!ok) return;
+              }
+              await api.moderateMember(conv.id, targetId, action);
+              const labels = { ban: 'Member banned', mute: 'Member muted', unmute: 'Member unmuted' };
+              toast(labels[action] || 'Updated', 'success');
+            }
             closeSheet();
             openConversationInfo();
-          } catch (err) { toast(err.message || 'Could not update moderation'); }
+          } catch (err) { toast(err.message || 'Could not update member'); }
         }));
         sheet.querySelector('#add-group-members')?.addEventListener('click', () => {
           closeSheet();

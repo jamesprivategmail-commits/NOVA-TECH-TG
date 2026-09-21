@@ -10,12 +10,31 @@ export function connectSocket() {
   connecting = (async () => {
     let io;
     try {
-      const mod = await import('/socket.io/socket.io.esm.min.js');
+      const mod = await import('./socket.io.esm.min.js');
       io = mod.io || mod.default?.io || mod.default;
     } catch (err) {
-      throw new Error('Unable to load realtime client');
+      try {
+        const mod = await import('/socket.io/socket.io.esm.min.js');
+        io = mod.io || mod.default?.io || mod.default;
+      } catch {
+        throw new Error('Unable to load realtime client');
+      }
     }
-    socket = io({ auth: { token: state.token }, transports: ['websocket', 'polling'] });
+    // When UI is hosted on WebView assets, connect to the configured API origin
+    let serverUrl = undefined;
+    try {
+      const meta = document.querySelector('meta[name="api-base"]');
+      const base = (typeof window !== 'undefined' && window.__API_BASE__)
+        || localStorage.getItem('apiBase')
+        || (meta && meta.content)
+        || '';
+      if (base && /^https?:\/\//.test(base)) {
+        serverUrl = base.replace(/\/api\/?$/, '');
+      } else if (location.hostname.includes('appassets.androidplatform.net') || location.protocol === 'file:') {
+        serverUrl = localStorage.getItem('socketUrl') || 'https://nova-tech-tg.vercel.app';
+      }
+    } catch { /* ignore */ }
+    socket = io(serverUrl, { auth: { token: state.token }, transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => { state.socketReady = true; emit('socket:state', { connected: true }); });
     socket.on('disconnect', () => { state.socketReady = false; emit('socket:state', { connected: false }); });

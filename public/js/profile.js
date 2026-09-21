@@ -9,6 +9,7 @@ import { settingsGroupHtml, wireSettingsGroup } from './settings.js';
 export function initProfile() {
   $('#profile-edit-btn')?.addEventListener('click', openEditProfileSheet);
   on('me:updated', renderProfile);
+  on('settings:changed', renderProfile);
   on('tab:show', (tab) => { if (tab === 'profile') renderProfile(); });
   on('admin:open', () => emit('admin:open-panel'));
   on('profile:edit', openEditProfileSheet);
@@ -28,7 +29,10 @@ export function renderProfile() {
     <div class="profile-body">
       <div class="profile-photo">${avatar(me, { size: 'lg' })}</div>
       <div class="profile-name">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)}</div>
-      <div class="profile-handle truncate">${escapeHtml(me.novaId || '')}</div>
+      <button type="button" class="profile-id-badge" id="profile-id-badge" title="Tap to copy">
+        <span class="profile-id-label">DARK CHAT ID</span>
+        <span class="profile-id-value">${escapeHtml(me.novaId || '')}</span>
+      </button>
       ${me.bio ? `<div class="profile-bio">${escapeHtml(me.bio)}</div>` : '<div class="profile-bio muted">No about yet.</div>'}
       <div class="profile-stats">
         <div class="stat"><b>${myConvs}</b><span>Chats</span></div>
@@ -45,6 +49,7 @@ export function renderProfile() {
   wireSettingsGroup(content);
   content.querySelector('#profile-edit-action').addEventListener('click', openEditProfileSheet);
   content.querySelector('#profile-share').addEventListener('click', shareId);
+  content.querySelector('#profile-id-badge')?.addEventListener('click', shareId);
 }
 
 async function shareId() {

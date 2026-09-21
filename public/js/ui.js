@@ -1,3 +1,4 @@
+import { mediaSrc } from './api.js';
 // ui.js - shared presentation helpers (escape, time, avatars, toast, sheet)
 import { emit } from './state.js';
 
@@ -40,7 +41,14 @@ function safeUrl(value) {
 
 export function avatarUrl(user) {
   if (!user) return null;
-  return safeUrl(user.avatarUrl || user.avatar_url || user.avatarData || user.avatar_data);
+  const raw = user.avatarUrl || user.avatar_url || user.avatarData || user.avatar_data;
+  const u = safeUrl(raw);
+  if (!u) return null;
+  try {
+    // Prefer absolute URLs for APK WebView
+    if (typeof mediaSrc === 'function') return mediaSrc(u);
+  } catch { /* ignore */ }
+  return u;
 }
 
 // Returns HTML for an avatar (image if a real url exists, else coloured initials).
@@ -110,6 +118,7 @@ export function lastSeenLabel(lastSeen, online) {
 
 export function conversationTitle(conv) {
   if (!conv) return '';
+  if (conv.type === 'notes') return conv.name || 'Saved Messages';
   if (conv.type === 'dm') return conv.other_user?.display_name || conv.name || 'Direct message';
   return conv.name || (conv.type === 'channel' ? 'Channel' : 'Group');
 }
@@ -121,6 +130,14 @@ export function conversationIsVerified(conv) {
 
 export function conversationAvatarUser(conv) {
   if (!conv) return {};
+  if (conv.type === 'notes') {
+    return {
+      displayName: 'Saved Messages',
+      avatarUrl: null,
+      avatarColor: '#0A84FF',
+      isVerified: false
+    };
+  }
   if (conv.type === 'dm' && conv.other_user) {
     return {
       displayName: conv.other_user.display_name,
@@ -298,3 +315,14 @@ export function humanSize(bytes) {
 }
 
 export function refreshUnread() { emit('unread:changed'); }
+
+
+/** Escape text then turn http(s) URLs into safe links. */
+export function linkify(value) {
+  const raw = String(value ?? '');
+  const escaped = escapeHtml(raw);
+  return escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    (url) => `<a class="msg-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+  );
+}

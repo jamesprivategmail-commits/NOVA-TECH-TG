@@ -5,12 +5,33 @@ import {
   $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy
 } from './ui.js';
 
-const TOGGLES = [
-  { key: 'online', label: 'Show online status', hint: 'Let contacts see when you are active' },
-  { key: 'lastSeen', label: 'Show last seen', hint: 'Show the last time you were online' },
-  { key: 'readReceipts', label: 'Read receipts', hint: 'Share when you have read messages' },
-  { key: 'profilePhoto', label: 'Profile photo visible', hint: 'Show your photo to everyone' },
-  { key: 'notifications', label: 'Message notifications', hint: 'Notify you about new messages' }
+const PRIVACY_TOGGLES = [
+  { key: 'online', label: 'Show online status', hint: 'Let contacts see when you are active', icon: 'eye' },
+  { key: 'lastSeen', label: 'Show last seen', hint: 'Show the last time you were online', icon: 'eye' },
+  { key: 'readReceipts', label: 'Read receipts', hint: 'Share when you have read messages', icon: 'check-check' },
+  { key: 'profilePhoto', label: 'Profile photo visible', hint: 'Show your photo to everyone', icon: 'image' },
+  { key: 'status', label: 'Share my status', hint: 'Let others see your status updates', icon: 'status' }
+];
+
+const CHAT_TOGGLES = [
+  { key: 'enterToSend', label: 'Enter to send', hint: 'Press Enter to send; Shift+Enter for a new line', icon: 'send', defaultOn: true },
+  { key: 'unarchiveOnNewMessage', label: 'Unarchive on new message', hint: 'Move an archived chat back to the main list when a new message arrives', icon: 'bookmark', defaultOn: true },
+  { key: 'showUnreadBadges', label: 'Unread badges', hint: 'Show real unread counts on chats and the Unread filter', icon: 'message-dot', defaultOn: true }
+];
+
+const STATUS_TOGGLES = [
+  { key: 'statusVideoAutoplay', label: 'Autoplay status videos', hint: 'Play status videos automatically; hold still pauses', icon: 'play', defaultOn: true },
+  { key: 'statusRepliesNotify', label: 'Status reply notifications', hint: 'Notify you when someone replies to your status', icon: 'bell', defaultOn: true }
+];
+
+const CALL_TOGGLES = [
+  { key: 'allowVoiceCalls', label: 'Allow voice calls', hint: 'Others can place voice calls to you', icon: 'phone', defaultOn: true },
+  { key: 'allowVideoCalls', label: 'Allow video calls', hint: 'Others can place video calls to you', icon: 'video', defaultOn: true },
+  { key: 'callNotifications', label: 'Call notifications', hint: 'Alert you about incoming calls', icon: 'bell', defaultOn: true }
+];
+
+const NOTIF_TOGGLES = [
+  { key: 'notifications', label: 'Message notifications', hint: 'Notify you about new messages', icon: 'bell', defaultOn: true }
 ];
 
 const VISIBILITY = [
@@ -18,19 +39,34 @@ const VISIBILITY = [
   { key: 'whoCanAddToGroups', label: 'Who can add me to groups', options: ['everyone', 'contacts', 'nobody'] }
 ];
 
+function isOn(settings, key, defaultOn = true) {
+  if (settings[key] === undefined || settings[key] === null) return defaultOn;
+  return settings[key] !== false;
+}
+
+function toggleRow(t, s) {
+  const on = isOn(s, t.key, t.defaultOn !== false);
+  return `<div class="setting">
+      <span class="setting-icon">${icon(t.icon || 'settings')}</span>
+      <span class="setting-copy">${escapeHtml(t.label)}<small>${escapeHtml(t.hint)}</small></span>
+      <button class="toggle" role="switch" aria-checked="${on}" data-toggle="${t.key}" data-default-on="${t.defaultOn !== false}" aria-label="${escapeHtml(t.label)}"></button>
+    </div>`;
+}
+
+function group(title, rows) {
+  return `<div class="settings-group">
+      <div class="settings-group-title">${escapeHtml(title)}</div>
+      ${rows}
+    </div>`;
+}
+
 export function initSettings() {
   $('#profile-settings-btn')?.addEventListener('click', openSettingsSheet);
 }
 
 export function settingsGroupHtml() {
   const s = state.settings.privacySettings || {};
-  const toggles = TOGGLES.map((t) => `
-    <div class="setting">
-      <span class="setting-icon">${icon(t.key === 'notifications' ? 'bell' : t.key === 'readReceipts' ? 'check-check' : 'eye')}</span>
-      <span class="setting-copy">${escapeHtml(t.label)}<small>${escapeHtml(t.hint)}</small></span>
-      <button class="toggle" role="switch" aria-checked="${s[t.key] !== false}" data-toggle="${t.key}" aria-label="${escapeHtml(t.label)}"></button>
-    </div>`).join('');
-
+  const privacy = PRIVACY_TOGGLES.map((t) => toggleRow(t, s)).join('');
   const visibility = VISIBILITY.map((v) => `
     <div class="setting">
       <span class="setting-icon">${icon('users')}</span>
@@ -39,13 +75,17 @@ export function settingsGroupHtml() {
         ${v.options.map((o) => `<option value="${o}" ${(s[v.key] || 'everyone') === o ? 'selected' : ''}>${o}</option>`).join('')}
       </select>
     </div>`).join('');
+  const chats = CHAT_TOGGLES.map((t) => toggleRow(t, s)).join('');
+  const status = STATUS_TOGGLES.map((t) => toggleRow(t, s)).join('');
+  const calls = CALL_TOGGLES.map((t) => toggleRow(t, s)).join('');
+  const notifs = NOTIF_TOGGLES.map((t) => toggleRow(t, s)).join('');
 
   return `
-    <div class="settings-group">
-      <div class="settings-group-title">Privacy</div>
-      ${toggles}
-      ${visibility}
-    </div>
+    ${group('Privacy', privacy + visibility)}
+    ${group('Chats', chats)}
+    ${group('Status', status)}
+    ${group('Calls', calls)}
+    ${group('Notifications', notifs)}
     <div class="settings-group">
       <div class="settings-group-title">Account</div>
       <button class="setting" data-settings-action="edit">
@@ -93,8 +133,16 @@ export function wireSettingsGroup(root = document) {
 
 async function saveSetting(patch) {
   const res = await api.updateProfileSettings(patch);
-  state.settings.privacySettings = res.privacySettings || state.settings.privacySettings;
+  state.settings.privacySettings = res.privacySettings || { ...state.settings.privacySettings, ...patch };
+  emit('settings:changed', state.settings.privacySettings);
   toast('Saved', 'success');
+}
+
+/** Read a boolean preference with a default. */
+export function pref(key, defaultOn = true) {
+  const s = state.settings.privacySettings || {};
+  if (s[key] === undefined || s[key] === null) return defaultOn;
+  return s[key] !== false;
 }
 
 export async function loadProfileSettings() {

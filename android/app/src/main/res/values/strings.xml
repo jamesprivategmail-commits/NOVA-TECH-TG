@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DARK CHAT</string>
+    <string name="title_activity_main">DARK CHAT</string>
+    <string name="package_name">com.darkchat.app</string>
+    <string name="custom_url_scheme">com.darkchat.app</string>
+</resources>

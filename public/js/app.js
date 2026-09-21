@@ -148,15 +148,46 @@ function wireEvents() {
     history.pushState({ app: true, tab: currentTab, chat: true }, '', `#${currentTab}/chat`);
     openConversation(conv);
   });
-  on('chat:needs-send', async ({ conversationId, content, statusReply }) => {
+  on('chat:needs-send', async ({ conversationId, content, statusReply, media }) => {
     try {
       await refreshConversations();
       const conv = state.conversations.find((c) => c.id === conversationId);
       if (conv) openConversation(conv);
-      const ack = await sendMessage({ conversationId, content, statusReply });
-      if (!ack || ack.error) toast('Could not send reply');
+      let mediaPayload = media || null;
+      // If media is a data URL, upload first so both clients can resolve it.
+      if (mediaPayload && mediaPayload.data && !mediaPayload.url) {
+        try {
+          const uploaded = await api.upload(mediaPayload.data, mediaPayload.mime, mediaPayload.name || 'status-reply');
+          mediaPayload = {
+            type: mediaPayload.type,
+            url: uploaded.url,
+            mime: uploaded.mimeType || mediaPayload.mime,
+            duration: mediaPayload.duration || null
+          };
+        } catch (err) {
+          toast(err.message || 'Could not upload reply media');
+          return;
+        }
+      }
+      const ack = await sendMessage({ conversationId, content, statusReply, media: mediaPayload });
+      if (!ack || ack.error) toast(ack?.error || 'Could not send reply');
+      else toast('Reply sent', 'success');
     } catch { toast('Could not send reply'); }
   });
+}
+
+
+function wireConnectivity() {
+  const banner = document.getElementById('offline-banner');
+  const sync = () => {
+    state.online = navigator.onLine !== false;
+    if (banner) banner.classList.toggle('hidden', state.online);
+    if (state.online) emit('connectivity:online');
+    else emit('connectivity:offline');
+  };
+  window.addEventListener('online', sync);
+  window.addEventListener('offline', sync);
+  sync();
 }
 
 async function boot() {
@@ -201,3 +232,14 @@ if ('serviceWorker' in navigator) {
 boot();
 
 export { closeConversation };
+
+
+/** Capacitor native shell hooks (Android/iOS WebView). */
+async function capacitorAppInit() {
+  try {
+    if (!window.Capacitor?.isNativePlatform?.()) return;
+    document.documentElement.classList.add('native-shell');
+    document.documentElement.style.setProperty('--safe-t', 'env(safe-area-inset-top, 0px)');
+  } catch { /* web only */ }
+}
+capacitorAppInit();

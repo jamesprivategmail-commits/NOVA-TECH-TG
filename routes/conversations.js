@@ -4,6 +4,7 @@ const {
   getConversationById,
   createConversation,
   findDmBetween,
+  findNotesForUser,
   updateConversation,
   deleteConversation,
   addConversationMember,
@@ -50,7 +51,25 @@ router.post('/dm', async (req, res) => {
     const { novaId } = req.body;
     const target = await getUserByNovaId((novaId || '').trim().toUpperCase());
     if (!target) return res.status(404).json({ error: 'No one has that DARK CHAT ID' });
-    if (target.id === req.user.id) return res.status(400).json({ error: "You can't DM yourself" });
+
+    // Notes to self / Saved Messages
+    if (target.id === req.user.id) {
+      const existingNotes = await findNotesForUser(req.user.id);
+      if (existingNotes) {
+        return res.json({ conversationId: existingNotes.id, existed: true, notes: true });
+      }
+      const now = new Date().toISOString();
+      const notes = await createConversation({
+        type: 'notes',
+        name: 'Saved Messages',
+        ownerId: req.user.id,
+        memberIds: [req.user.id],
+        members: {
+          [req.user.id]: { role: 'owner', joined_at: now }
+        }
+      });
+      return res.json({ conversationId: notes.id, existed: false, notes: true });
+    }
 
     // Check for existing DM
     const existing = await findDmBetween(req.user.id, target.id);

@@ -28,7 +28,11 @@ function renderIntro() {
 }
 
 export async function loadDiscover() {
-  const term = (els.search?.value || '').trim();
+  let term = (els.search?.value || '').trim();
+  // Normalize phone-style IDs: keep + and digits/dashes
+  if (term && /\d/.test(term)) {
+    term = term.replace(/\s+/g, '');
+  }
   const local = ++seq;
   els.list.innerHTML = skeletonList(6);
   try {
@@ -87,5 +91,25 @@ async function startChat(novaId, button) {
     toast(err.message || 'Could not start chat');
   } finally {
     button.disabled = false;
+  }
+}
+
+
+/** Open or create Saved Messages (notes to self) */
+export async function openSavedMessages() {
+  if (!state.me?.novaId) {
+    toast('Sign in first');
+    return;
+  }
+  try {
+    const res = await api.createDm(state.me.novaId);
+    const refreshed = await api.conversations();
+    state.conversations = refreshed.conversations || [];
+    emit('conversations:changed');
+    const conv = state.conversations.find((c) => c.id === res.conversationId);
+    if (conv) emit('chat:open', conv);
+    else toast('Saved Messages ready');
+  } catch (err) {
+    toast(err.message || 'Could not open Saved Messages');
   }
 }

@@ -35,8 +35,7 @@ function renderBadge() {
   const count = state.unreadNotifications;
   badge.textContent = count > 99 ? '99+' : String(count);
   badge.classList.toggle('hidden', !count);
-  const dot = $('#nav-dot-chats');
-  if (dot) dot.classList.toggle('hidden', !count);
+  // Chats tab dot is owned by chats.js (real message unreads).
 }
 
 function notificationText(n) {

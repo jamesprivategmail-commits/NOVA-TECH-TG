@@ -1,0 +1,21 @@
+{
+  "appId": "com.darkchat.app",
+  "appName": "DARK CHAT",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#050505"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#050505",
+      "showSpinner": false
+    }
+  }
+}

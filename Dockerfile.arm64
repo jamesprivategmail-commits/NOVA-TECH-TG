@@ -1,0 +1,12 @@
+# Server image for linux/arm64 (Pi, Graviton, etc.)
+# docker buildx build --platform linux/arm64 -f Dockerfile.arm64 -t dark-chat:arm64 --load .
+FROM --platform=$TARGETPLATFORM node:20-bookworm-slim
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
+COPY . .
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||3000),r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
+CMD ["node", "server.js"]

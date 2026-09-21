@@ -1,5 +1,6 @@
 // calls.js - voice/video calls over the existing WebRTC signalling events
 import { api } from './api.js';
+import { pref } from './settings.js';
 import { state, emit, on } from './state.js';
 import { inviteCall, signalCall, stateCall } from './socket.js';
 import {
@@ -55,6 +56,14 @@ async function startCall(conversation, kind) {
   if (session) { toast('A call is already in progress'); return; }
   const target = conversation.other_user;
   if (!target) { toast('Calls need a direct message'); return; }
+  if (kind === 'video' && !pref('allowVideoCalls', true)) {
+    toast('Video calls are turned off in Settings');
+    return;
+  }
+  if (kind === 'voice' && !pref('allowVoiceCalls', true)) {
+    toast('Voice calls are turned off in Settings');
+    return;
+  }
   try {
     const res = await api.startCall(conversation.id, kind);
     const call = res.call;
@@ -77,8 +86,25 @@ async function startCall(conversation, kind) {
 // ---------------- incoming ----------------
 async function onIncoming({ call, fromUserId }) {
   if (session) { stateCall(fromUserId, call.id, 'busy'); return; }
+  const kind = call.kind || 'voice';
+  if (kind === 'video' && !pref('allowVideoCalls', true)) {
+    stateCall(fromUserId, call.id, 'declined');
+    api.updateCall(call.id, 'declined').catch(() => {});
+    return;
+  }
+  if (kind === 'voice' && !pref('allowVoiceCalls', true)) {
+    stateCall(fromUserId, call.id, 'declined');
+    api.updateCall(call.id, 'declined').catch(() => {});
+    return;
+  }
+  if (!pref('callNotifications', true) && !pref('notifications', true)) {
+    // Still show the in-app call screen, but skip toast noise if both are off is handled below
+  }
   const conv = state.conversations.find((c) => c.id === call.conversation_id);
   const peer = conv?.other_user || { id: fromUserId, display_name: 'Incoming call' };
+  if (pref('callNotifications', true)) {
+    toast(`${peer.display_name || 'Someone'} is calling…`);
+  }
   session = {
     call, kind: call.kind, targetUserId: fromUserId, direction: 'incoming',
     pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, cameraOff: call.kind !== 'video', state: 'ringing'
@@ -136,8 +162,15 @@ async function setupPeer() {
     if (kind === 'video') {
       els.remoteVideo.srcObject = session.remoteStream;
       els.remoteVideo.classList.remove('hidden');
+      els.remoteVideo.play?.().catch(() => {});
+      // Also route audio so video calls are not silent if remoteAudio is the sink.
+      if (els.remoteAudio) {
+        els.remoteAudio.srcObject = session.remoteStream;
+        els.remoteAudio.play?.().catch(() => {});
+      }
     } else {
       els.remoteAudio.srcObject = session.remoteStream;
+      els.remoteAudio.play?.().catch(() => {});
     }
   };
 
@@ -146,13 +179,26 @@ async function setupPeer() {
   };
 
   pc.onconnectionstatechange = () => {
+    if (!session || session.pc !== pc) return;
     if (pc.connectionState === 'connected') {
       session.state = 'connected';
       els.stateText.textContent = 'Connected';
       els.incoming.hidden = true;
       els.controls.hidden = false;
+      if (els.camera) els.camera.hidden = session.kind !== 'video';
       startCallTimer();
-    } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState) && session) {
+    } else if (pc.connectionState === 'disconnected' && session) {
+      // Brief network blips should not kill the call immediately.
+      els.stateText.textContent = 'Reconnecting...';
+      session.state = 'reconnecting';
+      clearTimeout(session.disconnectTimer);
+      session.disconnectTimer = setTimeout(() => {
+        if (session && session.pc === pc && pc.connectionState === 'disconnected') {
+          els.stateText.textContent = 'Call ended';
+          endCall('ended');
+        }
+      }, 8000);
+    } else if (['failed', 'closed'].includes(pc.connectionState) && session) {
       els.stateText.textContent = 'Call ended';
       endCall('ended');
     }
@@ -206,7 +252,9 @@ function onCallState({ callId, state: callState, fromUserId }) {
     els.stateText.textContent = 'Connected';
     els.incoming.hidden = true;
     els.controls.hidden = false;
+    if (els.camera) els.camera.hidden = session.kind !== 'video';
     session.state = 'connected';
+    startCallTimer();
   } else if (callState === 'declined') {
     els.stateText.textContent = 'Declined';
     toast('Call declined');
@@ -234,6 +282,15 @@ function showCallUi(conversation, peer, kind, stateText, direction) {
   els.remoteVideo.classList.toggle('hidden', kind !== 'video');
   els.localVideo.classList.add('hidden');
   els.center.classList.toggle('hidden', kind === 'video' && direction === 'incoming');
+  if (els.camera) {
+    els.camera.hidden = kind !== 'video';
+    els.camera.classList.remove('off');
+    els.camera.innerHTML = icon('video');
+  }
+  if (els.mute) {
+    els.mute.classList.remove('off');
+    els.mute.innerHTML = icon('mic');
+  }
   if (direction === 'incoming') {
     els.incoming.hidden = false;
     els.controls.hidden = true;
@@ -270,30 +327,37 @@ function toggleCamera() {
 }
 
 async function endCall(finalState) {
-  if (!session) return;
+  if (!session || session.ending) return;
+  session.ending = true;
+  clearTimeout(session.disconnectTimer);
   const { targetUserId, call } = session;
-  stateCall(targetUserId, call.id, finalState);
+  try { stateCall(targetUserId, call.id, finalState); } catch { /* ignore */ }
   api.updateCall(call.id, finalState).catch(() => {});
-  els.stateText.textContent = 'Call ended';
+  if (els.stateText) els.stateText.textContent = finalState === 'declined' ? 'Declined' : 'Call ended';
   setTimeout(() => cleanup(), 500);
 }
 
 function cleanup() {
   clearInterval(callTimer);
   callTimer = null;
+  if (session?.disconnectTimer) clearTimeout(session.disconnectTimer);
   if (session?.pc) { try { session.pc.close(); } catch { /* ignore */ } }
   if (session?.localStream) session.localStream.getTracks().forEach((t) => t.stop());
   session = null;
+  if (!els.screen) return;
   els.screen.hidden = true;
   els.remoteVideo.srcObject = null;
   els.localVideo.srcObject = null;
   els.remoteAudio.srcObject = null;
   els.remoteVideo.classList.add('hidden');
   els.localVideo.classList.add('hidden');
-  els.mute.classList.remove('off');
-  els.camera.classList.remove('off');
-  els.mute.innerHTML = icon('mic');
-  els.camera.innerHTML = icon('video');
+  els.mute?.classList.remove('off');
+  els.camera?.classList.remove('off');
+  if (els.mute) els.mute.innerHTML = icon('mic');
+  if (els.camera) {
+    els.camera.innerHTML = icon('video');
+    els.camera.hidden = false;
+  }
 }
 
 void conversationAvatarUser;

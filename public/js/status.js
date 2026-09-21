@@ -240,16 +240,16 @@ function openViewerForUser(userId, focusId = null) {
       <div class="viewer-head">
         ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
         <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')} ${verifyBadge(s.is_verified)}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
-        ${isOwn ? `<button class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
-        <button class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
+        ${isOwn ? `<button type="button" class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
+        <button type="button" class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
       </div>
       <div class="viewer-stage">${media}${caption}</div>
       <div class="viewer-foot">
         <input class="input" id="viewer-reply" placeholder="Reply..." autocomplete="off">
-        <button class="btn btn-primary" id="viewer-send" aria-label="Send reply">${icon('send')}</button>
+        <button type="button" class="btn btn-primary" id="viewer-send" aria-label="Send reply">${icon('send')}</button>
       </div>
-      ${canPrev ? '<button class="viewer-nav prev" id="viewer-prev" aria-label="Previous status"></button>' : ''}
-      ${canNext ? '<button class="viewer-nav next" id="viewer-next" aria-label="Next status"></button>' : ''}
+      ${canPrev ? '<button type="button" class="viewer-nav prev" id="viewer-prev" aria-label="Previous status"></button>' : ''}
+      ${canNext ? '<button type="button" class="viewer-nav next" id="viewer-next" aria-label="Next status"></button>' : ''}
     `;
     viewer.querySelector('#viewer-close').addEventListener('click', closeViewer);
     viewer.querySelector('#viewer-prev')?.addEventListener('click', () => { index--; render(); });

@@ -97,7 +97,7 @@ function renderPosts() {
     const url = img.getAttribute('data-open-post-image');
     const viewer = $('#viewer');
     viewer.hidden = false;
-    viewer.innerHTML = `<button class="viewer-lightbox-close" id="lightbox-close" aria-label="Close post" title="Close post">${icon('x')}</button>
+    viewer.innerHTML = `<button type="button" class="viewer-lightbox-close" id="lightbox-close" aria-label="Close post" title="Close post">${icon('x')}</button>
       <div class="viewer-stage"><img src="${escapeHtml(url)}" alt=""></div>`;
     viewer.tabIndex = -1;
     viewer.querySelector('#lightbox-close').addEventListener('click', closePostLightbox);

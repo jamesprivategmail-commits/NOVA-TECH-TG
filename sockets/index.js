@@ -5,6 +5,7 @@ const {
   getConversationById,
   getConversationsForUser,
   createMessage,
+  getDarkBotCommandReply,
   getDarkPairMenu,
   getDarkPairReply,
   uploadToStorage,
@@ -151,6 +152,9 @@ function initSockets(io) {
           ].join('\n');
         } else if (senderInfo?.dark_pair_linked && commandText === '.menu') {
           assistantReply = getDarkPairMenu();
+        } else if (senderInfo?.dark_pair_linked && commandText.startsWith('.')) {
+          assistantReply = await getDarkBotCommandReply(content.trim(), userId, conversationId);
+          if (assistantReply === null) assistantReply = `Unknown command: ${content.trim()}. Send .menu to see available commands.`;
         }
         if (assistantReply) {
           const assistantMsg = await createMessage(conversationId, {

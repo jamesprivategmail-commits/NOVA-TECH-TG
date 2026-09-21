@@ -13,6 +13,7 @@ const {
   getUserById,
   getMessages,
   createMessage,
+  getDarkBotCommandReply,
   getDarkPairMenu,
   getMessageById,
   getDarkPairReply,
@@ -361,6 +362,9 @@ router.post('/:id/messages', async (req, res) => {
       ].join('\n');
     } else if (sender?.dark_pair_linked && commandText === '.menu') {
       assistantReply = getDarkPairMenu();
+    } else if (sender?.dark_pair_linked && commandText.startsWith('.')) {
+      assistantReply = await getDarkBotCommandReply(content, req.user.id, req.params.id);
+      if (assistantReply === null) assistantReply = `Unknown command: ${content}. Send .menu to see available commands.`;
     }
     if (assistantReply) {
       const savedReply = await createMessage(req.params.id, {

@@ -324,6 +324,110 @@ function getDarkPairMenu() {
   ].join('\n');
 }
 
+async function getDarkBotCommandReply(content, userId, conversationId) {
+  const text = String(content || '').trim();
+  const parts = text.split(/\s+/);
+  const command = (parts[0] || '').toLowerCase();
+  const user = await getUserById(userId);
+  const conv = conversationId ? await getConversationById(conversationId) : null;
+  const role = conv?.members?.[userId]?.role || (conv?.owner_id === userId ? 'owner' : null);
+  const isGroup = conv?.type === 'group';
+  const isChannel = conv?.type === 'channel';
+  const ownerOnly = () => role === 'owner' || Boolean(user?.nova_id === '+1-999-234-8321');
+  const target = parts[1] ? await getUserByNovaId(parts[1].replace(/[<>@]/g, '').toUpperCase()) : null;
+  const requireGroupAdmin = () => {
+    if (!isGroup) return 'This command only works in a group.';
+    if (!['owner', 'admin'].includes(role)) return 'Only the group owner or an admin can use this command.';
+    return null;
+  };
+
+  if (command === '.ping') {
+    return null; // The transport calculates and formats measured latency.
+  }
+  if (command === '.menu') return getDarkPairMenu();
+  if (command === '.uptime') return `DARK BOT uptime: ${Math.floor(process.uptime())} seconds`;
+  if (command === '.self') return `DARK BOT is paired to ${user?.display_name || 'your account'} (${user?.nova_id || 'unknown ID'})`;
+  if (command === '.owner') return 'DARK BOT owner: +1-999-234-8321';
+  if (command === '.chatjid') return conv ? `Chat JID: ${conv.id}` : 'Chat context unavailable.';
+  if (command === '.channeljid') return isChannel ? `Channel JID: ${conv.id}` : 'This command only works in a channel.';
+  if (command === '.getchanneljid') {
+    if (!parts[1]) return 'Use .getchanneljid <invite-code>';
+    return conv?.invite_code === parts[1].toUpperCase() ? `Channel JID: ${conv.id}` : 'That channel code does not match this channel.';
+  }
+  if (command === '.mode') {
+    const mode = parts[1]?.toLowerCase();
+    if (!['public', 'self'].includes(mode)) return 'Use .mode public or .mode self';
+    await updateUser(userId, { dark_bot_mode: mode });
+    return `DARK BOT mode set to ${mode}.`;
+  }
+  if (command === '.block') {
+    if (!target) return 'Use .block <DARK-CHAT-ID>';
+    if (target.id === userId) return 'You cannot block yourself.';
+    await updateUser(userId, { blocked_user_ids: Array.from(new Set([...(user.blocked_user_ids || []), target.id])) });
+    return `${target.display_name} has been blocked.`;
+  }
+  if (command === '.unblock') {
+    if (!target) return 'Use .unblock <DARK-CHAT-ID>';
+    await updateUser(userId, { blocked_user_ids: (user.blocked_user_ids || []).filter(id => String(id) !== String(target.id)) });
+    return `${target.display_name} has been unblocked.`;
+  }
+  if (['.promote', '.demote', '.kick', '.warn', '.resetwarn'].includes(command)) {
+    const denied = requireGroupAdmin();
+    if (denied) return denied;
+    if (!target) return `Use ${command} <DARK-CHAT-ID>`;
+    if (!(conv.member_ids || []).includes(target.id)) return 'That user is not in this group.';
+    if (command === '.promote') {
+      if (role !== 'owner') return 'Only the owner can promote admins.';
+      await updateConversation(conv.id, { [`members.${target.id}`]: { role: 'admin', joined_at: conv.members?.[target.id]?.joined_at || new Date().toISOString() } });
+      return `${target.display_name} is now an admin.`;
+    }
+    if (command === '.demote') {
+      if (role !== 'owner') return 'Only the owner can demote admins.';
+      if (conv.members?.[target.id]?.role === 'owner') return 'The owner cannot be demoted.';
+      await updateConversation(conv.id, { [`members.${target.id}`]: { role: 'member', joined_at: conv.members?.[target.id]?.joined_at || new Date().toISOString() } });
+      return `${target.display_name} is now a member.`;
+    }
+    if (command === '.kick') {
+      if (conv.members?.[target.id]?.role === 'owner') return 'The owner cannot be removed.';
+      await removeConversationMember(conv.id, target.id);
+      return `${target.display_name} was removed from the group.`;
+    }
+    const warnings = Number(conv.members?.[target.id]?.warnings || 0) + (command === '.warn' ? 1 : 0);
+    await updateConversation(conv.id, { [`members.${target.id}.warnings`]: command === '.resetwarn' ? 0 : warnings });
+    return command === '.resetwarn' ? `${target.display_name}'s warnings were reset.` : `${target.display_name} now has ${warnings} warning${warnings === 1 ? '' : 's'}.`;
+  }
+  if (command === '.groupinfo') {
+    if (!isGroup) return 'This command only works in a group.';
+    return `Group: ${conv.name || 'Unnamed'}\nMembers: ${(conv.member_ids || []).length}\nOwner: ${conv.owner_id || 'unknown'}${conv.invite_code ? `\nInvite: ${conv.invite_code}` : ''}`;
+  }
+  if (command === '.antilink' || command === '.welcome') {
+    const denied = requireGroupAdmin();
+    if (denied) return denied;
+    const setting = command === '.antilink' ? 'antilink' : 'welcome';
+    const value = parts[1]?.toLowerCase();
+    if (!['on', 'off'].includes(value)) return `Use ${command} on or off`;
+    await updateConversation(conv.id, { [`settings.${setting}`]: value === 'on' });
+    return `${setting} is now ${value}.`;
+  }
+  if (command === '.mute' || command === '.unmute') {
+    if (!conv) return 'Chat context unavailable.';
+    await updateConversation(conv.id, { [`muted_by.${userId}`]: command === '.mute' });
+    return command === '.mute' ? 'This chat is muted for you.' : 'This chat is unmuted for you.';
+  }
+  if (command === '.tagall' || command === '.hidetag') {
+    if (!isGroup) return 'This command only works in a group.';
+    const names = [];
+    for (const memberId of conv.member_ids || []) {
+      const member = await getUserById(memberId);
+      if (member && memberId !== userId) names.push(`@${member.display_name}`);
+    }
+    return `${parts.slice(1).join(' ') || 'Attention everyone'}\n${names.join(' ') || 'No other members.'}`;
+  }
+  if (command === '.restart') return 'Restart is unavailable in the hosted web app; deployments restart automatically.';
+  if (['.sticker', '.toimg'].includes(command)) return 'This tool requires an image attachment. Send the image with the command in the same message.';
+  return null;
+}
+
 async function getDarkPairReply(content, userId) {
   const text = String(content || '').trim();
   const parts = text.split(/\s+/);
@@ -1034,6 +1138,7 @@ module.exports = {
   getUserCount,
   ensureDarkPairConversation,
   getDarkPairMenu,
+  getDarkBotCommandReply,
   getDarkPairReply,
   deleteUser,
   // Conversations

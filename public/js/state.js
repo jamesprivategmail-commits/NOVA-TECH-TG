@@ -94,7 +94,7 @@ export function isUnread(conv) {
   const lastAt = conv.last_message_at;
   if (!lastAt) return false;
   const seen = state.readAt[conv.id];
-  if (!seen) return false;
+  if (!seen) return true;
   return new Date(lastAt).getTime() > new Date(seen).getTime();
 }
 

@@ -371,8 +371,8 @@ function metaHtml(msg) {
   }
   const edited = msg.edited_at ? '<span class="edited">edited</span>' : '';
   const ticking = msg._status === 'sending'
-    ? `<span style="opacity:.6">${icon('check')}</span>`
-    : msg.read_at ? `<span class="seen read">${icon('check-check')}</span>` : `<span class="sent">${icon('check')}</span>`;
+    ? `<span class="sending" title="Sending" aria-label="Sending">${icon('send')}</span>`
+    : msg.read_at ? `<span class="seen read" title="Read" aria-label="Read">${icon('check-check')}</span>` : `<span class="sent" title="Sent" aria-label="Sent">${icon('check')}</span>`;
   const pin = msg.pinned_at ? `<span class="pin-flag" title="Pinned">${icon('pin')}</span>` : '';
   return `<div class="meta">${edited}${pin}<span>${escapeHtml(formatTime(msg.created_at))}</span>${msg.sender_id === state.me?.id ? ticking : ''}</div>`;
 }
@@ -1237,10 +1237,10 @@ async function openConversationInfo() {
         ${avatar({ displayName: m.display_name, avatarUrl: m.avatar_url, avatarColor: m.avatar_color }, { size: 'sm' })}
         <span class="option-copy">${escapeHtml(m.display_name)} ${verifyBadge(m.is_verified)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
         ${m.id !== conv.owner_id && canManage ? `<span class="member-actions">
-          ${canChangeRoles ? `<button class="icon-btn" data-member-role="${escapeHtml(m.id)}" data-role="${m.role === 'admin' ? 'member' : 'admin'}" aria-label="${m.role === 'admin' ? 'Demote' : 'Promote'}">${icon('user')}</button>` : ''}
-          ${canChangeRoles ? `<button class="icon-btn" data-transfer-owner="${escapeHtml(m.id)}" aria-label="Transfer ownership">${icon('share')}</button>` : ''}
-          <button class="icon-btn" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="${m.muted_until ? 'unmute' : 'mute'}" aria-label="${m.muted_until ? 'Unmute' : 'Mute'}">${icon('volume')}</button>
-          <button class="icon-btn danger" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="ban" aria-label="Ban">${icon('trash')}</button>
+          ${canChangeRoles ? `<button class="member-action-btn" data-member-role="${escapeHtml(m.id)}" data-role="${m.role === 'admin' ? 'member' : 'admin'}" aria-label="${m.role === 'admin' ? 'Demote' : 'Promote'}" title="${m.role === 'admin' ? 'Demote' : 'Promote'}">${icon(m.role === 'admin' ? 'arrow-down' : 'arrow-up')}<span>${m.role === 'admin' ? 'Demote' : 'Promote'}</span></button>` : ''}
+          ${canChangeRoles ? `<button class="member-action-btn" data-transfer-owner="${escapeHtml(m.id)}" aria-label="Transfer ownership" title="Transfer ownership">${icon('share')}<span>Transfer</span></button>` : ''}
+          <button class="member-action-btn" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="${m.muted_until ? 'unmute' : 'mute'}" aria-label="${m.muted_until ? 'Unmute' : 'Mute'}" title="${m.muted_until ? 'Unmute' : 'Mute'}">${icon(m.muted_until ? 'volume' : 'volume-off')}<span>${m.muted_until ? 'Unmute' : 'Mute'}</span></button>
+          <button class="member-action-btn danger" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="ban" aria-label="Ban" title="Ban">${icon('ban')}<span>Ban</span></button>
         </span>` : ''}
       </div>`).join('')}</div>`,
       footer: `<div class="sheet-pad stack">

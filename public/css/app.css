@@ -500,6 +500,9 @@ input, textarea { font-size: 16px; }
 .meta .failed { color: var(--danger); font-weight: 600; }
 .meta .retry { color: var(--blue); font-weight: 600; text-decoration: underline; }
 .seen { color: var(--blue); }
+.meta .sending { color: var(--muted); opacity: .9; }
+.meta .sending .icon { width: 13px; height: 13px; }
+.meta .sent { color: var(--text); opacity: .95; }
 
 .media { border-radius: 14px; overflow: hidden; margin-bottom: 2px; background: var(--surface3); max-width: 100%; }
 .media img, .media video { max-width: 260px; max-height: 320px; width: auto; object-fit: cover; }
@@ -706,9 +709,10 @@ input, textarea { font-size: 16px; }
 .option-copy { flex: 1; min-width: 0; }
 .option-copy small { display: block; color: var(--muted); font-size: 12.5px; }
 .member-management-row .member-actions { display: inline-flex; align-items: center; gap: 2px; }
-.member-management-row .member-actions .icon-btn { width: 30px; height: 30px; color: var(--muted); }
-.member-management-row .member-actions .icon-btn:hover { color: var(--text); background: var(--surface3); }
-.member-management-row .member-actions .icon-btn.danger { color: var(--danger); }
+.member-management-row .member-actions .member-action-btn { display: inline-flex; align-items: center; gap: 3px; min-height: 30px; padding: 4px 6px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
+.member-management-row .member-actions .member-action-btn .icon { width: 15px; height: 15px; }
+.member-management-row .member-actions .member-action-btn:hover { color: var(--text); background: var(--surface3); }
+.member-management-row .member-actions .member-action-btn.danger { color: var(--danger); }
 .option.danger { color: var(--danger); }
 .option.danger .option-icon { color: var(--danger); }
 .tabs { display: flex; gap: 6px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }

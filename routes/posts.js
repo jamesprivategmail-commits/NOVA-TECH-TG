@@ -35,12 +35,13 @@ router.post('/', async (req, res) => {
 
     let imageUrl = null;
     let detectedMime = imageMime || 'image/jpeg';
+    if (imageData && !/^(image|video)\//.test(detectedMime)) return res.status(400).json({ error: 'Updates support image and video files only' });
     if (imageData) {
       // Upload image to Firebase Storage
       const uploaded = await uploadToStorage({
         data: imageData,
         mimeType: detectedMime,
-        filename: `post_${req.user.id}_${Date.now()}.jpg`,
+        filename: `post_${req.user.id}_${Date.now()}.${detectedMime.split('/')[1] || 'bin'}`,
         userId: req.user.id
       });
       imageUrl = uploaded.url;

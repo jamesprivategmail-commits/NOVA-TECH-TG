@@ -21,8 +21,8 @@ function composeHtml() {
     <textarea id="post-caption" placeholder="Share something..." maxlength="500"></textarea>
     <div id="post-preview"></div>
     <div class="toolbar">
-      <input type="file" id="post-image-input" accept="image/*" class="hidden">
-      <button type="button" class="icon-btn" id="post-image-btn" aria-label="Add image">${icon('image')}</button>
+      <input type="file" id="post-image-input" accept="image/*,video/*" class="hidden">
+      <button type="button" class="icon-btn" id="post-image-btn" aria-label="Add image or video">${icon('image')}</button>
       <span class="spacer"></span>
       <button type="submit" class="btn btn-primary btn-sm" id="post-submit">Post</button>
     </div>
@@ -34,11 +34,14 @@ function wireComposer() {
   $('#post-image-input')?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) { composeImage = null; $('#post-preview').innerHTML = ''; return; }
-    if (file.size > 15 * 1024 * 1024) { toast('Image too large (max 15MB)'); e.target.value = ''; return; }
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) { toast('Choose an image or video'); e.target.value = ''; return; }
+    if (file.size > 30 * 1024 * 1024) { toast('Media too large (max 30MB)'); e.target.value = ''; return; }
     try {
       const dataUrl = await fileToDataUrl(file);
       composeImage = { dataUrl, mime: file.type };
-      $('#post-preview').innerHTML = `<div class="post-image"><img src="${escapeHtml(dataUrl)}" alt=""></div>`;
+      $('#post-preview').innerHTML = file.type.startsWith('video/')
+        ? `<div class="post-image"><video src="${escapeHtml(dataUrl)}" controls style="width:100%;max-height:320px;border-radius:12px"></video></div>`
+        : `<div class="post-image"><img src="${escapeHtml(dataUrl)}" alt=""></div>`;
     } catch { toast('Could not read image'); }
   });
   $('#post-composer')?.addEventListener('submit', onPost);
@@ -104,6 +107,7 @@ function postHtml(p) {
   const own = String(p.user_id) === String(state.me?.id);
   const canDelete = own || !!state.me?.isAdmin;
   const image = p.image_url || p.image_data;
+  const isVideo = String(p.image_mime || '').startsWith('video/');
   return `<article class="post" data-post="${escapeHtml(p.id)}">
     <div class="post-head">
       ${avatar({ displayName: p.display_name, avatarUrl: p.avatar_url, avatarColor: p.avatar_color }, { size: 'sm' })}
@@ -114,7 +118,7 @@ function postHtml(p) {
       ${canDelete ? `<button class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete post">${icon('trash')}</button>` : ''}
     </div>
     ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
-    ${image ? `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>` : ''}
+    ${image ? (isVideo ? `<div class="post-image"><video src="${escapeHtml(image)}" controls preload="metadata" style="width:100%;max-height:480px;border-radius:12px"></video></div>` : `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>`) : ''}
     <div class="post-actions">
       <button class="post-action ${p.liked_by_me ? 'liked' : ''}" data-like="${escapeHtml(p.id)}" aria-label="Like">
         ${icon('heart')}<span>${p.like_count || 0}</span></button>

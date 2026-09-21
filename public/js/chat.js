@@ -668,6 +668,18 @@ async function deliverTemp(convId, temp) {
     if (ack.assistantMessage && !list.some((m) => m.id === ack.assistantMessage.id)) {
       list.push({ ...ack.assistantMessage, _status: 'sent' });
     }
+    if (/^\.(block|unblock)\b/i.test(String(temp._content || '').trim())) {
+      try {
+        const refreshed = await api.conversations();
+        const latest = (refreshed.conversations || []).find((item) => item.id === convId);
+        if (latest && state.activeConv?.id === convId) {
+          Object.assign(conv, latest);
+          updateBlockedChatState(conv);
+        }
+        state.conversations = refreshed.conversations || state.conversations;
+        emit('conversations:changed');
+      } catch { /* the server still enforces the block if refresh is delayed */ }
+    }
   } else {
     // keep optimistic bubble, mark failed for retry
     temp._status = 'failed';

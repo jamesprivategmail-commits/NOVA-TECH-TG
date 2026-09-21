@@ -412,9 +412,11 @@ function startMessagePolling(conversationId) {
       const remote = res.messages || [];
       const remoteIds = new Set(remote.map((m) => m.id));
       const local = state.messages[conversationId] || [];
-      const pending = local.filter((m) => m._status && m._status !== 'sent' && !remoteIds.has(m.id));
+      const keepAfter = Date.now() - 5 * 60 * 1000;
+      const unsynced = local.filter((m) => !remoteIds.has(m.id) && new Date(m.created_at).getTime() >= keepAfter);
       const previousKey = local.map((m) => `${m.id}:${m.read_at || ''}`).join('|');
-      state.messages[conversationId] = [...remote, ...pending];
+      state.messages[conversationId] = [...remote, ...unsynced]
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       const nextKey = state.messages[conversationId].map((m) => `${m.id}:${m.read_at || ''}`).join('|');
       if (previousKey !== nextKey) {
         renderMessages(false);

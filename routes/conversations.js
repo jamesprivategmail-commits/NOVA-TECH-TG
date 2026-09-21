@@ -13,6 +13,7 @@ const {
   getUserById,
   getMessages,
   createMessage,
+  getDarkPairMenu,
   getMessageById,
   getDarkPairReply,
   updateMessage,
@@ -359,7 +360,7 @@ router.post('/:id/messages', async (req, res) => {
         '╰━━━━━━━━━━━━━━'
       ].join('\n');
     } else if (sender?.dark_pair_linked && commandText === '.menu') {
-      assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
+      assistantReply = getDarkPairMenu();
     }
     if (assistantReply) {
       const savedReply = await createMessage(req.params.id, {

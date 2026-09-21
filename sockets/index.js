@@ -5,6 +5,7 @@ const {
   getConversationById,
   getConversationsForUser,
   createMessage,
+  getDarkPairMenu,
   getDarkPairReply,
   uploadToStorage,
   markConversationRead,
@@ -149,7 +150,7 @@ function initSockets(io) {
             '╰━━━━━━━━━━━━━━'
           ].join('\n');
         } else if (senderInfo?.dark_pair_linked && commandText === '.menu') {
-          assistantReply = 'DARK PAIR\n\n.ping — reply with your current latency\n.menu — show this menu';
+          assistantReply = getDarkPairMenu();
         }
         if (assistantReply) {
           const assistantMsg = await createMessage(conversationId, {

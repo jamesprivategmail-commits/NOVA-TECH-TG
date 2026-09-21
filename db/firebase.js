@@ -279,6 +279,51 @@ async function getUserCount() {
   return snap.docs.filter(d => !d.data().is_banned).length;
 }
 
+function getDarkPairMenu() {
+  return [
+    '╔══════════════════╗',
+    '║  DARK BOT',
+    '╠══════════════════╣',
+    '║ 👑 𝗢𝗪𝗡𝗘𝗥',
+    '║ ┠ .ping',
+    '║ ┠ .uptime',
+    '║ ┠ .mode public|self',
+    '║ ┠ .self',
+    '║ ┠ .block <user>',
+    '║ ┠ .unblock <user>',
+    '║ ┠ .restart',
+    '║ ┠ .channeljid',
+    '║ ┖ .getchanneljid <code>',
+    '╠══════════════════╣',
+    '║ 🔎 𝗨𝗧𝗜𝗟𝗜𝗧𝗬',
+    '║ ┖ .chatjid',
+    '╠══════════════════╣',
+    '║ 🛡️ 𝗚𝗥𝗢𝗨𝗣 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧',
+    '║ ┠ .antilink on|off',
+    '║ ┠ .welcome on|off|set',
+    '║ ┠ .warn <user>',
+    '║ ┠ .resetwarn <user>',
+    '║ ┠ .promote <user>',
+    '║ ┠ .demote <user>',
+    '║ ┠ .kick <user>',
+    '║ ┠ .mute',
+    '║ ┠ .unmute',
+    '║ ┠ .tagall <msg>',
+    '║ ┠ .hidetag <msg>',
+    '║ ┖ .groupinfo',
+    '╠══════════════════╣',
+    '║ 🛠️ 𝗧𝗢𝗢𝗟𝗦',
+    '║',
+    '║ ┠ .sticker',
+    '║ ┠ .toimg',
+    '║ ┠ .owner',
+    '║ ┖',
+    '╠══════════════════╣',
+    '║  📲',
+    '╚══════════════════╝'
+  ].join('\n');
+}
+
 async function getDarkPairReply(content, userId) {
   const text = String(content || '').trim();
   const parts = text.split(/\s+/);
@@ -293,16 +338,7 @@ async function getDarkPairReply(content, userId) {
     return 'DARK PAIR is now paired with your account. Send /menu to see available commands.';
   }
   if (command === '/start' || command === '/menu') {
-    return [
-      'DARK PAIR',
-      '',
-      'Quick commands:',
-      '/start — open this menu',
-      '/menu — show available commands',
-      '/pair DARK-CHAT-ID — generate a Dark code',
-      '',
-      'Send /pair followed by your DARK CHAT ID to begin.'
-    ].join('\n');
+    return getDarkPairMenu();
   }
   if (command === '/pair') {
     const novaId = (parts[1] || '').toUpperCase();
@@ -997,6 +1033,7 @@ module.exports = {
   getAllUsers,
   getUserCount,
   ensureDarkPairConversation,
+  getDarkPairMenu,
   getDarkPairReply,
   deleteUser,
   // Conversations

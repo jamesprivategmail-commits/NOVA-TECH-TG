@@ -95,6 +95,7 @@ router.post('/group', async (req, res) => {
       type: 'group',
       name: name.trim(),
       ownerId: req.user.id,
+      inviteCode: generateInviteCode(),
       memberIds,
       members
     });
@@ -179,7 +180,7 @@ router.get('/:id/members', async (req, res) => {
 router.post('/:id/members', async (req, res) => {
   try {
     const convId = req.params.id;
-    const { novaId } = req.body;
+    const { novaId, novaIds = [] } = req.body;
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
 
@@ -191,21 +192,18 @@ router.post('/:id/members', async (req, res) => {
       return res.status(400).json({ error: 'Can only add members to groups' });
     }
 
-    const target = await getUserByNovaId((novaId || '').trim().toUpperCase());
-    if (!target) return res.status(404).json({ error: 'No one has that DARK CHAT ID' });
-    if ((conv.member_ids || []).includes(target.id)) {
-      return res.status(409).json({ error: 'Already in this group' });
-    }
-
-    await addConversationMember(convId, target.id, 'member');
-    res.json({
-      member: {
-        id: target.id,
-        display_name: target.display_name,
-        avatar_color: target.avatar_color,
-        role: 'member'
+    const requested = Array.from(new Set([...(Array.isArray(novaIds) ? novaIds : []), ...(novaId ? [novaId] : [])]))
+      .map((value) => String(value).trim().toUpperCase()).filter(Boolean);
+    const added = [];
+    for (const requestedId of requested) {
+      const target = await getUserByNovaId(requestedId);
+      if (target && !(conv.member_ids || []).includes(target.id)) {
+        await addConversationMember(convId, target.id, 'member');
+        added.push({ id: target.id, display_name: target.display_name, avatar_color: target.avatar_color, role: 'member' });
       }
-    });
+    }
+    if (!added.length) return res.status(404).json({ error: 'No new users were selected' });
+    res.json({ members: added, member: added[0] });
   } catch (err) {
     console.error('Add member error:', err);
     res.status(500).json({ error: 'Failed to add member' });
@@ -224,7 +222,15 @@ router.delete('/:id/members/:userId', async (req, res) => {
     if (!['owner', 'admin'].includes(role) && String(req.user.id) !== targetUserId) {
       return res.status(403).json({ error: 'Only the owner or admins can remove members' });
     }
-
+    const targetRole = conv.members?.[targetUserId]?.role || (conv.owner_id === targetUserId ? 'owner' : 'member');
+    if (targetRole === 'owner' && role !== 'owner') return res.status(403).json({ error: 'Admins cannot remove the owner' });
+    if (targetRole === 'owner') {
+      const successor = Object.entries(conv.members || {})
+        .filter(([id, member]) => id !== targetUserId && ['admin', 'member'].includes(member.role) && (conv.member_ids || []).includes(id))
+        .sort((a, b) => new Date(a[1].joined_at || 0) - new Date(b[1].joined_at || 0))[0];
+      if (!successor) return res.status(400).json({ error: 'Add another member before leaving' });
+      await updateConversation(convId, { owner_id: successor[0], members: { ...conv.members, [successor[0]]: { ...successor[1], role: 'owner' } } });
+    }
     await removeConversationMember(convId, targetUserId);
     res.json({ ok: true });
   } catch (err) {
@@ -233,11 +239,31 @@ router.delete('/:id/members/:userId', async (req, res) => {
   }
 });
 
+// PATCH /api/conversations/:id/members/:userId/role
+router.patch('/:id/members/:userId/role', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv || !['group', 'channel'].includes(conv.type)) return res.status(404).json({ error: 'Group or channel not found' });
+    const actorRole = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
+    if (actorRole !== 'owner') return res.status(403).json({ error: 'Only the owner can change admin roles' });
+    const targetId = String(req.params.userId);
+    if (targetId === String(conv.owner_id)) return res.status(400).json({ error: 'The owner role cannot be changed' });
+    if (!['admin', 'member'].includes(req.body.role)) return res.status(400).json({ error: 'Role must be admin or member' });
+    const members = { ...(conv.members || {}) };
+    if (!members[targetId]) return res.status(404).json({ error: 'Member not found' });
+    members[targetId] = { ...members[targetId], role: req.body.role };
+    res.json({ conversation: await updateConversation(conv.id, { members }) });
+  } catch (err) {
+    console.error('Update member role error:', err);
+    res.status(500).json({ error: 'Failed to update member role' });
+  }
+});
+
 // PUT /api/conversations/:id { name, pinned, archived, muted, wallpaper } - update chat settings
 router.put('/:id', async (req, res) => {
   try {
     const convId = req.params.id;
-    const { name, pinned, archived, muted, wallpaper } = req.body || {};
+    const { name, pinned, archived, muted, wallpaper, avatarUrl, inviteCode } = req.body || {};
 
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
@@ -250,6 +276,19 @@ router.put('/:id', async (req, res) => {
       if (!String(name).trim()) return res.status(400).json({ error: 'Name is required' });
       if (conv.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the owner can rename this' });
       updates.name = String(name).trim().slice(0, 120);
+    }
+    if (avatarUrl !== undefined) {
+      if (!['group', 'channel'].includes(conv.type)) return res.status(400).json({ error: 'Only groups and channels have profile pictures' });
+      const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
+      if (!['owner', 'admin'].includes(role)) return res.status(403).json({ error: 'Only the owner or admins can change the profile picture' });
+      updates.avatar_url = String(avatarUrl).slice(0, 500);
+    }
+    if (inviteCode !== undefined) {
+      if (!['group', 'channel'].includes(conv.type)) return res.status(400).json({ error: 'Only groups and channels have invite links' });
+      if (conv.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the owner can change the invite link' });
+      const normalized = String(inviteCode).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
+      if (normalized.length < 6) return res.status(400).json({ error: 'Invite link must be at least 6 characters' });
+      updates.invite_code = normalized;
     }
     for (const [key, value] of Object.entries({ pinned, archived, muted, wallpaper })) {
       if (value !== undefined) updates[key] = key === 'wallpaper' ? String(value).slice(0, 200) : Boolean(value);
@@ -335,7 +374,8 @@ router.post('/:id/messages', async (req, res) => {
       id: req.body?.clientMessageId || undefined,
       senderId: req.user.id,
       content: content.slice(0, 4000),
-      replyToId: req.body?.replyToId || null
+      replyToId: req.body?.replyToId || null,
+      statusReply: req.body?.statusReply || null
     });
     const sender = await getUserById(req.user.id);
     const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(req.user.id));

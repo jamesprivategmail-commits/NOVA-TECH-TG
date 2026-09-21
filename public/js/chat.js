@@ -117,6 +117,19 @@ export async function openConversation(conv) {
   try {
     const res = await api.messages(conv.id);
     state.messages[conv.id] = res.messages || [];
+    try {
+      const calls = (await api.callHistory(conv.id)).calls || [];
+      const callLogs = calls.map((call) => ({
+        id: `call_${call.id}`,
+        conversation_id: conv.id,
+        sender_id: call.initiator_id,
+        created_at: call.ended_at || call.started_at,
+        call_log: { kind: call.kind, state: call.state, started_at: call.started_at, ended_at: call.ended_at },
+        display_name: conv.other_user?.display_name || conv.name || 'Call'
+      }));
+      const existing = new Set(state.messages[conv.id].map((message) => message.id));
+      state.messages[conv.id].push(...callLogs.filter((message) => !existing.has(message.id)));
+    } catch { /* call history is supplementary to the message timeline */ }
     markConversationRead(conv.id);
     state.hasMore[conv.id] = (res.messages || []).length >= 50;
     renderMessages(true);
@@ -297,13 +310,15 @@ function mediaHtml(msg) {
 }
 
 function replyQuoteHtml(msg) {
-  if (!msg.reply_to_id) return '';
+  const status = msg.status_reply;
+  const statusQuote = status ? `<div class="status-reply-quote"><span class="who">Replying to ${escapeHtml(status.author || 'status')}</span><div class="truncate">${escapeHtml(status.content || 'Status post')}</div></div>` : '';
+  if (!msg.reply_to_id) return statusQuote;
   const list = state.messages[msg.conversation_id] || [];
   const target = list.find((m) => m.id === msg.reply_to_id);
-  if (!target) return `<div class="reply-quote"><span class="who">Reply</span> · message unavailable</div>`;
+  if (!target) return `${statusQuote}<div class="reply-quote"><span class="who">Reply</span> · message unavailable</div>`;
   const who = target.sender_id === state.me?.id ? 'You' : (target.display_name || 'User');
   const text = target.deleted_for_everyone ? 'This message was deleted' : (target.content || (target.media_type ? 'Attachment' : ''));
-  return `<div class="reply-quote"><span class="who">${escapeHtml(who)}</span><div class="truncate">${escapeHtml(text)}</div></div>`;
+  return `${statusQuote}<div class="reply-quote"><span class="who">${escapeHtml(who)}</span><div class="truncate">${escapeHtml(text)}</div></div>`;
 }
 
 function reactionsHtml(msg) {
@@ -335,6 +350,15 @@ function metaHtml(msg) {
 }
 
 function messageHtml(msg, index, list) {
+  if (msg.call_log) {
+    const ownCall = msg.sender_id === state.me?.id;
+    const log = msg.call_log;
+    const seconds = log.ended_at && log.started_at ? Math.max(0, Math.round((new Date(log.ended_at) - new Date(log.started_at)) / 1000)) : 0;
+    const duration = seconds ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : '';
+    const label = log.state === 'missed' ? 'Missed call' : log.state === 'declined' ? 'Declined call' : log.state === 'busy' ? 'Busy' : log.state === 'ringing' ? 'Ongoing call' : 'Call ended';
+    const cls = ['message', 'call-log', ownCall ? 'own' : ''].filter(Boolean).join(' ');
+    return `<div class="${cls}" data-msg="${escapeHtml(msg.id)}"><div class="bubble call-bubble">${icon(log.state === 'missed' ? 'phone-off' : 'phone')}<span>${label}${duration ? ` · ${duration}` : ''}</span></div><div class="meta">${escapeHtml(formatTime(msg.created_at))}</div></div>`;
+  }
   const own = msg.sender_id === state.me?.id;
   const prev = list[index - 1];
   const grouped = prev && prev.sender_id === msg.sender_id && dayLabel(prev.created_at) === dayLabel(msg.created_at);
@@ -1094,14 +1118,37 @@ async function handleChatAction(act, conv, role) {
 }
 
 async function addMemberFlow(conv) {
-  const novaId = await promptSheet({ title: 'Add member', label: 'DARK CHAT ID', placeholder: '+1-626-715-0000', confirmText: 'Add' });
-  if (!novaId) return;
+  let current = [], users = [];
   try {
-    await api.addMember(conv.id, novaId);
-    toast('Member added', 'success');
+    current = (await api.members(conv.id)).members || [];
+    users = (await api.discover('')).users || [];
   } catch (err) {
-    toast(err instanceof ApiError ? err.message : 'Could not add member');
+    toast(err instanceof ApiError ? err.message : 'Could not load users'); return;
   }
+  const existing = new Set(current.map((m) => String(m.id)));
+  users = users.filter((u) => !existing.has(String(u.id)) && String(u.id) !== String(state.me?.id));
+  if (!users.length) { toast('There are no users available to add'); return; }
+  await new Promise((resolve) => {
+    let decided = false;
+    const done = async (value) => {
+      if (decided) return; decided = true; closeSheet();
+      if (value?.length) {
+        try { await api.addMembers(conv.id, value); toast(`${value.length} member${value.length === 1 ? '' : 's'} added`, 'success'); emit('conversations:changed'); }
+        catch (err) { toast(err instanceof ApiError ? err.message : 'Could not add members'); }
+      }
+      resolve();
+    };
+    openSheet({
+      title: 'Add members',
+      body: `<div class="sheet-body">${users.map((u) => `<label class="option"><input type="checkbox" class="member-pick" value="${escapeHtml(u.nova_id)}"><span>${avatar({ displayName: u.display_name, avatarUrl: u.avatar_url, avatarColor: u.avatar_color }, { size: 'sm' })}</span><span class="option-copy">${escapeHtml(u.display_name)}<small>${escapeHtml(u.nova_id || '')}</small></span></label>`).join('')}</div>`,
+      footer: `<div class="sheet-pad row"><button class="btn btn-ghost grow" data-act="cancel">Cancel</button><button class="btn btn-primary grow" data-act="add">Add selected</button></div>`,
+      onMount(sheet) {
+        sheet.querySelector('[data-act="cancel"]').addEventListener('click', () => done([]));
+        sheet.querySelector('[data-act="add"]').addEventListener('click', () => done(Array.from(sheet.querySelectorAll('.member-pick:checked')).map((el) => el.value)));
+      },
+      onClose() { if (!decided) { decided = true; resolve(); } }
+    });
+  });
 }
 
 // ---------------- conversation info ----------------
@@ -1151,10 +1198,30 @@ async function openConversationInfo() {
         ${avatar({ displayName: m.display_name, avatarUrl: m.avatar_url, avatarColor: m.avatar_color }, { size: 'sm' })}
         <span class="option-copy">${escapeHtml(m.display_name)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
       </div>`).join('')}</div>`,
-      footer: conv.invite_code ? `<div class="sheet-pad"><button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button></div>` : '',
+      footer: `<div class="sheet-pad stack">
+        ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
+        <label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>
+      </div>`,
       onMount(sheet) {
         sheet.querySelector('#copy-invite')?.addEventListener('click', async () => {
           try { await navigator.clipboard.writeText(conv.invite_code); toast('Copied', 'success'); } catch { toast(conv.invite_code); }
+        });
+        sheet.querySelector('#custom-invite')?.addEventListener('click', async () => {
+          const code = await promptSheet({ title: 'Custom invite code', label: '6–40 letters, numbers, - or _', value: conv.invite_code, confirmText: 'Save' });
+          if (!code) return;
+          try { const result = await api.updateConversation(conv.id, { inviteCode: code }); conv.invite_code = result.conversation.invite_code || code.toUpperCase(); toast('Invite code updated', 'success'); }
+          catch (err) { toast(err.message || 'Could not update invite'); }
+        });
+        sheet.querySelector('#conversation-avatar-input')?.addEventListener('change', async (event) => {
+          const file = event.target.files?.[0]; if (!file) return;
+          if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) { toast('Choose an image up to 8MB'); return; }
+          try {
+            const dataUrl = await fileToDataUrl(file);
+            const upload = await api.upload(dataUrl, file.type, file.name);
+            const result = await api.updateConversation(conv.id, { avatarUrl: upload.url });
+            Object.assign(conv, result.conversation || {}, { avatar_url: upload.url });
+            emit('conversations:changed'); renderHeader(); toast('Group picture updated', 'success');
+          } catch (err) { toast(err.message || 'Could not update group picture'); }
         });
       }
     });

@@ -15,6 +15,7 @@ let iceServersPromise = null;
 
 let els = {};
 let session = null; // { call, kind, targetUserId, pc, localStream, remoteStream, pendingSignals, pendingIce, ... }
+let callTimer = null;
 
 export function initCalls() {
   els = {
@@ -95,6 +96,7 @@ async function acceptIncoming() {
     els.incoming.hidden = true;
     els.controls.hidden = false;
     els.stateText.textContent = 'Connected';
+    startCallTimer();
   } catch (err) {
     toast('Could not start media');
     endCall('ended');
@@ -149,6 +151,7 @@ async function setupPeer() {
       els.stateText.textContent = 'Connected';
       els.incoming.hidden = true;
       els.controls.hidden = false;
+      startCallTimer();
     } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState) && session) {
       els.stateText.textContent = 'Call ended';
       endCall('ended');
@@ -240,6 +243,16 @@ function showCallUi(conversation, peer, kind, stateText, direction) {
   }
 }
 
+function startCallTimer() {
+  clearInterval(callTimer);
+  const startedAt = session?.call?.started_at ? new Date(session.call.started_at).getTime() : Date.now();
+  callTimer = setInterval(() => {
+    if (!session || session.state !== 'connected') return;
+    const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    els.stateText.textContent = `Ongoing · ${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  }, 1000);
+}
+
 function toggleMute() {
   if (!session?.localStream) return;
   session.muted = !session.muted;
@@ -266,6 +279,8 @@ async function endCall(finalState) {
 }
 
 function cleanup() {
+  clearInterval(callTimer);
+  callTimer = null;
   if (session?.pc) { try { session.pc.close(); } catch { /* ignore */ } }
   if (session?.localStream) session.localStream.getTracks().forEach((t) => t.stop());
   session = null;

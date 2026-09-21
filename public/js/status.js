@@ -11,6 +11,7 @@ let viewerTimer = null;
 let progressStartedAt = 0;
 let progressRemaining = 0;
 let progressPaused = false;
+let viewerPointerCleanup = null;
 
 const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#ff3b45', '#1a1a1d'];
 
@@ -187,6 +188,7 @@ function openViewerForUser(userId, focusId = null) {
   let index = focusId ? Math.max(0, items.findIndex((s) => s.id === focusId)) : 0;
   const viewer = els.viewer;
   viewer.hidden = false;
+  viewerPointerCleanup?.();
   const onPointerDown = (event) => {
     viewer.setPointerCapture?.(event.pointerId);
     pauseProgress();
@@ -199,6 +201,13 @@ function openViewerForUser(userId, focusId = null) {
   viewer.addEventListener('pointerup', onPointerUp);
   viewer.addEventListener('pointercancel', onPointerUp);
   viewer.addEventListener('lostpointercapture', resumeProgress);
+  viewerPointerCleanup = () => {
+    viewer.removeEventListener('pointerdown', onPointerDown);
+    viewer.removeEventListener('pointerup', onPointerUp);
+    viewer.removeEventListener('pointercancel', onPointerUp);
+    viewer.removeEventListener('lostpointercapture', resumeProgress);
+    viewerPointerCleanup = null;
+  };
 
   const render = () => {
     items = groups[userIndex].items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -283,6 +292,7 @@ function openViewerForUser(userId, focusId = null) {
 function closeViewer() {
   clearTimeout(viewerTimer);
   progressPaused = false;
+  viewerPointerCleanup?.();
   els.viewer.hidden = true;
   els.viewer.innerHTML = '';
 }

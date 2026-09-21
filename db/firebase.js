@@ -291,7 +291,6 @@ function getDarkPairMenu() {
     '║ ┠ .self',
     '║ ┠ .block <user>',
     '║ ┠ .unblock <user>',
-    '║ ┠ .restart',
     '║ ┠ .channeljid',
     '║ ┖ .getchanneljid <code>',
     '╠══════════════════╣',
@@ -300,7 +299,7 @@ function getDarkPairMenu() {
     '╠══════════════════╣',
     '║ 🛡️ 𝗚𝗥𝗢𝗨𝗣 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧',
     '║ ┠ .antilink on|off',
-    '║ ┠ .welcome on|off|set',
+    '║ ┠ .welcome on|off',
     '║ ┠ .warn <user>',
     '║ ┠ .resetwarn <user>',
     '║ ┠ .promote <user>',
@@ -313,11 +312,7 @@ function getDarkPairMenu() {
     '║ ┖ .groupinfo',
     '╠══════════════════╣',
     '║ 🛠️ 𝗧𝗢𝗢𝗟𝗦',
-    '║',
-    '║ ┠ .sticker',
-    '║ ┠ .toimg',
-    '║ ┠ .owner',
-    '║ ┖',
+    '║ ┖ .owner',
     '╠══════════════════╣',
     '║  📲',
     '╚══════════════════╝'
@@ -423,8 +418,6 @@ async function getDarkBotCommandReply(content, userId, conversationId) {
     }
     return `${parts.slice(1).join(' ') || 'Attention everyone'}\n${names.join(' ') || 'No other members.'}`;
   }
-  if (command === '.restart') return 'Restart is unavailable in the hosted web app; deployments restart automatically.';
-  if (['.sticker', '.toimg'].includes(command)) return 'This tool requires an image attachment. Send the image with the command in the same message.';
   return null;
 }
 

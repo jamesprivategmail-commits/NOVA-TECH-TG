@@ -418,7 +418,7 @@ input, textarea { font-size: 16px; }
 /* ============================================================
    CHAT SCREEN
    ============================================================ */
-.chat-screen { display: flex; flex: 1; min-height: 0; background: var(--bg); }
+.chat-screen { display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; width: 100%; background: var(--bg); }
 .chat-header {
   display: flex; align-items: center; gap: 6px;
   padding: calc(6px + var(--safe-t)) 8px 6px;
@@ -549,26 +549,26 @@ input, textarea { font-size: 16px; }
 .attachment-progress span { display: block; height: 100%; width: 0; background: var(--red); transition: width .2s; }
 
 .composer {
-  display: flex; align-items: flex-end; gap: 4px;
-  padding: 8px 8px calc(8px + var(--safe-b));
+  display: flex; align-items: flex-end; gap: 8px; width: 100%; box-sizing: border-box;
+  padding: 12px 14px calc(12px + var(--safe-b));
   background: var(--surface); border-top: 1px solid var(--line);
   flex: 0 0 auto;
 }
 .composer-input {
   flex: 1; min-width: 0; max-height: 140px;
-  padding: 11px 14px; border-radius: 22px;
+  min-height: 46px; padding: 12px 16px; border-radius: 24px;
   background: var(--surface2); border: 1px solid var(--line);
   color: var(--text); outline: none; resize: none; line-height: 1.35;
 }
 .composer-input:focus { border-color: var(--red); }
 .composer-icon-btn {
-  width: 42px; height: 42px; border-radius: 50%;
+  width: 46px; height: 46px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--muted); flex: 0 0 auto;
 }
 .composer-icon-btn:hover { background: var(--surface3); color: var(--text); }
 .send {
-  width: 46px; height: 46px; border-radius: 50%;
+  width: 50px; height: 50px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--red); color: #fff; flex: 0 0 auto;
 }

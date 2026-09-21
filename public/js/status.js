@@ -191,7 +191,7 @@ function openViewerForUser(userId, focusId = null) {
   viewerPointerCleanup?.();
   let pointerStartedAt = 0;
   const onPointerDown = (event) => {
-    if (event.target.closest('button, input')) return;
+    if (event.target.closest('.viewer-head, .viewer-foot, button, input')) return;
     pointerStartedAt = Date.now();
     event.preventDefault();
     viewer.setPointerCapture?.(event.pointerId);
@@ -200,10 +200,10 @@ function openViewerForUser(userId, focusId = null) {
   const onPointerUp = (event) => {
     if (viewer.hasPointerCapture?.(event.pointerId)) viewer.releasePointerCapture(event.pointerId);
     resumeProgress();
-    if (!event.target.closest('button, input, video') && pointerStartedAt && Date.now() - pointerStartedAt < 350) {
+    if (!event.target.closest('.viewer-head, .viewer-foot, button, input, video') && pointerStartedAt && Date.now() - pointerStartedAt < 350) {
       const rect = viewer.getBoundingClientRect();
       const x = event.clientX - rect.left;
-      if (x <= rect.width * 0.35 && index > 0) { index--; render(); }
+      if (x <= rect.width * 0.35 && (index > 0 || userIndex > 0)) retreat();
       else if (x >= rect.width * 0.65) advance();
     }
     pointerStartedAt = 0;
@@ -227,7 +227,7 @@ function openViewerForUser(userId, focusId = null) {
     items = groups[userIndex].items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     const s = items[index];
     const isOwn = String(s.user_id) === String(state.me?.id);
-    const canPrev = index > 0;
+    const canPrev = index > 0 || userIndex > 0;
     const canNext = index < items.length - 1 || userIndex < groups.length - 1;
     let media = '';
     if (s.media_url && s.media_type === 'video') media = `<video src="${escapeHtml(s.media_url)}" autoplay playsinline controls></video>`;
@@ -240,8 +240,11 @@ function openViewerForUser(userId, focusId = null) {
       <div class="viewer-head">
         ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
         <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')} ${verifyBadge(s.is_verified)}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
-        ${isOwn ? `<button type="button" class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
-        <button type="button" class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
+        <div class="viewer-actions">
+          <button type="button" class="icon-btn" id="viewer-pause" aria-label="Pause status" aria-pressed="false">${icon('pause')}</button>
+          ${isOwn ? `<button type="button" class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
+          <button type="button" class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
+        </div>
       </div>
       <div class="viewer-stage">${media}${caption}</div>
       <div class="viewer-foot">
@@ -251,10 +254,26 @@ function openViewerForUser(userId, focusId = null) {
       ${canPrev ? '<button type="button" class="viewer-nav prev" id="viewer-prev" aria-label="Previous status"></button>' : ''}
       ${canNext ? '<button type="button" class="viewer-nav next" id="viewer-next" aria-label="Next status"></button>' : ''}
     `;
-    viewer.querySelector('#viewer-close').addEventListener('click', closeViewer);
-    viewer.querySelector('#viewer-prev')?.addEventListener('click', () => { index--; render(); });
+    viewer.querySelector('#viewer-close').addEventListener('click', (e) => { e.stopPropagation(); closeViewer(); });
+    viewer.querySelector('#viewer-prev')?.addEventListener('click', (e) => { e.stopPropagation(); retreat(); });
     viewer.querySelector('#viewer-next')?.addEventListener('click', () => advance());
-    viewer.querySelector('#viewer-delete')?.addEventListener('click', async () => {
+    viewer.querySelector('#viewer-pause').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const button = e.currentTarget;
+      if (progressPaused) {
+        resumeProgress();
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-label', 'Pause status');
+        button.innerHTML = icon('pause');
+      } else {
+        pauseProgress();
+        button.setAttribute('aria-pressed', 'true');
+        button.setAttribute('aria-label', 'Play status');
+        button.innerHTML = icon('play');
+      }
+    });
+    viewer.querySelector('#viewer-delete')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
       // The confirmation sheet sits below the full-screen viewer. Close the
       // viewer first so the confirmation controls are actually tappable.
       closeViewer();
@@ -262,7 +281,7 @@ function openViewerForUser(userId, focusId = null) {
       if (!ok) return;
       try { await api.deleteStatus(s.id); toast('Deleted', 'success'); await loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
     });
-    viewer.querySelector('#viewer-send').addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
+    viewer.querySelector('#viewer-send').addEventListener('click', (e) => { e.stopPropagation(); replyToStatus(s, viewer.querySelector('#viewer-reply').value); });
 
     if (!s.viewed && !isOwn) api.viewStatus(s.id).catch(() => {});
     startProgress(s);
@@ -286,6 +305,15 @@ function openViewerForUser(userId, focusId = null) {
     if (index < items.length - 1) { index++; render(); return; }
     if (userIndex < groups.length - 1) { userIndex++; index = 0; render(); return; }
     closeViewer();
+  }
+  function retreat() {
+    if (index > 0) { index--; render(); return; }
+    if (userIndex > 0) {
+      userIndex--;
+      const previousItems = groups[userIndex].items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      index = previousItems.length - 1;
+      render();
+    }
   }
   function pauseProgress() {
     if (progressPaused) return;

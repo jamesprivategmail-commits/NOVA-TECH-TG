@@ -23,13 +23,22 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Statuses support image and video files only' });
       }
       normalizedMediaType = String(mediaMime).toLowerCase().startsWith('video/') ? 'video' : 'image';
-      const uploaded = await uploadToStorage({
-        data: mediaData,
-        mimeType: mediaMime || 'image/jpeg',
-        filename: `status_${Date.now()}.${(mediaMime || 'image/jpeg').split('/')[1] || 'bin'}`,
-        userId: req.user.id
-      });
-      mediaUrl = uploaded.url;
+      try {
+        const uploaded = await uploadToStorage({
+          data: mediaData,
+          mimeType: mediaMime || 'image/jpeg',
+          filename: `status_${Date.now()}.${(mediaMime || 'image/jpeg').split('/')[1] || 'bin'}`,
+          userId: req.user.id
+        });
+        mediaUrl = uploaded.url;
+      } catch (uploadErr) {
+        console.error('Status media upload failed:', uploadErr);
+        return res.status(502).json({
+          error: normalizedMediaType === 'video'
+            ? 'Could not upload video. Check that Firebase Storage is enabled and its rules allow writes.'
+            : 'Could not upload image. Check that Firebase Storage is enabled and its rules allow writes.'
+        });
+      }
     }
 
     const status = await createStatus({
@@ -44,7 +53,7 @@ router.post('/', async (req, res) => {
     res.json({ status });
   } catch (err) {
     console.error('Create status error:', err);
-    res.status(500).json({ error: 'Failed to post status' });
+    res.status(500).json({ error: err.message || 'Failed to post status' });
   }
 });
 

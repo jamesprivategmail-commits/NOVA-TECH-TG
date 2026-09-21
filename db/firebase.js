@@ -192,7 +192,13 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
   // but put videos and other large files in Firebase Storage.
   if (byteLength > 700 * 1024) {
     const storagePath = `dark-chat/${userId || 'system'}/${fileId}/${filename}`;
-    await uploadBytes(storageRef(firebaseStorage, storagePath), Buffer.from(base64Data, 'base64'), { contentType: detectedMime });
+    try {
+      await uploadBytes(storageRef(firebaseStorage, storagePath), Buffer.from(base64Data, 'base64'), { contentType: detectedMime });
+    } catch (storageErr) {
+      const wrapped = new Error(`Firebase Storage upload failed (${storageErr.code || 'unknown'}): ${storageErr.message}`);
+      wrapped.cause = storageErr;
+      throw wrapped;
+    }
     await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, storagePath });
   } else {
     await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, data: base64Data });

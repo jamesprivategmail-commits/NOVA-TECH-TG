@@ -1140,7 +1140,7 @@ async function addMemberFlow(conv) {
     };
     openSheet({
       title: 'Add members',
-      body: `<div class="sheet-body">${users.map((u) => `<label class="option"><input type="checkbox" class="member-pick" value="${escapeHtml(u.nova_id)}"><span>${avatar({ displayName: u.display_name, avatarUrl: u.avatar_url, avatarColor: u.avatar_color }, { size: 'sm' })}</span><span class="option-copy">${escapeHtml(u.display_name)}<small>${escapeHtml(u.nova_id || '')}</small></span></label>`).join('')}</div>`,
+      body: `<div class="sheet-body">${users.map((u) => `<label class="option"><input type="checkbox" class="member-pick" value="${escapeHtml(u.novaId || '')}"><span>${avatar({ displayName: u.displayName, avatarUrl: u.avatarUrl, avatarColor: u.avatarColor }, { size: 'sm' })}</span><span class="option-copy">${escapeHtml(u.displayName || 'DARK CHAT User')}<small>${escapeHtml(u.novaId || '')}</small></span></label>`).join('')}</div>`,
       footer: `<div class="sheet-pad row"><button class="btn btn-ghost grow" data-act="cancel">Cancel</button><button class="btn btn-primary grow" data-act="add">Add selected</button></div>`,
       onMount(sheet) {
         sheet.querySelector('[data-act="cancel"]').addEventListener('click', () => done([]));
@@ -1192,6 +1192,7 @@ async function openConversationInfo() {
   try {
     const res = await api.members(conv.id);
     const members = res.members || [];
+    const canManage = ['owner', 'admin'].includes(conv.role || conv.members?.[state.me?.id]?.role || (conv.owner_id === state.me?.id ? 'owner' : null));
     openSheet({
       title: escapeHtml(conversationTitle(conv)),
       body: `<div class="sheet-body">${members.map((m) => `<div class="option">
@@ -1200,7 +1201,7 @@ async function openConversationInfo() {
       </div>`).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
-        <label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>
+        ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
       </div>`,
       onMount(sheet) {
         sheet.querySelector('#copy-invite')?.addEventListener('click', async () => {
@@ -1218,8 +1219,9 @@ async function openConversationInfo() {
           try {
             const dataUrl = await fileToDataUrl(file);
             const upload = await api.upload(dataUrl, file.type, file.name);
+            if (!upload?.url) throw new Error('The image upload did not return a usable URL');
             const result = await api.updateConversation(conv.id, { avatarUrl: upload.url });
-            Object.assign(conv, result.conversation || {}, { avatar_url: upload.url });
+            Object.assign(conv, result.conversation || {}, { avatar_url: result.conversation?.avatar_url || upload.url });
             emit('conversations:changed'); renderHeader(); toast('Group picture updated', 'success');
           } catch (err) { toast(err.message || 'Could not update group picture'); }
         });

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { managementDefaults } = require('./conversationPermissions');
 const { initializeApp, getApps } = require('firebase/app');
 const {
   getAuth,
@@ -465,6 +466,7 @@ async function createConversation(data) {
     invite_code: data.inviteCode || data.invite_code || null,
     member_ids: data.memberIds || data.member_ids || [],
     members: data.members || {}, // map: { [userId]: { role: 'owner'|'admin'|'member', joined_at: ... } }
+    ...managementDefaults(data),
     last_message: null,
     last_message_at: null,
     last_sender_id: null,
@@ -646,7 +648,8 @@ async function getConversationMembers(convId) {
         avatar_url: user.avatar_url,
         avatar_data: user.avatar_data,
         is_verified: user.is_verified,
-        role: conv.members?.[uid]?.role || (conv.owner_id === uid ? 'owner' : 'member')
+        role: conv.members?.[uid]?.role || (conv.owner_id === uid ? 'owner' : 'member'),
+        muted_until: conv.members?.[uid]?.muted_until || null
       });
     }
   }

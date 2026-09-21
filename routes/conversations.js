@@ -24,9 +24,14 @@ const {
 } = require('../db/firebase');
 const { generateInviteCode } = require('../db/idGen');
 const { requireAuth } = require('../middleware/auth');
+const { roleFor, hasPermission, canActOnTarget } = require('../db/conversationPermissions');
 
 const router = express.Router();
 router.use(requireAuth);
+
+function auditEntry(actionType, actorId, targetId = null, reason = null) {
+  return { action_type: actionType, actor_id: String(actorId), target_id: targetId == null ? null : String(targetId), reason, timestamp: new Date().toISOString() };
+}
 
 // GET /api/conversations - list all conversations for current user
 router.get('/', async (req, res) => {
@@ -184,10 +189,7 @@ router.post('/:id/members', async (req, res) => {
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
 
-    const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
-    if (!['owner', 'admin'].includes(role)) {
-      return res.status(403).json({ error: 'Only the owner or admins can add members' });
-    }
+    if (!hasPermission(conv, req.user.id, conv.type === 'channel' ? 'can_add_subscribers' : 'can_add_members')) return res.status(403).json({ error: 'You do not have permission to add members' });
     if (conv.type !== 'group') {
       return res.status(400).json({ error: 'Can only add members to groups' });
     }
@@ -197,12 +199,13 @@ router.post('/:id/members', async (req, res) => {
     const added = [];
     for (const requestedId of requested) {
       const target = await getUserByNovaId(requestedId);
-      if (target && !(conv.member_ids || []).includes(target.id)) {
+      if (target && !(conv.banned_user_ids || []).includes(String(target.id)) && !(conv.member_ids || []).includes(target.id)) {
         await addConversationMember(convId, target.id, 'member');
         added.push({ id: target.id, display_name: target.display_name, avatar_color: target.avatar_color, role: 'member' });
       }
     }
     if (!added.length) return res.status(404).json({ error: 'No new users were selected' });
+    await updateConversation(convId, { audit_log: [...(conv.audit_log || []), ...added.map((member) => auditEntry('member_added', req.user.id, member.id))].slice(-200) });
     res.json({ members: added, member: added[0] });
   } catch (err) {
     console.error('Add member error:', err);
@@ -218,11 +221,10 @@ router.delete('/:id/members/:userId', async (req, res) => {
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
 
-    const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
-    if (!['owner', 'admin'].includes(role) && String(req.user.id) !== targetUserId) {
-      return res.status(403).json({ error: 'Only the owner or admins can remove members' });
-    }
+    const isSelf = String(req.user.id) === targetUserId;
+    if (!isSelf && !canActOnTarget(conv, req.user.id, targetUserId, conv.type === 'channel' ? 'can_ban_subscribers' : 'can_kick')) return res.status(403).json({ error: 'You do not have permission to remove that member' });
     const targetRole = conv.members?.[targetUserId]?.role || (conv.owner_id === targetUserId ? 'owner' : 'member');
+    if (targetRole === 'owner' && isSelf) return res.status(400).json({ error: 'Transfer ownership before leaving' });
     if (targetRole === 'owner' && role !== 'owner') return res.status(403).json({ error: 'Admins cannot remove the owner' });
     if (targetRole === 'owner') {
       const successor = Object.entries(conv.members || {})
@@ -232,10 +234,67 @@ router.delete('/:id/members/:userId', async (req, res) => {
       await updateConversation(convId, { owner_id: successor[0], members: { ...conv.members, [successor[0]]: { ...successor[1], role: 'owner' } } });
     }
     await removeConversationMember(convId, targetUserId);
+    await updateConversation(convId, { audit_log: [...(conv.audit_log || []), auditEntry(isSelf ? 'member_left' : 'member_removed', req.user.id, targetUserId)].slice(-200) });
     res.json({ ok: true });
   } catch (err) {
     console.error('Remove member error:', err);
     res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
+// POST /api/conversations/:id/ownership { userId }
+router.post('/:id/ownership', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv || !['group', 'channel'].includes(conv.type)) return res.status(404).json({ error: 'Group or channel not found' });
+    if (String(conv.owner_id) !== String(req.user.id)) return res.status(403).json({ error: 'Only the owner can transfer ownership' });
+    const targetId = String(req.body?.userId || '');
+    if (!targetId || !(conv.member_ids || []).includes(targetId)) return res.status(404).json({ error: 'New owner must be a member' });
+    if (targetId === String(req.user.id)) return res.status(400).json({ error: 'You are already the owner' });
+    const members = { ...(conv.members || {}) };
+    members[String(req.user.id)] = { ...(members[String(req.user.id)] || {}), role: 'admin' };
+    members[targetId] = { ...(members[targetId] || {}), role: 'owner' };
+    const updated = await updateConversation(conv.id, { owner_id: targetId, members, audit_log: [...(conv.audit_log || []), auditEntry('ownership_transferred', req.user.id, targetId)].slice(-200) });
+    res.json({ conversation: updated });
+  } catch (err) {
+    console.error('Transfer ownership error:', err);
+    res.status(500).json({ error: 'Failed to transfer ownership' });
+  }
+});
+
+// PATCH /api/conversations/:id/members/:userId/moderation { action: mute|unmute|ban|unban, durationSeconds }
+router.patch('/:id/members/:userId/moderation', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv || !['group', 'channel'].includes(conv.type)) return res.status(404).json({ error: 'Group or channel not found' });
+    const targetId = String(req.params.userId);
+    const action = String(req.body?.action || '').toLowerCase();
+    if (!['mute', 'unmute', 'ban', 'unban'].includes(action)) return res.status(400).json({ error: 'Invalid moderation action' });
+    if (targetId === String(conv.owner_id)) return res.status(403).json({ error: 'The owner is protected from moderation actions' });
+    const permission = conv.type === 'channel' ? 'can_ban_subscribers' : action.startsWith('ban') ? 'can_ban' : 'can_mute';
+    if (!hasPermission(conv, req.user.id, permission)) return res.status(403).json({ error: 'You do not have permission to moderate members' });
+    const members = { ...(conv.members || {}) };
+    const banned = new Set((conv.banned_user_ids || []).map(String));
+    if (action === 'mute' || action === 'unmute') {
+      if (!members[targetId]) return res.status(404).json({ error: 'Member not found' });
+      const duration = Math.max(0, Number(req.body?.durationSeconds) || 0);
+      members[targetId] = { ...members[targetId], muted_until: action === 'mute' ? (duration ? new Date(Date.now() + duration * 1000).toISOString() : '9999-12-31T23:59:59.999Z') : null };
+    } else if (action === 'ban') {
+      banned.add(targetId);
+      delete members[targetId];
+    } else {
+      banned.delete(targetId);
+    }
+    const updates = {
+      members,
+      member_ids: action === 'ban' ? (conv.member_ids || []).filter((id) => String(id) !== targetId) : (conv.member_ids || []),
+      banned_user_ids: Array.from(banned),
+      audit_log: [...(conv.audit_log || []), auditEntry(`member_${action}`, req.user.id, targetId)].slice(-200)
+    };
+    res.json({ conversation: await updateConversation(conv.id, updates) });
+  } catch (err) {
+    console.error('Moderation error:', err);
+    res.status(500).json({ error: 'Failed to update member moderation' });
   }
 });
 
@@ -244,7 +303,7 @@ router.patch('/:id/members/:userId/role', async (req, res) => {
   try {
     const conv = await getConversationById(req.params.id);
     if (!conv || !['group', 'channel'].includes(conv.type)) return res.status(404).json({ error: 'Group or channel not found' });
-    const actorRole = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
+    const actorRole = roleFor(conv, req.user.id);
     if (actorRole !== 'owner') return res.status(403).json({ error: 'Only the owner can change admin roles' });
     const targetId = String(req.params.userId);
     if (targetId === String(conv.owner_id)) return res.status(400).json({ error: 'The owner role cannot be changed' });
@@ -252,7 +311,8 @@ router.patch('/:id/members/:userId/role', async (req, res) => {
     const members = { ...(conv.members || {}) };
     if (!members[targetId]) return res.status(404).json({ error: 'Member not found' });
     members[targetId] = { ...members[targetId], role: req.body.role };
-    res.json({ conversation: await updateConversation(conv.id, { members }) });
+    const updated = await updateConversation(conv.id, { members, audit_log: [...(conv.audit_log || []), auditEntry(req.body.role === 'admin' ? 'member_promoted' : 'admin_demoted', req.user.id, targetId)].slice(-200) });
+    res.json({ conversation: updated });
   } catch (err) {
     console.error('Update member role error:', err);
     res.status(500).json({ error: 'Failed to update member role' });
@@ -263,7 +323,7 @@ router.patch('/:id/members/:userId/role', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const convId = req.params.id;
-    const { name, pinned, archived, muted, wallpaper, avatarUrl, inviteCode } = req.body || {};
+    const { name, description, visibility, pinned, archived, muted, wallpaper, avatarUrl, inviteCode, isLocked, lockedPermissions, adminPermissions, slowModeSeconds } = req.body || {};
 
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
@@ -277,6 +337,15 @@ router.put('/:id', async (req, res) => {
       if (conv.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the owner can rename this' });
       updates.name = String(name).trim().slice(0, 120);
     }
+    if (description !== undefined || visibility !== undefined) {
+      if (!hasPermission(conv, req.user.id, conv.type === 'channel' ? 'can_edit_channel_info' : 'can_edit_group_info')) return res.status(403).json({ error: 'You do not have permission to edit this information' });
+      if (description !== undefined) updates.description = String(description).slice(0, 1000);
+      if (visibility !== undefined) {
+        if (!['public', 'private'].includes(String(visibility))) return res.status(400).json({ error: 'Visibility must be public or private' });
+        updates.visibility = String(visibility);
+        updates.settings = { ...(conv.settings || {}), public: String(visibility) === 'public' };
+      }
+    }
     if (avatarUrl !== undefined) {
       if (!['group', 'channel'].includes(conv.type)) return res.status(400).json({ error: 'Only groups and channels have profile pictures' });
       const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
@@ -289,6 +358,26 @@ router.put('/:id', async (req, res) => {
       const normalized = String(inviteCode).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
       if (normalized.length < 6) return res.status(400).json({ error: 'Invite link must be at least 6 characters' });
       updates.invite_code = normalized;
+    }
+    if (isLocked !== undefined) {
+      if (conv.type === 'dm') return res.status(400).json({ error: 'Direct messages cannot be locked' });
+      if (!hasPermission(conv, req.user.id, 'can_lock_group')) return res.status(403).json({ error: 'You do not have permission to lock this conversation' });
+      updates.is_locked = Boolean(isLocked);
+      updates.locked_by = Boolean(isLocked) ? String(req.user.id) : null;
+      updates.locked_at = Boolean(isLocked) ? new Date().toISOString() : null;
+      updates.audit_log = [...(conv.audit_log || []), auditEntry(Boolean(isLocked) ? 'conversation_locked' : 'conversation_unlocked', req.user.id)].slice(-200);
+    }
+    if (lockedPermissions !== undefined) {
+      if (!hasPermission(conv, req.user.id, 'can_lock_group')) return res.status(403).json({ error: 'You do not have permission to change lock settings' });
+      updates.locked_permissions = { ...(conv.locked_permissions || {}), ...(lockedPermissions || {}) };
+    }
+    if (adminPermissions !== undefined) {
+      if (roleFor(conv, req.user.id) !== 'owner') return res.status(403).json({ error: 'Only the owner can change admin permissions' });
+      updates.admin_permissions = { ...(conv.admin_permissions || {}), ...(adminPermissions || {}) };
+    }
+    if (slowModeSeconds !== undefined) {
+      if (!hasPermission(conv, req.user.id, 'can_edit_group_info')) return res.status(403).json({ error: 'You do not have permission to change slow mode' });
+      updates.slow_mode_seconds = Math.max(0, Math.min(86400, Number(slowModeSeconds) || 0));
     }
     for (const [key, value] of Object.entries({ pinned, archived, muted, wallpaper })) {
       if (value !== undefined) updates[key] = key === 'wallpaper' ? String(value).slice(0, 200) : Boolean(value);
@@ -364,6 +453,10 @@ router.post('/:id/messages', async (req, res) => {
       }
     }
     const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
+    if ((conv.banned_user_ids || []).includes(String(req.user.id))) return res.status(403).json({ error: 'You are banned from this conversation' });
+    if (conv.members?.[req.user.id]?.muted_until && new Date(conv.members[req.user.id].muted_until).getTime() > Date.now()) return res.status(403).json({ error: 'You are muted in this conversation' });
+    if (conv.type === 'channel' && conv.is_locked) return res.status(403).json({ error: 'This channel is currently paused by the owner' });
+    if (conv.type === 'group' && conv.is_locked && !['owner', 'admin'].includes(role)) return res.status(403).json({ error: 'This group is locked — only admins can send messages' });
     if (conv.type === 'channel' && !['owner', 'admin'].includes(role)) {
       return res.status(403).json({ error: 'Only channel admins can post here' });
     }

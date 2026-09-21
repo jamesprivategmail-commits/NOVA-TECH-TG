@@ -148,7 +148,7 @@ function updateBlockedChatState(conv) {
   els.blockedNotice?.classList.toggle('hidden', !blocked);
   els.composer?.classList.toggle('hidden', blocked);
   els.darkPairCodeBar?.classList.toggle('hidden', blocked || conv?.other_user?.id !== 'u_dark_pair');
-  if (!els.blockedNotice || !blocked) return;
+  if (!els.blockedNotice || !blocked) { renderRestrictionState(); return; }
   if (blockedByMe) {
     const name = escapeHtml(conv.other_user?.display_name || 'this user');
     els.blockedNotice.innerHTML = `<span>You blocked ${name}.</span><button class="btn btn-ghost btn-sm" id="unblock-chat-user">Unblock</button>`;
@@ -164,6 +164,7 @@ function updateBlockedChatState(conv) {
   } else {
     els.blockedNotice.textContent = 'This user has blocked you.';
   }
+  renderRestrictionState();
 }
 
 function submitDarkPairCode() {
@@ -196,6 +197,7 @@ function renderHeader() {
   els.chatAvatar.outerHTML = avatar(user, { size: 'sm', id: 'chat-avatar' });
   els.chatAvatar = $('#chat-avatar');
   els.title.innerHTML = `${escapeHtml(conversationTitle(conv))} ${verifyBadge(conversationIsVerified(conv))}`;
+  if (conv.is_locked) els.title.innerHTML = `${icon('lock')} ${els.title.innerHTML}`;
   renderPresenceState();
   // channels: only owners/admins can post
   const role = conv.role || conv.members?.[state.me?.id]?.role;
@@ -203,6 +205,27 @@ function renderHeader() {
   els.input.disabled = !canPost;
   els.input.placeholder = canPost ? 'Message' : 'Only admins can post in this channel';
   els.sendBtn.disabled = !canPost;
+  renderRestrictionState();
+}
+
+function renderRestrictionState() {
+  const conv = state.activeConv;
+  if (!conv || !els.input || !els.blockedNotice) return;
+  const role = conv.role || conv.members?.[state.me?.id]?.role;
+  const lockedForMe = conv.is_locked && (conv.type === 'channel' || !['owner', 'admin'].includes(role));
+  if (lockedForMe) {
+    els.input.disabled = true;
+    els.sendBtn.disabled = true;
+    els.input.placeholder = conv.type === 'channel' ? 'This channel is currently paused' : 'Group is locked — only admins can send messages';
+    [els.attachBtn, els.voiceBtn, els.emojiBtn].forEach((button) => { if (button) button.disabled = true; });
+    if (!els.blockedNotice.textContent.includes('blocked')) {
+      els.blockedNotice.innerHTML = `<span>${conv.type === 'channel' ? 'This channel is currently paused by the owner.' : 'This group is locked. Only admins can send messages and manage the group.'}</span>`;
+      els.blockedNotice.classList.remove('hidden');
+    }
+  } else {
+    [els.attachBtn, els.voiceBtn, els.emojiBtn].forEach((button) => { if (button) button.disabled = false; });
+    if (!els.blockedNotice.textContent.includes('blocked')) els.blockedNotice.classList.add('hidden');
+  }
 }
 
 function renderPresenceState() {
@@ -1205,22 +1228,65 @@ async function openConversationInfo() {
   try {
     const res = await api.members(conv.id);
     const members = res.members || [];
-    const canManage = ['owner', 'admin'].includes(conv.role || conv.members?.[state.me?.id]?.role || (conv.owner_id === state.me?.id ? 'owner' : null));
+    const actorRole = conv.role || conv.members?.[state.me?.id]?.role || (conv.owner_id === state.me?.id ? 'owner' : null);
+    const canManage = ['owner', 'admin'].includes(actorRole);
+    const canChangeRoles = actorRole === 'owner';
     openSheet({
       title: escapeHtml(conversationTitle(conv)),
-      body: `<div class="sheet-body">${members.map((m) => `<div class="option">
+      body: `<div class="sheet-body">${members.map((m) => `<div class="option member-management-row">
         ${avatar({ displayName: m.display_name, avatarUrl: m.avatar_url, avatarColor: m.avatar_color }, { size: 'sm' })}
         <span class="option-copy">${escapeHtml(m.display_name)} ${verifyBadge(m.is_verified)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
+        ${m.id !== conv.owner_id && canManage ? `<span class="member-actions">
+          ${canChangeRoles ? `<button class="icon-btn" data-member-role="${escapeHtml(m.id)}" data-role="${m.role === 'admin' ? 'member' : 'admin'}" aria-label="${m.role === 'admin' ? 'Demote' : 'Promote'}">${icon('user')}</button>` : ''}
+          ${canChangeRoles ? `<button class="icon-btn" data-transfer-owner="${escapeHtml(m.id)}" aria-label="Transfer ownership">${icon('share')}</button>` : ''}
+          <button class="icon-btn" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="${m.muted_until ? 'unmute' : 'mute'}" aria-label="${m.muted_until ? 'Unmute' : 'Mute'}">${icon('volume')}</button>
+          <button class="icon-btn danger" data-member-moderation="${escapeHtml(m.id)}" data-moderation-action="ban" aria-label="Ban">${icon('trash')}</button>
+        </span>` : ''}
       </div>`).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
         ${conv.type === 'group' && canManage ? `<button class="btn btn-primary btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
+        ${['group', 'channel'].includes(conv.type) && canManage ? `<button class="btn btn-ghost btn-block" id="toggle-conversation-lock">${icon(conv.is_locked ? 'unlock' : 'lock')} ${conv.is_locked ? (conv.type === 'channel' ? 'Resume channel' : 'Unlock group') : (conv.type === 'channel' ? 'Pause channel' : 'Lock group')}</button>` : ''}
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
         ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
       </div>`,
       onMount(sheet) {
+        sheet.querySelectorAll('[data-transfer-owner]').forEach((button) => button.addEventListener('click', async () => {
+          const member = members.find((item) => String(item.id) === String(button.dataset.transferOwner));
+          const ok = await confirmSheet({ title: 'Transfer ownership', message: `Make ${member?.display_name || 'this member'} the new owner? You will become an admin.`, confirmText: 'Transfer', danger: true });
+          if (!ok) return;
+          try { await api.transferOwnership(conv.id, button.dataset.transferOwner); Object.assign(conv, { owner_id: button.dataset.transferOwner, role: 'admin' }); toast('Ownership transferred', 'success'); closeSheet(); openConversationInfo(); }
+          catch (err) { toast(err.message || 'Could not transfer ownership'); }
+        }));
+        sheet.querySelectorAll('[data-member-role]').forEach((button) => button.addEventListener('click', async () => {
+          try {
+            await api.updateMemberRole(conv.id, button.dataset.memberRole, button.dataset.role);
+            toast(button.dataset.role === 'admin' ? 'Member promoted' : 'Admin demoted', 'success');
+            closeSheet();
+            openConversationInfo();
+          } catch (err) { toast(err.message || 'Could not update role'); }
+        }));
+        sheet.querySelectorAll('[data-member-moderation]').forEach((button) => button.addEventListener('click', async () => {
+          try {
+            await api.moderateMember(conv.id, button.dataset.memberModeration, button.dataset.moderationAction);
+            toast(button.dataset.moderationAction === 'ban' ? 'Member banned' : button.dataset.moderationAction === 'mute' ? 'Member muted' : 'Member unmuted', 'success');
+            closeSheet();
+            openConversationInfo();
+          } catch (err) { toast(err.message || 'Could not update moderation'); }
+        }));
         sheet.querySelector('#add-group-members')?.addEventListener('click', () => {
           closeSheet();
           openAddMembersSheet(conv);
+        });
+        sheet.querySelector('#toggle-conversation-lock')?.addEventListener('click', async () => {
+          const button = sheet.querySelector('#toggle-conversation-lock');
+          setBusy(button, true, conv.is_locked ? 'Resuming...' : 'Locking...');
+          try {
+            const result = await api.updateConversation(conv.id, { isLocked: !conv.is_locked });
+            Object.assign(conv, result.conversation || {}, { is_locked: !conv.is_locked });
+            closeSheet();
+            renderHeader();
+            toast(conv.is_locked ? (conv.type === 'channel' ? 'Channel paused' : 'Group locked') : (conv.type === 'channel' ? 'Channel resumed' : 'Group unlocked'), 'success');
+          } catch (err) { toast(err.message || 'Could not change lock state'); setBusy(button, false); }
         });
         sheet.querySelector('#copy-invite')?.addEventListener('click', async () => {
           try { await navigator.clipboard.writeText(conv.invite_code); toast('Copied', 'success'); } catch { toast(conv.invite_code); }

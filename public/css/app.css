@@ -705,6 +705,10 @@ input, textarea { font-size: 16px; }
 }
 .option-copy { flex: 1; min-width: 0; }
 .option-copy small { display: block; color: var(--muted); font-size: 12.5px; }
+.member-management-row .member-actions { display: inline-flex; align-items: center; gap: 2px; }
+.member-management-row .member-actions .icon-btn { width: 30px; height: 30px; color: var(--muted); }
+.member-management-row .member-actions .icon-btn:hover { color: var(--text); background: var(--surface3); }
+.member-management-row .member-actions .icon-btn.danger { color: var(--danger); }
 .option.danger { color: var(--danger); }
 .option.danger .option-icon { color: var(--danger); }
 .tabs { display: flex; gap: 6px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }

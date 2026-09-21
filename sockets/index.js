@@ -12,6 +12,7 @@ const {
   markConversationRead,
   createNotification
 } = require('../db/firebase');
+const { roleFor, hasPermission } = require('../db/conversationPermissions');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026';
 
@@ -76,6 +77,7 @@ function initSockets(io) {
         if (!isMember && conv.type !== 'channel') {
           return ack?.({ error: 'Not a member of this conversation' });
         }
+        if ((conv.banned_user_ids || []).includes(String(userId))) return ack?.({ error: 'You are banned from this conversation' });
 
         if (conv.type === 'dm') {
           const otherId = (conv.member_ids || []).find((id) => String(id) !== String(userId));
@@ -86,6 +88,11 @@ function initSockets(io) {
         }
 
         const role = conv.members?.[userId]?.role || (conv.owner_id === userId ? 'owner' : null);
+        const memberState = conv.members?.[userId] || {};
+        if (memberState.muted_until && new Date(memberState.muted_until).getTime() > Date.now()) return ack?.({ error: 'You are muted in this conversation' });
+        if (conv.type === 'channel' && conv.is_locked) return ack?.({ error: 'This channel is currently paused by the owner' });
+        if (conv.type === 'group' && conv.is_locked && !['owner', 'admin'].includes(role)) return ack?.({ error: 'This group is locked — only admins can send messages' });
+        if (hasMedia && conv.type === 'group' && conv.is_locked && conv.locked_permissions?.media !== false && !['owner', 'admin'].includes(role)) return ack?.({ error: 'Media sharing is disabled while this group is locked' });
         // Channels: only owner/admin can post
         if (conv.type === 'channel' && !['owner', 'admin'].includes(role)) {
           return ack?.({ error: 'Only channel admins can post here' });

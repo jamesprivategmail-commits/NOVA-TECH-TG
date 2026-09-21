@@ -97,10 +97,20 @@ function renderPosts() {
     const url = img.getAttribute('data-open-post-image');
     const viewer = $('#viewer');
     viewer.hidden = false;
-    viewer.innerHTML = `<div class="viewer-stage"><img src="${escapeHtml(url)}" alt=""></div>
-      <div class="viewer-foot"><button class="btn btn-ghost btn-block" id="lightbox-close">Close</button></div>`;
-    viewer.querySelector('#lightbox-close').addEventListener('click', () => { viewer.hidden = true; viewer.innerHTML = ''; });
+    viewer.innerHTML = `<button class="viewer-lightbox-close" id="lightbox-close" aria-label="Close post" title="Close post">${icon('x')}</button>
+      <div class="viewer-stage"><img src="${escapeHtml(url)}" alt=""></div>`;
+    viewer.tabIndex = -1;
+    viewer.querySelector('#lightbox-close').addEventListener('click', closePostLightbox);
+    viewer.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePostLightbox(); }, { once: true });
+    viewer.focus?.();
   }));
+}
+
+function closePostLightbox() {
+  const viewer = $('#viewer');
+  if (!viewer) return;
+  viewer.hidden = true;
+  viewer.innerHTML = '';
 }
 
 function postHtml(p) {

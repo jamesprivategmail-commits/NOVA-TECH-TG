@@ -606,6 +606,29 @@ input, textarea { font-size: 16px; }
 .channel-chevron .icon { width: 17px; height: 17px; }
 .composer.recording .composer-icon-btn, .composer.recording .composer-input { opacity: .4; pointer-events: none; }
 
+/* Supplied dark chat design: shared by DMs, groups, and channels. The
+   existing composer/keyboard controls remain structurally unchanged. */
+.chat-screen { background: #000; }
+.chat-header { background: #000; border-bottom-color: #1c1c1c; padding: calc(10px + var(--safe-t)) 10px 10px; }
+.chat-user-name { color: #e8e8e8; font-size: 16px; font-weight: 700; }
+.chat-user-state { color: #8a8a8a; }
+.chat-header-actions { gap: 10px; }
+.chat-header-actions .icon-btn { color: #d0d0d0; }
+.messages { padding: 24px 16px 10px; gap: 10px; }
+.day { background: transparent; color: #7a7a7a; padding: 0; margin: 0 0 14px; text-transform: none; font-size: 12.5px; font-weight: 400; }
+.message { max-width: 75%; }
+.bubble { padding: 9px 16px; border-radius: 20px; background: #262626; font-size: 16px; line-height: 1.35; }
+.message.own .bubble { background: #3a9bfc; border-radius: 20px; color: #fff; }
+.meta { color: #7a7a7a; padding-top: 4px; }
+.message.own .meta { color: #8a8a8a; }
+.composer { background: #1c1c1c; border-color: #1c1c1c; border-radius: 22px; margin: 10px 12px calc(20px + var(--safe-b)); padding: 9px 8px 9px 16px; }
+.composer:focus-within { background: #1c1c1c; }
+.composer-input { min-height: 28px; padding: 0 0 4px; font-size: 15px; }
+.composer-icon-btn { color: #d0d0d0; }
+.send { background: #3a9bfc; color: #fff; }
+.viewer-lightbox-close { position: absolute; z-index: 5; top: calc(14px + var(--safe-t)); right: 14px; width: 38px; height: 38px; border: 0; border-radius: 50%; background: rgba(38,38,38,.86); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+.viewer-lightbox-close .icon { width: 20px; height: 20px; }
+
 /* ============================================================
    CALL
    ============================================================ */

@@ -189,8 +189,10 @@ function openViewerForUser(userId, focusId = null) {
   const viewer = els.viewer;
   viewer.hidden = false;
   viewerPointerCleanup?.();
+  let pointerStartedAt = 0;
   const onPointerDown = (event) => {
-    if (event.target.closest('button, input, video')) return;
+    if (event.target.closest('button, input')) return;
+    pointerStartedAt = Date.now();
     event.preventDefault();
     viewer.setPointerCapture?.(event.pointerId);
     pauseProgress();
@@ -198,32 +200,26 @@ function openViewerForUser(userId, focusId = null) {
   const onPointerUp = (event) => {
     if (viewer.hasPointerCapture?.(event.pointerId)) viewer.releasePointerCapture(event.pointerId);
     resumeProgress();
+    if (!event.target.closest('button, input, video') && pointerStartedAt && Date.now() - pointerStartedAt < 350) {
+      const rect = viewer.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      if (x <= rect.width * 0.35 && index > 0) { index--; render(); }
+      else if (x >= rect.width * 0.65) advance();
+    }
+    pointerStartedAt = 0;
   };
   viewer.addEventListener('pointerdown', onPointerDown);
   viewer.addEventListener('pointerup', onPointerUp);
   viewer.addEventListener('pointercancel', onPointerUp);
   viewer.addEventListener('lostpointercapture', resumeProgress);
   const onContextMenu = (event) => event.preventDefault();
-  const onStageTap = (event) => {
-    if (event.target.closest('button, input, video')) return;
-    const rect = viewer.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    if (x <= rect.width * 0.35 && index > 0) {
-      index--;
-      render();
-    } else if (x >= rect.width * 0.65) {
-      advance();
-    }
-  };
   viewer.addEventListener('contextmenu', onContextMenu);
-  viewer.addEventListener('click', onStageTap);
   viewerPointerCleanup = () => {
     viewer.removeEventListener('pointerdown', onPointerDown);
     viewer.removeEventListener('pointerup', onPointerUp);
     viewer.removeEventListener('pointercancel', onPointerUp);
     viewer.removeEventListener('lostpointercapture', resumeProgress);
     viewer.removeEventListener('contextmenu', onContextMenu);
-    viewer.removeEventListener('click', onStageTap);
     viewerPointerCleanup = null;
   };
 
@@ -259,9 +255,12 @@ function openViewerForUser(userId, focusId = null) {
     viewer.querySelector('#viewer-prev')?.addEventListener('click', () => { index--; render(); });
     viewer.querySelector('#viewer-next')?.addEventListener('click', () => advance());
     viewer.querySelector('#viewer-delete')?.addEventListener('click', async () => {
+      // The confirmation sheet sits below the full-screen viewer. Close the
+      // viewer first so the confirmation controls are actually tappable.
+      closeViewer();
       const ok = await confirmSheet({ title: 'Delete status', message: 'Delete this status?', confirmText: 'Delete', danger: true });
       if (!ok) return;
-      try { await api.deleteStatus(s.id); toast('Deleted'); closeViewer(); loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
+      try { await api.deleteStatus(s.id); toast('Deleted', 'success'); await loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
     });
     viewer.querySelector('#viewer-send').addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
 

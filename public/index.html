@@ -298,13 +298,21 @@
     <div class="blocked-chat-notice hidden" id="blocked-chat-notice"></div>
 
     <form class="composer" id="composer">
-      <textarea id="composer-input" class="composer-input" rows="1" placeholder="Message" aria-label="Message" autocomplete="off"></textarea>
-      <button type="button" class="composer-icon-btn" id="composer-emoji" aria-label="Emoji"><svg class="icon"><use href="#i-smile"></use></svg></button>
-      <button type="button" class="composer-icon-btn" id="composer-attach" aria-label="Attach"><svg class="icon"><use href="#i-paperclip"></use></svg></button>
-      <button type="button" class="composer-icon-btn" id="composer-voice" aria-label="Record voice note"><svg class="icon"><use href="#i-mic"></use></svg></button>
-      <button type="submit" class="send" id="send-btn" aria-label="Send">
-        <svg class="icon"><use href="#i-send"></use></svg>
-      </button>
+      <div class="composer-input-row">
+        <textarea id="composer-input" class="composer-input" rows="1" placeholder="Message" aria-label="Message" autocomplete="off"></textarea>
+      </div>
+      <div class="composer-controls-row">
+        <div class="composer-left-controls">
+          <button type="button" class="composer-icon-btn" id="composer-attach" aria-label="Add attachment"><svg class="icon"><use href="#i-plus"></use></svg></button>
+          <button type="button" class="composer-icon-btn" id="composer-emoji" aria-label="Emoji"><span aria-hidden="true">😊</span></button>
+        </div>
+        <div class="composer-right-controls">
+          <button type="button" class="composer-icon-btn" id="composer-voice" aria-label="Record voice note"><svg class="icon"><use href="#i-mic"></use></svg></button>
+          <button type="submit" class="send" id="send-btn" aria-label="Send">
+            <svg class="icon"><use href="#i-send"></use></svg>
+          </button>
+        </div>
+      </div>
       <input type="file" id="attach-input" class="hidden">
     </form>
   </section>

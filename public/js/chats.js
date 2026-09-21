@@ -2,7 +2,7 @@
 import { api, ApiError } from './api.js';
 import { state, emit, on, isUnread } from './state.js';
 import {
-  $, avatar, icon, escapeHtml, timeAgo, conversationTitle, conversationAvatarUser,
+  $, avatar, icon, escapeHtml, timeAgo, conversationTitle, conversationAvatarUser, conversationIsVerified, verifyBadge,
   emptyState, errorState, skeletonList, toast, openSheet, closeSheet, setBusy
 } from './ui.js';
 
@@ -42,6 +42,7 @@ export function initChats() {
 export function setConversations(list) {
   state.conversations = Array.isArray(list) ? list : [];
   renderChats();
+  emit('conversations:changed');
 }
 
 export function renderMeHeader() {
@@ -105,7 +106,7 @@ function conversationRow(conv) {
     <span class="chat-info">
       <span class="chat-top">
         ${pin}
-        <span class="chat-name truncate">${escapeHtml(conversationTitle(conv))}</span>
+        <span class="chat-name truncate">${escapeHtml(conversationTitle(conv))} ${verifyBadge(conversationIsVerified(conv))}</span>
         <span class="chat-time">${escapeHtml(timeAgo(conv.last_message_at))}</span>
       </span>
       <span class="chat-bottom">

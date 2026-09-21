@@ -3,7 +3,7 @@ import { api, ApiError } from './api.js';
 import { state, emit, on, markRead } from './state.js';
 import { joinConversation, sendMessage as socketSend, sendTyping, markConversationRead } from './socket.js';
 import {
-  $, avatar, icon, escapeHtml, formatTime, dayLabel, lastSeenLabel, conversationTitle,
+  $, avatar, icon, escapeHtml, formatTime, dayLabel, lastSeenLabel, conversationTitle, conversationIsVerified, verifyBadge,
   conversationAvatarUser, toast, openSheet, closeSheet, confirmSheet, promptSheet,
   emptyState, errorState, setBusy, fileToDataUrl, humanSize
 } from './ui.js';
@@ -195,7 +195,7 @@ function renderHeader() {
   const user = conversationAvatarUser(conv);
   els.chatAvatar.outerHTML = avatar(user, { size: 'sm', id: 'chat-avatar' });
   els.chatAvatar = $('#chat-avatar');
-  els.title.textContent = conversationTitle(conv);
+  els.title.innerHTML = `${escapeHtml(conversationTitle(conv))} ${verifyBadge(conversationIsVerified(conv))}`;
   renderPresenceState();
   // channels: only owners/admins can post
   const role = conv.role || conv.members?.[state.me?.id]?.role;
@@ -363,7 +363,7 @@ function messageHtml(msg, index, list) {
   const prev = list[index - 1];
   const grouped = prev && prev.sender_id === msg.sender_id && dayLabel(prev.created_at) === dayLabel(msg.created_at);
   const deleted = msg.deleted_for_everyone;
-  const sender = !own && !grouped ? `<span class="sender" style="color:${escapeHtml(msg.avatar_color || '#3da9ff')}">${escapeHtml(msg.display_name || 'User')}</span>` : '';
+  const sender = !own && !grouped ? `<span class="sender" style="color:${escapeHtml(msg.avatar_color || '#3da9ff')}">${escapeHtml(msg.display_name || 'User')} ${verifyBadge(msg.is_verified)}</span>` : '';
   const bubbleClass = ['bubble'];
   if (deleted) bubbleClass.push('deleted');
   const inner = deleted
@@ -956,7 +956,7 @@ async function onSearchInput() {
       title: `Results for "${escapeHtml(q)}"`,
       body: messages.length
         ? `<div class="sheet-body">${messages.map((m) => `<button class="option" data-goto="${escapeHtml(m.id)}">
-            <span class="option-copy"><b>${escapeHtml(m.display_name)}</b><small class="truncate">${escapeHtml(m.content)}</small></span>
+            <span class="option-copy"><b>${escapeHtml(m.display_name)} ${verifyBadge(m.is_verified)}</b><small class="truncate">${escapeHtml(m.content)}</small></span>
             <span class="muted" style="font-size:12px">${escapeHtml(formatTime(m.created_at))}</span>
           </button>`).join('')}</div>`
         : emptyState({ iconName: 'search', title: 'No matches', subtitle: 'Try another word.' }),
@@ -1196,7 +1196,7 @@ async function openConversationInfo() {
       title: escapeHtml(conversationTitle(conv)),
       body: `<div class="sheet-body">${members.map((m) => `<div class="option">
         ${avatar({ displayName: m.display_name, avatarUrl: m.avatar_url, avatarColor: m.avatar_color }, { size: 'sm' })}
-        <span class="option-copy">${escapeHtml(m.display_name)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
+        <span class="option-copy">${escapeHtml(m.display_name)} ${verifyBadge(m.is_verified)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
       </div>`).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}

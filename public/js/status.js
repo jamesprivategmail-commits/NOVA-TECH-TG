@@ -2,7 +2,7 @@
 import { api, ApiError } from './api.js';
 import { state, emit, on } from './state.js';
 import {
-  $, avatar, icon, escapeHtml, timeAgo, emptyState, errorState, skeletonList,
+  $, avatar, icon, escapeHtml, timeAgo, emptyState, errorState, skeletonList, verifyBadge,
   toast, openSheet, closeSheet, confirmSheet, setBusy, fileToDataUrl, fileToDataUrl as readFile
 } from './ui.js';
 
@@ -78,7 +78,7 @@ function renderStatus() {
         <span class="story-inner">${avatar({ displayName: g.name, avatarUrl: g.avatarUrl, avatarColor: g.color }, { cls: '' })}</span>
       </span>
       ${isOwn ? `<span class="story-plus">${icon('plus')}</span>` : ''}
-      <span class="story-name truncate">${escapeHtml(isOwn ? 'My status' : (g.name || 'User'))}</span>
+      <span class="story-name truncate">${escapeHtml(isOwn ? 'My status' : (g.name || 'User'))} ${verifyBadge(g.verified)}</span>
     </button>`;
   };
   let html = '<div class="story-strip">';
@@ -96,12 +96,12 @@ function renderChannels() {
   if (!els.channels) return;
   const channels = (state.conversations || []).filter((conversation) => conversation.type === 'channel');
   if (!channels.length) {
-    els.channels.innerHTML = '<div class="channel-empty">Channels you create or follow will appear here.</div>';
+    els.channels.innerHTML = '';
     return;
   }
   els.channels.innerHTML = channels.map((channel) => `<button class="channel-row" data-channel-id="${escapeHtml(channel.id)}">
     ${avatar({ displayName: channel.name || 'Channel', avatarUrl: channel.avatar_url, avatarColor: channel.avatar_color }, { size: 'sm' })}
-    <span class="channel-info"><span class="channel-name truncate">${escapeHtml(channel.name || 'Channel')} ${channel.is_verified ? icon('badge-check') : ''}</span><span class="channel-meta truncate">${escapeHtml(channel.last_message?.content || 'Channel updates')}</span></span>
+    <span class="channel-info"><span class="channel-name truncate">${escapeHtml(channel.name || 'Channel')} ${verifyBadge(channel.is_verified)}</span><span class="channel-meta truncate">${escapeHtml(channel.last_message?.content || 'Channel updates')}</span></span>
     <span class="channel-chevron">${icon('chevron-right')}</span>
   </button>`).join('');
   els.channels.querySelectorAll('[data-channel-id]').forEach((button) => button.addEventListener('click', () => {
@@ -203,7 +203,7 @@ function openViewerForUser(userId, focusId = null) {
       <div class="viewer-progress">${items.map((_, i) => `<div class="seg ${i < index ? 'done' : ''}"><span style="width:${i < index ? '100%' : '0%'}"></span></div>`).join('')}</div>
       <div class="viewer-head">
         ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
-        <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
+        <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')} ${verifyBadge(s.is_verified)}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
         ${isOwn ? `<button class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
         <button class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
       </div>

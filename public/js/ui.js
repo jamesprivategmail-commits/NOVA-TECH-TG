@@ -114,6 +114,11 @@ export function conversationTitle(conv) {
   return conv.name || (conv.type === 'channel' ? 'Channel' : 'Group');
 }
 
+export function conversationIsVerified(conv) {
+  if (!conv) return false;
+  return conv.type === 'dm' ? Boolean(conv.other_user?.is_verified) : Boolean(conv.is_verified);
+}
+
 export function conversationAvatarUser(conv) {
   if (!conv) return {};
   if (conv.type === 'dm' && conv.other_user) {
@@ -124,7 +129,7 @@ export function conversationAvatarUser(conv) {
       isVerified: conv.other_user.is_verified
     };
   }
-  return { displayName: conv.name, avatarColor: conv.avatar_color };
+  return { displayName: conv.name, avatarUrl: conv.avatar_url, avatarColor: conv.avatar_color, isVerified: conv.is_verified };
 }
 
 // ---------- toast ----------

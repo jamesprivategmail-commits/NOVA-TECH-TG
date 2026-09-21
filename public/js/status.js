@@ -187,6 +187,18 @@ function openViewerForUser(userId, focusId = null) {
   let index = focusId ? Math.max(0, items.findIndex((s) => s.id === focusId)) : 0;
   const viewer = els.viewer;
   viewer.hidden = false;
+  const onPointerDown = (event) => {
+    viewer.setPointerCapture?.(event.pointerId);
+    pauseProgress();
+  };
+  const onPointerUp = (event) => {
+    if (viewer.hasPointerCapture?.(event.pointerId)) viewer.releasePointerCapture(event.pointerId);
+    resumeProgress();
+  };
+  viewer.addEventListener('pointerdown', onPointerDown);
+  viewer.addEventListener('pointerup', onPointerUp);
+  viewer.addEventListener('pointercancel', onPointerUp);
+  viewer.addEventListener('lostpointercapture', resumeProgress);
 
   const render = () => {
     items = groups[userIndex].items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -224,9 +236,6 @@ function openViewerForUser(userId, focusId = null) {
       try { await api.deleteStatus(s.id); toast('Deleted'); closeViewer(); loadStatuses(); } catch (err) { toast(err.message || 'Delete failed'); }
     });
     viewer.querySelector('#viewer-send').addEventListener('click', () => replyToStatus(s, viewer.querySelector('#viewer-reply').value));
-    viewer.addEventListener('pointerdown', pauseProgress);
-    viewer.addEventListener('pointerup', resumeProgress);
-    viewer.addEventListener('pointercancel', resumeProgress);
 
     if (!s.viewed && !isOwn) api.viewStatus(s.id).catch(() => {});
     startProgress(s);
@@ -273,6 +282,7 @@ function openViewerForUser(userId, focusId = null) {
 
 function closeViewer() {
   clearTimeout(viewerTimer);
+  progressPaused = false;
   els.viewer.hidden = true;
   els.viewer.innerHTML = '';
 }

@@ -15,9 +15,14 @@ router.use(requireAuth);
 router.post('/', async (req, res) => {
   try {
     const { content, bgColor, mediaData, mediaMime, mediaType } = req.body || {};
-    if ((!content || !content.trim()) && !mediaData) return res.status(400).json({ error: 'Status text or media is required' });
+    if ((!content || !content.trim()) && !mediaData) return res.status(400).json({ error: 'Status text or photo/video is required' });
     let mediaUrl = null;
+    let normalizedMediaType = null;
     if (mediaData) {
+      if (!/^(image|video)\//i.test(String(mediaMime || ''))) {
+        return res.status(400).json({ error: 'Statuses support image and video files only' });
+      }
+      normalizedMediaType = String(mediaMime).toLowerCase().startsWith('video/') ? 'video' : 'image';
       const uploaded = await uploadToStorage({
         data: mediaData,
         mimeType: mediaMime || 'image/jpeg',
@@ -32,7 +37,7 @@ router.post('/', async (req, res) => {
       content: String(content || '').trim().slice(0, 300),
       bgColor: bgColor || '#0A84FF',
       mediaUrl,
-      mediaType: mediaType || null,
+      mediaType: normalizedMediaType || mediaType || null,
       mediaMime: mediaMime || null
     });
 

@@ -22,7 +22,7 @@ function composeHtml() {
     <div id="post-preview"></div>
     <div class="toolbar">
       <input type="file" id="post-image-input" accept="image/*,video/*" class="hidden">
-      <button type="button" class="icon-btn" id="post-image-btn" aria-label="Add image or video">${icon('image')}</button>
+      <button type="button" class="icon-btn" id="post-image-btn" aria-label="Add photo or video" title="Add photo or video">${icon('image')}</button>
       <span class="spacer"></span>
       <button type="submit" class="btn btn-primary btn-sm" id="post-submit">Post</button>
     </div>
@@ -50,7 +50,7 @@ function wireComposer() {
 async function onPost(e) {
   e.preventDefault();
   const caption = $('#post-caption').value.trim();
-  if (!caption && !composeImage) { toast('Add a caption or an image'); return; }
+  if (!caption && !composeImage) { toast('Add a caption or a photo or video'); return; }
   const btn = $('#post-submit');
   setBusy(btn, true, 'Posting...');
   try {

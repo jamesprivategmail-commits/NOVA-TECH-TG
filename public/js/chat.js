@@ -311,7 +311,12 @@ function mediaHtml(msg) {
 
 function replyQuoteHtml(msg) {
   const status = msg.status_reply;
-  const statusQuote = status ? `<div class="status-reply-quote"><span class="who">Replying to ${escapeHtml(status.author || 'status')}</span><div class="truncate">${escapeHtml(status.content || 'Status post')}</div></div>` : '';
+  const statusMedia = status?.media_url
+    ? (status.media_type === 'video'
+      ? `<video class="status-reply-media" src="${escapeHtml(status.media_url)}" muted playsinline preload="metadata"></video>`
+      : `<img class="status-reply-media" src="${escapeHtml(status.media_url)}" alt="Replied status">`)
+    : '';
+  const statusQuote = status ? `<div class="status-reply-quote"><span class="who">Replying to ${escapeHtml(status.author || 'status')}</span>${statusMedia}<div class="status-reply-text">${escapeHtml(status.content || 'Status post')}</div></div>` : '';
   if (!msg.reply_to_id) return statusQuote;
   const list = state.messages[msg.conversation_id] || [];
   const target = list.find((m) => m.id === msg.reply_to_id);
@@ -670,10 +675,12 @@ async function deliverTemp(convId, temp) {
   if (temp._attachment) {
     // real upload with progress, so failures and progress are honest
     try {
-      await uploadAttachment(temp._attachment, (pct) => {
+      const uploaded = await uploadAttachment(temp._attachment, (pct) => {
         els.attachProgress.querySelector('span').style.width = `${pct}%`;
       });
-      mediaData = { type: temp._attachment.type, data: temp._attachment.dataUrl, mime: temp._attachment.mime, duration: temp._attachment.duration };
+      // The upload endpoint already persisted the bytes. Send its URL through
+      // the socket instead of uploading the same large base64 payload again.
+      mediaData = { type: temp._attachment.type, url: uploaded.url, mime: uploaded.mimeType || temp._attachment.mime, duration: temp._attachment.duration };
     } catch (err) {
       temp._status = 'failed';
       update();
@@ -748,9 +755,15 @@ function uploadAttachment(att, onProgress) {
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
+        try {
+          const result = JSON.parse(xhr.responseText);
+          if (!result?.url) return reject(new Error('Upload completed without a usable file URL'));
+          resolve(result);
+        } catch { reject(new Error('Upload returned an invalid response')); }
       } else {
-        reject(new Error('Upload failed'));
+        let message = 'Upload failed';
+        try { message = JSON.parse(xhr.responseText)?.error || message; } catch { /* fallback */ }
+        reject(new Error(message));
       }
     };
     xhr.onerror = () => reject(new Error('Upload failed'));
@@ -1200,10 +1213,15 @@ async function openConversationInfo() {
         <span class="option-copy">${escapeHtml(m.display_name)} ${verifyBadge(m.is_verified)}<small>${escapeHtml(m.nova_id || '')} · ${escapeHtml(m.role || 'member')}</small></span>
       </div>`).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
+        ${conv.type === 'group' && canManage ? `<button class="btn btn-primary btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
         ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
       </div>`,
       onMount(sheet) {
+        sheet.querySelector('#add-group-members')?.addEventListener('click', () => {
+          closeSheet();
+          openAddMembersSheet(conv);
+        });
         sheet.querySelector('#copy-invite')?.addEventListener('click', async () => {
           try { await navigator.clipboard.writeText(conv.invite_code); toast('Copied', 'success'); } catch { toast(conv.invite_code); }
         });

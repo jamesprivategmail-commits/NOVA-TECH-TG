@@ -190,6 +190,8 @@ function openViewerForUser(userId, focusId = null) {
   viewer.hidden = false;
   viewerPointerCleanup?.();
   const onPointerDown = (event) => {
+    if (event.target.closest('button, input, video')) return;
+    event.preventDefault();
     viewer.setPointerCapture?.(event.pointerId);
     pauseProgress();
   };
@@ -201,11 +203,27 @@ function openViewerForUser(userId, focusId = null) {
   viewer.addEventListener('pointerup', onPointerUp);
   viewer.addEventListener('pointercancel', onPointerUp);
   viewer.addEventListener('lostpointercapture', resumeProgress);
+  const onContextMenu = (event) => event.preventDefault();
+  const onStageTap = (event) => {
+    if (event.target.closest('button, input, video')) return;
+    const rect = viewer.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    if (x <= rect.width * 0.35 && index > 0) {
+      index--;
+      render();
+    } else if (x >= rect.width * 0.65) {
+      advance();
+    }
+  };
+  viewer.addEventListener('contextmenu', onContextMenu);
+  viewer.addEventListener('click', onStageTap);
   viewerPointerCleanup = () => {
     viewer.removeEventListener('pointerdown', onPointerDown);
     viewer.removeEventListener('pointerup', onPointerUp);
     viewer.removeEventListener('pointercancel', onPointerUp);
     viewer.removeEventListener('lostpointercapture', resumeProgress);
+    viewer.removeEventListener('contextmenu', onContextMenu);
+    viewer.removeEventListener('click', onStageTap);
     viewerPointerCleanup = null;
   };
 
@@ -308,7 +326,7 @@ async function replyToStatus(status, text) {
       conversationId: dm.conversationId,
       content: value,
       novaId: status.nova_id,
-      statusReply: { id: status.id, author: status.display_name, content: status.content || (status.media_type === 'video' ? 'Video' : 'Photo'), created_at: status.created_at }
+      statusReply: { id: status.id, author: status.display_name, content: status.content || (status.media_type === 'video' ? 'Video' : 'Photo'), media_url: status.media_url || null, media_type: status.media_type || null, created_at: status.created_at }
     });
     closeViewer();
     toast('Reply sent', 'success');

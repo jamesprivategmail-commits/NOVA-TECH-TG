@@ -65,7 +65,7 @@ function initSockets(io) {
       try {
         const startedAt = process.hrtime.bigint();
         const hasText = content && content.trim();
-        const hasMedia = media && media.data && media.type;
+        const hasMedia = media && (media.data || media.url) && media.type;
         if (!hasText && !hasMedia) return ack?.({ error: 'Empty message' });
 
         const conv = await getConversationById(conversationId);
@@ -98,14 +98,18 @@ function initSockets(io) {
           const fallbackMime = media.type === 'voice' ? 'audio/webm' : media.type === 'video' ? 'video/mp4' : media.type === 'audio' ? 'audio/mpeg' : 'application/octet-stream';
           const extension = (media.mime || fallbackMime).split('/')[1]?.split(';')[0] || 'bin';
           const filename = `${media.type || 'file'}_${Date.now()}.${extension}`;
-          const uploadResult = await uploadToStorage({
-            data: media.data,
-            mimeType: mediaMime || fallbackMime,
-            filename,
-            userId
-          });
-          mediaUrl = uploadResult.url;
-          mediaMime = uploadResult.mimeType;
+          if (media.url) {
+            mediaUrl = String(media.url);
+          } else {
+            const uploadResult = await uploadToStorage({
+              data: media.data,
+              mimeType: mediaMime || fallbackMime,
+              filename,
+              userId
+            });
+            mediaUrl = uploadResult.url;
+            mediaMime = uploadResult.mimeType;
+          }
         }
 
         const msg = await createMessage(conversationId, {

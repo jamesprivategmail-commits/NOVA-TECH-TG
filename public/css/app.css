@@ -517,6 +517,10 @@ input, textarea { font-size: 16px; }
 .reply-quote .who { font-weight: 700; color: var(--red); }
 .message.own .reply-quote { border-color: #fff; }
 .message.own .reply-quote .who { color: #fff; }
+.status-reply-quote { margin-bottom: 8px; padding: 8px 10px; border-left: 3px solid var(--red); background: rgba(255, 59, 69, .08); border-radius: 8px; }
+.status-reply-quote .who { display: block; margin-bottom: 3px; font-weight: 700; color: var(--red); }
+.status-reply-media { display: block; width: 52px; height: 52px; margin: 3px 0 6px; border-radius: 7px; object-fit: cover; background: var(--surface3); }
+.status-reply-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12em; overflow: auto; }
 
 .reactions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
 .reaction {

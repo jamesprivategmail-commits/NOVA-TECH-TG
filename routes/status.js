@@ -27,18 +27,15 @@ router.post('/', async (req, res) => {
       try {
         const uploaded = await uploadToStorage({
           data: mediaData,
-          mimeType: mediaMime || 'image/jpeg',
-          filename: `status_${Date.now()}.${(mediaMime || 'image/jpeg').split('/')[1] || 'bin'}`,
+          mimeType: mediaMime || (normalizedMediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
+          filename: `status_${Date.now()}.${(mediaMime || 'image/jpeg').split('/')[1]?.split(';')[0] || (normalizedMediaType === 'video' ? 'mp4' : 'jpg')}`,
           userId: req.user.id
         });
         mediaUrl = uploaded.url;
       } catch (uploadErr) {
         console.error('Status media upload failed:', uploadErr);
-        // Surface a specific, actionable message instead of a generic 500 later.
-        return res.status(502).json({
-          error: normalizedMediaType === 'video'
-            ? 'Could not upload video. Check that Firebase Storage is enabled and its rules allow writes.'
-            : 'Could not upload image. Check that Firebase Storage is enabled and its rules allow writes.'
+        return res.status(500).json({
+          error: 'Failed to process media upload: ' + (uploadErr.message || 'unknown error')
         });
       }
     }

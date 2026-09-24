@@ -41,6 +41,10 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    match /storage_chunks/{chunkId} {
+      allow read, write: if isSignedIn();
+    }
+
     match /system/{docId} {
       allow read, write: if isSignedIn();
     }

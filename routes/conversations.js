@@ -480,12 +480,39 @@ router.post('/:id/messages', async (req, res) => {
       return res.status(403).json({ error: 'Only channel admins can post here' });
     }
     const content = String(req.body?.content || '').trim();
-    if (!content) return res.status(400).json({ error: 'Only text messages are supported by the HTTP fallback' });
+    const media = req.body?.media || null;
+    let mediaUrl = req.body?.mediaUrl || null;
+    let mediaMime = req.body?.mediaMime || null;
+    let mediaType = req.body?.mediaType || null;
+
+    if (!content && !media && !mediaUrl) {
+      return res.status(400).json({ error: 'Message text or attachment is required' });
+    }
+
+    if (media && media.data && !mediaUrl) {
+      const fallbackMime = media.type === 'voice' ? 'audio/webm' : media.type === 'video' ? 'video/mp4' : media.type === 'audio' ? 'audio/mpeg' : 'application/octet-stream';
+      const ext = (media.mime || fallbackMime).split('/')[1]?.split(';')[0] || 'bin';
+      const uploaded = await uploadToStorage({
+        data: media.data,
+        mimeType: media.mime || fallbackMime,
+        filename: `${media.type || 'file'}_${Date.now()}.${ext}`,
+        userId: req.user.id
+      });
+      mediaUrl = uploaded.url;
+      mediaMime = uploaded.mimeType;
+      mediaType = media.type;
+    }
+
     const startedAt = process.hrtime.bigint();
     const message = await createMessage(req.params.id, {
       id: req.body?.clientMessageId || undefined,
       senderId: req.user.id,
-      content: content.slice(0, 4000),
+      content: content ? content.slice(0, 4000) : null,
+      mediaType: mediaType || (media ? media.type : null),
+      mediaUrl: mediaUrl || null,
+      mediaData: mediaUrl || null,
+      mediaMime: mediaMime || (media ? media.mime : null),
+      mediaDuration: media?.duration || null,
       replyToId: req.body?.replyToId || null,
       statusReply: req.body?.statusReply || null
     });

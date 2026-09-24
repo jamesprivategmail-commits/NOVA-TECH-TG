@@ -143,14 +143,14 @@ function openNewStatusSheet() {
         const file = e.target.files?.[0];
         if (!file) { media = null; sheet.querySelector('#status-preview').innerHTML = ''; return; }
         const isVideo = file.type.startsWith('video/');
-        const maxBytes = isVideo ? 40 * 1024 * 1024 : 15 * 1024 * 1024;
+        const maxBytes = isVideo ? 50 * 1024 * 1024 : 25 * 1024 * 1024;
         if (!file.type.startsWith('image/') && !isVideo) {
           toast('Statuses support photos and videos only');
           e.target.value = '';
           return;
         }
         if (file.size > maxBytes) {
-          toast(isVideo ? 'Video too large (max 40MB)' : 'Photo too large (max 15MB)');
+          toast(isVideo ? 'Video too large (max 50MB)' : 'Photo too large (max 25MB)');
           e.target.value = '';
           return;
         }
@@ -258,6 +258,7 @@ function openViewerForUser(userId, focusId = null) {
         ${avatar({ displayName: s.display_name, avatarUrl: s.avatar_url, avatarColor: s.avatar_color }, { size: 'sm' })}
         <div class="grow"><div class="name truncate">${escapeHtml(s.display_name || 'User')} ${verifyBadge(s.is_verified)}</div><div class="time">${escapeHtml(timeAgo(s.created_at))}</div></div>
         <div class="viewer-actions">
+          ${s.media_url && s.media_type === 'video' ? `<button type="button" class="icon-btn" id="viewer-sound" aria-label="Unmute video">${icon('volume-off')}</button>` : ''}
           <button type="button" class="icon-btn" id="viewer-pause" aria-label="Pause status" aria-pressed="false">${icon('pause')}</button>
           ${isOwn ? `<button type="button" class="icon-btn" id="viewer-delete" aria-label="Delete status">${icon('trash')}</button>` : ''}
           <button type="button" class="icon-btn" id="viewer-close" aria-label="Close">${icon('x')}</button>
@@ -290,6 +291,16 @@ function openViewerForUser(userId, focusId = null) {
     viewer.querySelector('#viewer-close').addEventListener('click', (e) => { e.stopPropagation(); closeViewer(); });
     viewer.querySelector('#viewer-prev')?.addEventListener('click', () => retreat());
     viewer.querySelector('#viewer-next')?.addEventListener('click', () => advance());
+    viewer.querySelector('#viewer-sound')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const vid = viewer.querySelector('video.status-video');
+      if (vid) {
+        vid.muted = !vid.muted;
+        btn.innerHTML = icon(vid.muted ? 'volume-off' : 'volume');
+        btn.setAttribute('aria-label', vid.muted ? 'Unmute video' : 'Mute video');
+      }
+    });
     viewer.querySelector('#viewer-pause').addEventListener('click', (e) => {
       e.stopPropagation();
       const btn = e.currentTarget;
@@ -355,7 +366,7 @@ function openViewerForUser(userId, focusId = null) {
         const file = replyFile.files?.[0];
         replyFile.value = '';
         if (!file) { resumeProgress(); return; }
-        if (file.size > 40 * 1024 * 1024) { toast('Video too large (max 40MB)'); resumeProgress(); return; }
+        if (file.size > 50 * 1024 * 1024) { toast('Video too large (max 50MB)'); resumeProgress(); return; }
         try {
           const dataUrl = await fileToDataUrl(file);
           replyMedia = { type: 'video', mime: file.type || 'video/mp4', dataUrl, name: file.name };

@@ -6,27 +6,24 @@ function resolveApiBase() {
   try {
     if (typeof window !== 'undefined' && window.__API_BASE__) return String(window.__API_BASE__).replace(/\/$/, '');
     const meta = typeof document !== 'undefined' ? document.querySelector('meta[name="api-base"]') : null;
-    if (meta?.content) return meta.content.replace(/\/$/, '');
+    const metaVal = meta?.content?.trim();
+    if (metaVal && metaVal !== PROD_API) return metaVal.replace(/\/$/, '');
     const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('apiBase') : null;
     if (stored) return stored.replace(/\/$/, '');
-    // Browser on same origin (normal web deploy)
+    // Standard web browser / AI Studio preview / Web deploy: use current origin's /api
     if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
-        && !location.hostname.includes('appassets.androidplatform.net')
-        && location.hostname !== 'localhost'
-        && location.hostname !== '127.0.0.1') {
+        && !location.hostname.includes('appassets.androidplatform.net')) {
       return '/api';
     }
-    // APK WebView / local file — use production API
+    // APK WebView / local file fallback
     if (typeof location !== 'undefined' && (
       location.hostname.includes('appassets.androidplatform.net')
       || location.protocol === 'file:'
-      || location.hostname === 'localhost'
-      || location.hostname === '127.0.0.1'
     )) {
-      return PROD_API;
+      return metaVal || PROD_API;
     }
   } catch { /* ignore */ }
-  return PROD_API;
+  return '/api';
 }
 
 const BASE = resolveApiBase();

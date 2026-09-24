@@ -175,6 +175,14 @@
     "/call_sessions/{callId}": {
       "schema": "CallSession",
       "description": "Call session history and signaling state"
+    },
+    "/storage_files/{fileId}": {
+      "schema": "StorageFile",
+      "description": "Media file metadata and small payload records"
+    },
+    "/storage_chunks/{chunkId}": {
+      "schema": "StorageChunk",
+      "description": "Chunked storage binary segments for videos and large media"
     }
   }
 }

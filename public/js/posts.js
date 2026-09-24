@@ -1,5 +1,5 @@
 // posts.js - updates feed: compose, like, comment, delete
-import { api } from './api.js';
+import { api, mediaSrc } from './api.js';
 import { state } from './state.js';
 import {
   $, avatar, icon, escapeHtml, timeAgo, emptyState, errorState, skeletonList,
@@ -35,14 +35,14 @@ function wireComposer() {
     const file = e.target.files?.[0];
     if (!file) { composeImage = null; $('#post-preview').innerHTML = ''; return; }
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) { toast('Choose an image or video'); e.target.value = ''; return; }
-    if (file.size > 30 * 1024 * 1024) { toast('Media too large (max 30MB)'); e.target.value = ''; return; }
+    if (file.size > 50 * 1024 * 1024) { toast('Media too large (max 50MB)'); e.target.value = ''; return; }
     try {
       const dataUrl = await fileToDataUrl(file);
       composeImage = { dataUrl, mime: file.type };
       $('#post-preview').innerHTML = file.type.startsWith('video/')
-        ? `<div class="post-image"><video src="${escapeHtml(dataUrl)}" controls style="width:100%;max-height:320px;border-radius:12px"></video></div>`
+        ? `<div class="post-image"><video src="${escapeHtml(dataUrl)}" controls playsinline style="width:100%;max-height:320px;border-radius:12px"></video></div>`
         : `<div class="post-image"><img src="${escapeHtml(dataUrl)}" alt=""></div>`;
-    } catch { toast('Could not read image'); }
+    } catch { toast('Could not read media'); }
   });
   $('#post-composer')?.addEventListener('submit', onPost);
 }
@@ -95,10 +95,11 @@ function renderPosts() {
   feed.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', () => deletePost(btn.dataset.del)));
   feed.querySelectorAll('[data-open-post-image]').forEach((img) => img.addEventListener('click', () => {
     const url = img.getAttribute('data-open-post-image');
+    const isVid = img.getAttribute('data-is-video') === '1';
     const viewer = $('#viewer');
     viewer.hidden = false;
     viewer.innerHTML = `<button type="button" class="viewer-lightbox-close" id="lightbox-close" aria-label="Close post" title="Close post">${icon('x')}</button>
-      <div class="viewer-stage"><img src="${escapeHtml(url)}" alt=""></div>`;
+      <div class="viewer-stage">${isVid ? `<video src="${escapeHtml(url)}" controls autoplay playsinline style="max-width:96vw;max-height:85vh;border-radius:12px"></video>` : `<img src="${escapeHtml(url)}" alt="">`}</div>`;
     viewer.tabIndex = -1;
     viewer.querySelector('#lightbox-close').addEventListener('click', closePostLightbox);
     viewer.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePostLightbox(); }, { once: true });
@@ -116,7 +117,8 @@ function closePostLightbox() {
 function postHtml(p) {
   const own = String(p.user_id) === String(state.me?.id) || (p.nova_id && String(p.nova_id).toUpperCase() === String(state.me?.novaId || '').toUpperCase());
   const canDelete = own || !!state.me?.isAdmin || !!state.me?.is_admin;
-  const image = p.image_url || p.image_data;
+  const rawImage = p.image_url || p.image_data;
+  const image = rawImage ? mediaSrc(rawImage) : null;
   const isVideo = String(p.image_mime || '').startsWith('video/');
   return `<article class="post" data-post="${escapeHtml(p.id)}">
     <div class="post-head">
@@ -128,7 +130,7 @@ function postHtml(p) {
       ${canDelete ? `<button type="button" class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete update" title="Delete update">${icon('trash')}</button>` : ''}
     </div>
     ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
-    ${image ? (isVideo ? `<div class="post-image"><video src="${escapeHtml(image)}" controls preload="metadata" style="width:100%;max-height:480px;border-radius:12px"></video></div>` : `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>`) : ''}
+    ${image ? (isVideo ? `<div class="post-image"><video src="${escapeHtml(image)}" controls playsinline preload="metadata" style="width:100%;max-height:480px;border-radius:12px"></video></div>` : `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>`) : ''}
     <div class="post-actions">
       <button class="post-action ${p.liked_by_me ? 'liked' : ''}" data-like="${escapeHtml(p.id)}" aria-label="Like">
         ${icon('heart')}<span>${p.like_count || 0}</span></button>

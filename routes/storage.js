@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/storage/files/:fileId - serve file from Firebase storage
+// GET /api/storage/files/:fileId - serve file from Firebase storage with Range streaming for video/audio
 router.get('/files/:fileId', async (req, res) => {
   try {
     const file = await getStorageFile(req.params.fileId);
@@ -12,14 +12,38 @@ router.get('/files/:fileId', async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Length', file.size || file.buffer.length);
+    const mimeType = file.mimeType || 'application/octet-stream';
+    const totalSize = file.size || file.buffer.length;
+    const range = req.headers.range;
+
+    res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     if (file.filename) {
       res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.filename)}"`);
     }
 
-    return res.end(file.buffer);
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+
+      if (start >= totalSize || end >= totalSize || start > end) {
+        res.setHeader('Content-Range', `bytes */${totalSize}`);
+        return res.status(416).end();
+      }
+
+      const chunkLength = end - start + 1;
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${totalSize}`);
+      res.setHeader('Content-Length', chunkLength);
+      res.setHeader('Content-Type', mimeType);
+
+      return res.end(file.buffer.subarray(start, end + 1));
+    } else {
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', totalSize);
+      return res.end(file.buffer);
+    }
   } catch (err) {
     console.error('Storage get error:', err);
     res.status(500).json({ error: 'Failed to retrieve file' });

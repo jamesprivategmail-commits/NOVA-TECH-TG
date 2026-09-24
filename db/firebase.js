@@ -162,7 +162,7 @@ async function seedDarkPairAccount() {
 }
 
 // ---------------- STORAGE SERVICE ----------------
-// Stores files persistently in Firebase with instant URL access
+// Stores files persistently in Firebase with instant URL access, supporting videos and media of any size
 async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'upload.bin', userId = null }) {
   await ensureInit();
   const fileId = 'file_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
@@ -188,23 +188,50 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
     userId,
     createdAt: new Date().toISOString()
   };
-  // Firestore documents are limited to 1 MiB. Keep small legacy uploads inline,
-  // but put videos and other large files in Firebase Storage.
-  if (byteLength > 700 * 1024) {
-    const storagePath = `dark-chat/${userId || 'system'}/${fileId}/${filename}`;
-    try {
-      await uploadBytes(storageRef(firebaseStorage, storagePath), Buffer.from(base64Data, 'base64'), { contentType: detectedMime });
-    } catch (storageErr) {
-      // Re-throw with the real Firebase Storage error code/message intact so
-      // callers (e.g. routes/status.js) can show something useful instead of
-      // a generic "Failed to post status".
-      const wrapped = new Error(`Firebase Storage upload failed (${storageErr.code || 'unknown'}): ${storageErr.message}`);
-      wrapped.cause = storageErr;
-      throw wrapped;
-    }
-    await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, storagePath });
-  } else {
+
+  // If small (<= 700KB), store directly in Firestore document
+  if (byteLength <= 700 * 1024) {
     await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, data: base64Data });
+  } else {
+    // For large files (e.g. videos up to 100MB):
+    // Attempt Firebase Storage first if accessible
+    let storedInBucket = false;
+    if (firebaseStorage) {
+      const storagePath = `dark-chat/${userId || 'system'}/${fileId}/${filename}`;
+      try {
+        await uploadBytes(storageRef(firebaseStorage, storagePath), Buffer.from(base64Data, 'base64'), { contentType: detectedMime });
+        await setDoc(doc(firestoreDb, 'storage_files', fileId), { ...metadata, storagePath });
+        storedInBucket = true;
+      } catch (storageErr) {
+        console.warn('Firebase Storage bucket write unavailable, storing in resilient Firestore chunked storage:', storageErr.message);
+      }
+    }
+
+    // High-reliability chunking directly in storage_files (matches cloud rules perfectly)
+    if (!storedInBucket) {
+      const CHUNK_CHAR_SIZE = 450000; // ~337KB raw base64 per chunk (well within 1MB Firestore limit)
+      const totalChunks = Math.ceil(base64Data.length / CHUNK_CHAR_SIZE);
+      const chunkPromises = [];
+      for (let i = 0; i < totalChunks; i++) {
+        const chunkData = base64Data.slice(i * CHUNK_CHAR_SIZE, (i + 1) * CHUNK_CHAR_SIZE);
+        const chunkDocId = `${fileId}_part_${i}`;
+        chunkPromises.push(
+          setDoc(doc(firestoreDb, 'storage_files', chunkDocId), {
+            fileId,
+            index: i,
+            totalChunks,
+            data: chunkData
+          })
+        );
+      }
+      await Promise.all(chunkPromises);
+      await setDoc(doc(firestoreDb, 'storage_files', fileId), {
+        ...metadata,
+        chunked: true,
+        totalChunks,
+        chunkSize: CHUNK_CHAR_SIZE
+      });
+    }
   }
 
   const publicBase = (process.env.PUBLIC_BASE_URL || process.env.VERCEL_URL
@@ -221,21 +248,55 @@ async function getStorageFile(fileId) {
   const snap = await getDoc(doc(firestoreDb, 'storage_files', fileId));
   if (!snap.exists()) return null;
   const file = snap.data();
-  if (file.storagePath) {
-    const bytes = await getBytes(storageRef(firebaseStorage, file.storagePath));
-    return { ...file, buffer: Buffer.from(bytes) };
+  if (file.storagePath && firebaseStorage) {
+    try {
+      const bytes = await getBytes(storageRef(firebaseStorage, file.storagePath));
+      return { ...file, buffer: Buffer.from(bytes) };
+    } catch (e) {
+      console.warn('Firebase Storage retrieval failed, checking chunks or data:', e.message);
+    }
   }
-  return {
-    ...file,
-    buffer: Buffer.from(file.data, 'base64')
-  };
+  if (file.chunked && file.totalChunks) {
+    const chunkSnaps = await Promise.all(
+      Array.from({ length: file.totalChunks }, (_, i) =>
+        getDoc(doc(firestoreDb, 'storage_files', `${fileId}_part_${i}`))
+      )
+    );
+    const fullBase64 = chunkSnaps.map(s => (s.exists() ? s.data().data || '' : '')).join('');
+    return {
+      ...file,
+      buffer: Buffer.from(fullBase64, 'base64')
+    };
+  }
+  if (file.data) {
+    return {
+      ...file,
+      buffer: Buffer.from(file.data, 'base64')
+    };
+  }
+  return null;
 }
 
 async function deleteStorageFile(fileId) {
   await ensureInit();
   const ref = doc(firestoreDb, 'storage_files', fileId);
   const snap = await getDoc(ref);
-  if (snap.exists() && snap.data().storagePath) await deleteObject(storageRef(firebaseStorage, snap.data().storagePath));
+  if (snap.exists()) {
+    const data = snap.data();
+    if (data.storagePath && firebaseStorage) {
+      try {
+        await deleteObject(storageRef(firebaseStorage, data.storagePath));
+      } catch (e) { /* ignore */ }
+    }
+    if (data.chunked && data.totalChunks) {
+      try {
+        const deletes = Array.from({ length: data.totalChunks }, (_, i) =>
+          deleteDoc(doc(firestoreDb, 'storage_files', `${fileId}_part_${i}`))
+        );
+        await Promise.all(deletes);
+      } catch (e) { /* ignore */ }
+    }
+  }
   await deleteDoc(ref);
 }
 

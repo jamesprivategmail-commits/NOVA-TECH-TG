@@ -374,7 +374,7 @@ function mediaHtml(msg) {
     return `<div class="media"><img src="${escapeHtml(url)}" alt="Photo" loading="lazy" data-open-media="${escapeHtml(url)}" onerror="this.closest('.media').style.display='none'"></div>`;
   }
   if (type === 'video') {
-    return `<div class="media"><video src="${escapeHtml(url)}" controls preload="metadata" onerror="this.closest('.media').style.display='none'"></video></div>`;
+    return `<div class="media"><video src="${escapeHtml(url)}" controls playsinline preload="metadata" style="max-width:100%;border-radius:12px;background:#000" onerror="this.closest('.media').style.display='none'"></video></div>`;
   }
   if (type === 'voice' || type === 'audio') {
     return `<div class="media"><audio src="${escapeHtml(url)}" controls preload="metadata"></audio></div>`;
@@ -677,8 +677,8 @@ function clearAttachment(resetInput = true) {
 async function onAttachSelected() {
   const file = els.attachInput.files?.[0];
   if (!file) return;
-  const maxSize = 15 * 1024 * 1024;
-  if (file.size > maxSize) { toast('File is too large (max 15MB)'); els.attachInput.value = ''; return; }
+  const maxSize = 50 * 1024 * 1024;
+  if (file.size > maxSize) { toast('File is too large (max 50MB)'); els.attachInput.value = ''; return; }
   try {
     const dataUrl = await fileToDataUrl(file);
     const type = file.type.startsWith('image/') ? 'image'

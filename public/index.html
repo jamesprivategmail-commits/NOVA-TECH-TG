@@ -10,8 +10,8 @@
 <link rel="apple-touch-icon" href="assets/logo.jpg?v=2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#050505">
-<!-- Set content to your live API root including /api, e.g. https://your-host.com/api -->
-<meta name="api-base" content="https://nova-tech-tg.vercel.app/api">
+<!-- Set content to your live API root including /api, e.g. /api -->
+<meta name="api-base" content="/api">
 <meta name="color-scheme" content="dark">
 <meta property="og:title" content="DARK CHAT">
 <meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, statuses and posts">
@@ -327,7 +327,7 @@
           </button>
         </div>
       </div>
-      <input type="file" id="attach-input" class="hidden">
+      <input type="file" id="attach-input" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" class="hidden">
     </form>
   </section>
 

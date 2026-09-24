@@ -72,8 +72,13 @@ export function clearSession() {
 
 export function markRead(conversationId, timestamp) {
   if (!conversationId) return;
-  state.readAt[conversationId] = timestamp || new Date().toISOString();
+  const readTimestamp = timestamp || new Date().toISOString();
+  state.readAt[conversationId] = readTimestamp;
   state.unread[conversationId] = 0;
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (conv) {
+    conv.unread_count = 0;
+  }
   writeJson(READ_KEY, state.readAt);
   writeJson(UNREAD_KEY, state.unread);
   emit('unread:changed');
@@ -81,29 +86,44 @@ export function markRead(conversationId, timestamp) {
 
 export function bumpUnread(conversationId) {
   if (!conversationId) return;
-  // Do not count messages we are currently looking at.
+  // Do not count messages we are currently looking at in active tab.
   if (state.activeConv && state.activeConv.id === conversationId && document.visibilityState === 'visible') return;
-  state.unread[conversationId] = (state.unread[conversationId] || 0) + 1;
+  const next = (state.unread[conversationId] || 0) + 1;
+  state.unread[conversationId] = next;
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (conv) {
+    conv.unread_count = next;
+  }
   writeJson(UNREAD_KEY, state.unread);
   emit('unread:changed');
 }
 
 export function isUnread(conv) {
   if (!conv) return false;
-  if (state.unread[conv.id]) return true;
-  const lastAt = conv.last_message_at;
-  if (!lastAt) return false;
-  const seen = state.readAt[conv.id];
-  if (!seen) return true;
-  return new Date(lastAt).getTime() > new Date(seen).getTime();
+  // If the user sent the last message, the conversation cannot be unread for them.
+  if (conv.last_sender_id && state.me?.id && String(conv.last_sender_id) === String(state.me.id)) {
+    return false;
+  }
+  const count = (typeof state.unread[conv.id] === 'number')
+    ? state.unread[conv.id]
+    : (conv.unread_count || 0);
+  return count > 0;
 }
 
 /** Sum of real unread message counts across non-archived conversations. */
 export function totalUnreadCount() {
   let total = 0;
   for (const conv of state.conversations || []) {
-    if (conv.archived) continue;
-    total += state.unread[conv.id] || (isUnread(conv) ? 1 : 0);
+    if (conv.archived || conv.type === 'channel') continue;
+    if (conv.last_sender_id && state.me?.id && String(conv.last_sender_id) === String(state.me.id)) {
+      continue;
+    }
+    const count = (typeof state.unread[conv.id] === 'number')
+      ? state.unread[conv.id]
+      : (conv.unread_count || 0);
+    if (count > 0) {
+      total += count;
+    }
   }
   return total;
 }

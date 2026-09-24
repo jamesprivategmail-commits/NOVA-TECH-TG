@@ -25,6 +25,19 @@
   --font: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
 
+body.theme-light {
+  --bg: #f4f4f8;
+  --surface: #ffffff;
+  --surface2: #eaeaea;
+  --surface3: #dcdce0;
+  --text: #111113;
+  --muted: #5e5e66;
+  --dim: #888890;
+  --line: rgba(0, 0, 0, .09);
+}
+body.font-small { font-size: 13.5px; }
+body.font-large { font-size: 16.5px; }
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {

@@ -587,9 +587,22 @@ async function getConversationsForUser(userId) {
   const list = snap.docs.map(d => d.data());
   const currentUser = await getUserById(userId);
 
-  // Populate DMs with other user's identity
+  // Populate DMs with other user's identity & compute real unread_count
   for (const conv of list) {
     conv.role = conv.members?.[userId]?.role || (conv.owner_id === userId ? 'owner' : 'member');
+    const memberMeta = conv.members?.[userId] || {};
+    const isLastSenderMe = conv.last_sender_id && String(conv.last_sender_id) === String(userId);
+
+    if (isLastSenderMe || !conv.last_message_at) {
+      conv.unread_count = 0;
+    } else if (typeof memberMeta.unread_count === 'number') {
+      conv.unread_count = memberMeta.unread_count;
+    } else if (memberMeta.last_read_at && new Date(memberMeta.last_read_at).getTime() >= new Date(conv.last_message_at).getTime()) {
+      conv.unread_count = 0;
+    } else {
+      conv.unread_count = 0;
+    }
+
     if (conv.type === 'dm') {
       const otherId = (conv.member_ids || []).find(mid => mid !== userId);
       if (otherId) {
@@ -787,7 +800,7 @@ async function createMessage(convId, msgData) {
 
   await setDoc(doc(firestoreDb, 'conversations', String(convId), 'messages', id), message);
 
-  // Update conversation last_message preview
+  // Update conversation last_message preview & member unread counts
   let preview = message.content;
   if (!preview) {
     if (message.media_type === 'sticker') preview = 'Sticker';
@@ -796,11 +809,33 @@ async function createMessage(convId, msgData) {
     else if (message.media_type === 'video') preview = '🎥 Video';
     else preview = 'Attachment';
   }
-  await updateDoc(doc(firestoreDb, 'conversations', String(convId)), {
-    last_message: preview,
-    last_message_at: now,
-    last_sender_id: message.sender_id
-  });
+
+  const convRef = doc(firestoreDb, 'conversations', String(convId));
+  try {
+    const convSnap = await getDoc(convRef);
+    let members = {};
+    if (convSnap.exists()) {
+      const convData = convSnap.data();
+      members = { ...(convData.members || {}) };
+      const memberIds = convData.member_ids || [];
+      for (const mid of memberIds) {
+        const current = members[mid] || {};
+        if (String(mid) === String(message.sender_id)) {
+          members[mid] = { ...current, last_read_at: now, unread_count: 0 };
+        } else {
+          members[mid] = { ...current, unread_count: (current.unread_count || 0) + 1 };
+        }
+      }
+    }
+    await updateDoc(convRef, {
+      last_message: preview,
+      last_message_at: now,
+      last_sender_id: message.sender_id,
+      members
+    });
+  } catch (err) {
+    console.error('Update conversation metadata error:', err);
+  }
 
   return message;
 }
@@ -860,13 +895,32 @@ async function updateMessage(convId, messageId, updates) {
 
 async function markConversationRead(convId, readerUserId) {
   await ensureInit();
-  const snap = await getDocs(collection(firestoreDb, 'conversations', String(convId), 'messages'));
   const readAt = new Date().toISOString();
+  const convRef = doc(firestoreDb, 'conversations', String(convId));
+  try {
+    const convSnap = await getDoc(convRef);
+    if (convSnap.exists()) {
+      const convData = convSnap.data();
+      const members = { ...(convData.members || {}) };
+      members[readerUserId] = {
+        ...(members[readerUserId] || {}),
+        last_read_at: readAt,
+        unread_count: 0
+      };
+      await updateDoc(convRef, { members });
+    }
+  } catch (err) {
+    console.error('Update conversation member last_read_at error:', err);
+  }
+
+  const snap = await getDocs(collection(firestoreDb, 'conversations', String(convId), 'messages'));
   const messageIds = snap.docs.map(d => d.data())
     .filter(m => String(m.sender_id) !== String(readerUserId) && !m.read_at)
     .map(m => m.id);
   for (const id of messageIds) {
-    await updateDoc(doc(firestoreDb, 'conversations', String(convId), 'messages', String(id)), { read_at: readAt });
+    try {
+      await updateDoc(doc(firestoreDb, 'conversations', String(convId), 'messages', String(id)), { read_at: readAt });
+    } catch { /* ignore */ }
   }
   return { messageIds, readAt };
 }

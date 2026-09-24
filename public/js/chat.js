@@ -2,7 +2,7 @@
 import { api, mediaSrc, apiBase, ApiError } from './api.js';
 import { pref } from './settings.js';
 import { openStickerPicker, saveSentStickerToPack } from './stickers.js';
-import { state, emit, on, markRead } from './state.js';
+import { state, emit, on, markRead, bumpUnread } from './state.js';
 import { joinConversation, sendMessage as socketSend, sendTyping, markConversationRead } from './socket.js';
 import {
   $, avatar, icon, escapeHtml, formatTime, dayLabel, lastSeenLabel, conversationTitle, conversationIsVerified, verifyBadge,
@@ -591,15 +591,16 @@ export function onIncomingMessage(msg) {
   if (!state.messages[convId]) state.messages[convId] = [];
   const list = state.messages[convId];
   const idx = list.findIndex((m) => m.id === msg.id);
-  const pendingIdx = idx < 0 ? list.findIndex((m) => m._status === 'sending' &&
+  const isDuplicate = idx > -1;
+  const pendingIdx = !isDuplicate ? list.findIndex((m) => m._status === 'sending' &&
     m.sender_id === msg.sender_id && m.content === msg.content &&
     Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000) : -1;
   if (pendingIdx > -1) list.splice(pendingIdx, 1);
-  if (idx > -1) list[idx] = { ...list[idx], ...msg, _status: 'sent' };
+  if (isDuplicate) list[idx] = { ...list[idx], ...msg, _status: 'sent' };
   else list.push({ ...msg, _status: 'sent' });
 
   // refresh conversation preview
-  const conv = state.conversations.find((c) => c.id === convId);
+  let conv = state.conversations.find((c) => c.id === convId);
   if (conv) {
     conv.last_message = msg.content || (msg.media_type ? 'Attachment' : '');
     conv.last_message_at = msg.created_at;
@@ -609,23 +610,36 @@ export function onIncomingMessage(msg) {
       conv.archived = false;
       api.updateConversation(convId, { archived: false }).catch(() => {});
     }
-    emit('conversations:changed');
-  } else {
-    emit('data:refresh-conversations');
   }
 
-  if (state.activeConv && state.activeConv.id === convId) {
+  const isCurrentActive = state.activeConv && state.activeConv.id === convId;
+
+  if (isCurrentActive) {
     const atBottom = els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight < 120;
     renderMessages(false);
     if (atBottom || msg.sender_id === state.me?.id) scrollToEnd();
     if (document.visibilityState === 'visible') {
       markRead(convId);
       markConversationRead(convId);
+    } else if (!isDuplicate && String(msg.sender_id) !== String(state.me?.id)) {
+      bumpUnread(convId);
     }
   } else {
-    if (String(msg.sender_id) !== String(state.me?.id)) {
-      import('./state.js').then(({ bumpUnread }) => bumpUnread(convId));
+    if (!isDuplicate && String(msg.sender_id) !== String(state.me?.id)) {
+      bumpUnread(convId);
     }
+  }
+
+  if (conv) {
+    emit('conversations:changed');
+  } else {
+    api.conversations().then((res) => {
+      state.conversations = res.conversations || [];
+      if (!isDuplicate && String(msg.sender_id) !== String(state.me?.id)) {
+        bumpUnread(convId);
+      }
+      emit('conversations:changed');
+    }).catch(() => {});
   }
 }
 
@@ -798,11 +812,16 @@ async function deliverTemp(convId, temp) {
     clientMessageId: temp.id
   });
 
-  if ((!ack || ack.error) && temp._content && !temp._attachment) {
+  if (!ack || ack.error) {
     try {
       const fallback = await api.sendMessage(convId, {
         clientMessageId: temp.id,
-        content: temp._content,
+        content: temp._content || null,
+        media: mediaData,
+        mediaUrl: mediaData?.url || null,
+        mediaMime: mediaData?.mime || null,
+        mediaType: mediaData?.type || null,
+        mediaDuration: mediaData?.duration || null,
         replyToId: temp._reply?.id || null
       });
       ack = { ok: true, message: fallback.message, assistantMessage: fallback.assistantMessage };

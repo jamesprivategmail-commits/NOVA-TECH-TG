@@ -1,7 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
-const { getUserByNovaId, getUserStickerPacks, addStickerToPack, uploadToStorage } = require('../db/firebase');
-const { updateProfileSettings, getProfileSettings, blockUser, unblockUser } = require('../db/profile');
+const { getUserByNovaId, getUserById, getUserStickerPacks, addStickerToPack, uploadToStorage, getConversationsForUser, getPosts, getActiveStatuses } = require('../db/firebase');
+const { updateProfileSettings, getProfileSettings, blockUser, unblockUser, changePassword, deleteUserAccount, toggleStarredMessage } = require('../db/profile');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -22,6 +22,65 @@ router.put('/settings', async (req, res) => {
     res.json(settings);
   } catch (err) {
     res.status(500).json({ error: 'Failed to save profile settings' });
+  }
+});
+
+router.post('/change-password', async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    await changePassword(req.user.id, currentPassword, newPassword);
+    res.json({ ok: true, message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Failed to change password' });
+  }
+});
+
+router.post('/delete-account', async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    await deleteUserAccount(req.user.id, password);
+    res.json({ ok: true, message: 'Account deleted' });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Failed to delete account' });
+  }
+});
+
+router.post('/starred/:messageId', async (req, res) => {
+  try {
+    const updated = await toggleStarredMessage(req.user.id, req.params.messageId);
+    res.json({ ok: true, starredMessageIds: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update starred message' });
+  }
+});
+
+router.get('/backup', async (req, res) => {
+  try {
+    const user = await getUserById(req.user.id);
+    const convs = await getConversationsForUser(req.user.id);
+    const posts = await getPosts(req.user.id);
+    const settings = await getProfileSettings(req.user.id);
+    const backupData = {
+      exportDate: new Date().toISOString(),
+      app: 'DARK CHAT',
+      version: '2.4.0',
+      user: {
+        id: user.id,
+        novaId: user.nova_id,
+        displayName: user.display_name,
+        bio: user.bio,
+        isVerified: user.is_verified,
+        createdAt: user.created_at
+      },
+      settings,
+      conversationsSummary: convs.map(c => ({ id: c.id, type: c.type, name: c.name, lastMessageAt: c.last_message_at })),
+      postsCount: posts.length
+    };
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="darkchat_backup_${user.nova_id}.json"`);
+    res.json(backupData);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate account backup' });
   }
 });
 

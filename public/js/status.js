@@ -476,7 +476,7 @@ function openViewerForUser(userId, focusId = null) {
 
   async function saveStatusMedia(status) {
     if (!status.media_url) throw new Error('This status has no media to save');
-    const res = await fetch(status.media_url, { credentials: 'include' });
+    const res = await fetch(mediaSrc(status.media_url), { credentials: 'include' });
     if (!res.ok) throw new Error('Could not download media');
     const blob = await res.blob();
     const ext = (status.media_mime || blob.type || 'image/jpeg').split('/')[1]?.split(';')[0] || (status.media_type === 'video' ? 'mp4' : 'jpg');
@@ -499,7 +499,7 @@ function openViewerForUser(userId, focusId = null) {
       bgColor: status.bg_color || '#0A84FF'
     };
     if (status.media_url) {
-      const res = await fetch(status.media_url, { credentials: 'include' });
+      const res = await fetch(mediaSrc(status.media_url), { credentials: 'include' });
       if (!res.ok) throw new Error('Could not copy media for repost');
       const blob = await res.blob();
       const dataUrl = await new Promise((resolve, reject) => {

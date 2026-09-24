@@ -31,7 +31,6 @@ export function initChats() {
     filters: $('#chat-filters'),
     newBtn: $('#new-chat-btn'),
     meAvatar: $('#me-avatar-btn'),
-    notifications: $('#notifications-btn'),
     adminBtn: $('#admin-btn')
   };
 
@@ -92,7 +91,21 @@ function updateChatsNavDot() {
 
 export function setConversations(list) {
   state.conversations = Array.isArray(list) ? list : [];
+  for (const conv of state.conversations) {
+    const isMine = conv.last_sender_id && state.me?.id && String(conv.last_sender_id) === String(state.me.id);
+    if (isMine) {
+      state.unread[conv.id] = 0;
+      conv.unread_count = 0;
+    } else if (typeof conv.unread_count === 'number') {
+      state.unread[conv.id] = conv.unread_count;
+    } else if (typeof state.unread[conv.id] !== 'number') {
+      state.unread[conv.id] = 0;
+      conv.unread_count = 0;
+    }
+  }
   renderChats();
+  updateFilterChips();
+  updateChatsNavDot();
   emit('conversations:changed');
 }
 
@@ -157,7 +170,8 @@ function previewHtml(conv) {
 }
 
 function conversationRow(conv) {
-  const unreadCount = state.unread[conv.id] || 0;
+  const isMine = conv.last_sender_id && state.me?.id && String(conv.last_sender_id) === String(state.me.id);
+  const unreadCount = isMine ? 0 : ((typeof state.unread[conv.id] === 'number') ? state.unread[conv.id] : (conv.unread_count || 0));
   const user = conversationAvatarUser(conv);
   const badge = conv.type === 'group' ? '<span class="pill group">Group</span>'
     : conv.type === 'channel' ? '<span class="pill channel">Channel</span>'
@@ -165,7 +179,7 @@ function conversationRow(conv) {
   const pin = conv.pinned ? `<span class="pin-flag">${icon('pin')}</span>` : '';
   const archived = conv.archived ? `<span class="pill">Archived</span>` : '';
   const online = conv.type === 'dm' && conv.other_user && state.presence[conv.other_user.id];
-  return `<button class="chat-row${unreadCount ? ' is-unread' : ''}" data-conv="${escapeHtml(conv.id)}">
+  return `<button class="chat-row${unreadCount > 0 ? ' is-unread' : ''}" data-conv="${escapeHtml(conv.id)}">
     <span class="avatar-wrap">
       ${avatar(user)}
       ${online ? `<span class="online-dot" data-presence-user="${escapeHtml(conv.other_user.id)}"></span>` : ''}
@@ -240,6 +254,7 @@ export function openNewChatSheet() {
         <button data-tab="dm" class="active">Direct</button>
         <button data-tab="group">Group</button>
         <button data-tab="channel">Channel</button>
+        <button data-tab="community">Community</button>
         <button data-tab="join">Join</button>
       </div>
       <div class="sheet-pad">
@@ -259,6 +274,12 @@ export function openNewChatSheet() {
           <label class="field"><span class="field-label">Channel name</span>
             <input class="input" id="channel-name" placeholder="Announcements"></label>
         </div>
+        <div id="pane-community" class="hidden">
+          <label class="field"><span class="field-label">Community name</span>
+            <input class="input" id="community-name" placeholder="Tech / Gaming / Neighborhood"></label>
+          <label class="field"><span class="field-label">Community description</span>
+            <input class="input" id="community-desc" placeholder="Announcements and topic groups for all members"></label>
+        </div>
         <div id="pane-join" class="hidden">
           <label class="field"><span class="field-label">Invite code</span>
             <input class="input" id="join-code" placeholder="e.g. AB3D7KQ"></label>
@@ -267,7 +288,13 @@ export function openNewChatSheet() {
     footer: `<div class="sheet-pad"><button class="btn btn-primary btn-block" id="new-submit">Continue</button></div>`,
     onMount(sheet) {
       const tabs = sheet.querySelector('#new-tabs');
-      const panes = { dm: sheet.querySelector('#pane-dm'), group: sheet.querySelector('#pane-group'), channel: sheet.querySelector('#pane-channel'), join: sheet.querySelector('#pane-join') };
+      const panes = {
+        dm: sheet.querySelector('#pane-dm'),
+        group: sheet.querySelector('#pane-group'),
+        channel: sheet.querySelector('#pane-channel'),
+        community: sheet.querySelector('#pane-community'),
+        join: sheet.querySelector('#pane-join')
+      };
       let mode = 'dm';
       const showError = (msg) => {
         const box = sheet.querySelector('#new-error');

@@ -326,3 +326,70 @@ export function linkify(value) {
     (url) => `<a class="msg-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
   );
 }
+
+/** Generate a clean high-contrast SVG QR-style visual code for DARK CHAT IDs and links */
+export function renderQrSvg(payload, size = 200) {
+  const str = String(payload || 'DARKCHAT');
+  const grid = 25;
+  const matrix = Array.from({ length: grid }, () => Array(grid).fill(false));
+
+  // Position markers (7x7 in 3 corners)
+  function drawMarker(r0, c0) {
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 7; c++) {
+        const border = r === 0 || r === 6 || c === 0 || c === 6;
+        const center = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        matrix[r0 + r][c0 + c] = border || center;
+      }
+    }
+  }
+  drawMarker(0, 0);
+  drawMarker(0, grid - 7);
+  drawMarker(grid - 7, 0);
+
+  // Timing lines
+  for (let i = 8; i < grid - 8; i++) {
+    matrix[6][i] = i % 2 === 0;
+    matrix[i][6] = i % 2 === 0;
+  }
+
+  // Generate deterministic pattern based on payload characters
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+
+  let bitIdx = 0;
+  for (let r = 0; r < grid; r++) {
+    for (let c = 0; c < grid; c++) {
+      // Skip corner markers and timing lines
+      const inTopLeft = r < 8 && c < 8;
+      const inTopRight = r < 8 && c >= grid - 8;
+      const inBottomLeft = r >= grid - 8 && c < 8;
+      const inTiming = r === 6 || c === 6;
+      if (inTopLeft || inTopRight || inBottomLeft || inTiming) continue;
+
+      const charVal = str.charCodeAt(bitIdx % str.length) || 42;
+      const bit = ((hash ^ (r * 31 + c * 17) ^ (charVal << (bitIdx % 8))) & 1) === 1;
+      matrix[r][c] = bit;
+      bitIdx++;
+    }
+  }
+
+  const cellSize = size / (grid + 4);
+  const offset = cellSize * 2;
+  let rects = '';
+  for (let r = 0; r < grid; r++) {
+    for (let c = 0; c < grid; c++) {
+      if (matrix[r][c]) {
+        rects += `<rect x="${(offset + c * cellSize).toFixed(2)}" y="${(offset + r * cellSize).toFixed(2)}" width="${cellSize.toFixed(2)}" height="${cellSize.toFixed(2)}" fill="#ffffff" rx="1.5"/>`;
+      }
+    }
+  }
+
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="background:#0a0a0c;border-radius:16px;padding:8px" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${size}" height="${size}" fill="#0a0a0c" rx="16"/>
+    ${rects}
+  </svg>`;
+}

@@ -566,6 +566,21 @@ router.post('/:id/messages', async (req, res) => {
         is_verified: sender?.is_verified || false
       };
     }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`conv:${req.params.id}`).emit('message:new', messagePayload);
+      for (const mid of (conv.member_ids || [])) {
+        io.to(`user:${mid}`).emit('message:new', messagePayload);
+      }
+      if (assistantMessage) {
+        io.to(`conv:${req.params.id}`).emit('message:new', assistantMessage);
+        for (const mid of (conv.member_ids || [])) {
+          io.to(`user:${mid}`).emit('message:new', assistantMessage);
+        }
+      }
+    }
+
     res.json({ message: messagePayload, assistantMessage });
   } catch (err) {
     console.error('HTTP send message error:', err);
@@ -581,7 +596,25 @@ router.post('/:id/read', async (req, res) => {
     if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
-    res.json(await markConversationRead(req.params.id, req.user.id));
+    const result = await markConversationRead(req.params.id, req.user.id);
+    const io = req.app.get('io');
+    if (io && result.messageIds?.length) {
+      io.to(`conv:${req.params.id}`).emit('messages:read', {
+        conversationId: req.params.id,
+        messageIds: result.messageIds,
+        readAt: result.readAt,
+        readerId: req.user.id
+      });
+      for (const mid of (conv.member_ids || [])) {
+        io.to(`user:${mid}`).emit('messages:read', {
+          conversationId: req.params.id,
+          messageIds: result.messageIds,
+          readAt: result.readAt,
+          readerId: req.user.id
+        });
+      }
+    }
+    res.json(result);
   } catch (err) {
     console.error('Mark conversation read error:', err);
     res.status(500).json({ error: 'Failed to mark messages read' });
@@ -734,6 +767,79 @@ router.post('/:id/messages/:messageId/pin', async (req, res) => {
   } catch (err) {
     console.error('Pin message error:', err);
     res.status(500).json({ error: 'Failed to pin message' });
+  }
+});
+
+// POST /api/conversations/community { name, description }
+router.post('/community', async (req, res) => {
+  try {
+    const { name, description } = req.body || {};
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Community name is required' });
+
+    const now = new Date().toISOString();
+    const conv = await createConversation({
+      type: 'community',
+      name: name.trim(),
+      description: description ? description.trim() : 'Community hub',
+      ownerId: req.user.id,
+      inviteCode: generateInviteCode(),
+      memberIds: [req.user.id],
+      members: {
+        [req.user.id]: { role: 'owner', joined_at: now }
+      }
+    });
+
+    res.json({ conversation: conv });
+  } catch (err) {
+    console.error('Create community error:', err);
+    res.status(500).json({ error: 'Failed to create community' });
+  }
+});
+
+// GET /api/conversations/:id/export - download clean text transcript
+router.get('/:id/export', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    const messages = await getMessages(req.params.id, { limitCount: 500, userId: req.user.id });
+    const sorted = [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    let transcript = `==================================================\n`;
+    transcript += `DARK CHAT TRANSCRIPT: ${conv.name || 'Conversation'}\n`;
+    transcript += `Exported: ${new Date().toUTCString()}\n`;
+    transcript += `==================================================\n\n`;
+
+    for (const m of sorted) {
+      const time = new Date(m.created_at).toLocaleString();
+      const sender = m.display_name || m.sender_id || 'User';
+      const content = m.deleted_for_everyone ? '[Message deleted]' : (m.content || `[Attachment: ${m.media_type || 'file'}]`);
+      transcript += `[${time}] ${sender}: ${content}\n`;
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="darkchat_transcript_${conv.id}.txt"`);
+    res.send(transcript);
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ error: 'Failed to export conversation' });
+  }
+});
+
+// POST /api/conversations/:id/disappearing { seconds }
+router.post('/:id/disappearing', async (req, res) => {
+  try {
+    const { seconds } = req.body || {};
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    const timer = Math.max(0, parseInt(seconds, 10) || 0);
+    await updateConversation(req.params.id, { disappearing_timer: timer });
+    res.json({ ok: true, disappearingTimer: timer });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update disappearing timer' });
   }
 });
 

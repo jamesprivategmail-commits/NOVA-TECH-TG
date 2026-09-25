@@ -680,7 +680,7 @@ function reactionsHtml(msg) {
   const chips = [...counts.entries()].map(([emoji, info]) =>
     `<button type="button" class="reaction ${info.mine ? 'mine' : ''}" data-react="${escapeHtml(emoji)}" data-react-msg="${escapeHtml(msg.id)}">${escapeHtml(emoji)} ${info.count}</button>`
   ).join('');
-  return `<div class="reactions">${chips}<button type="button" class="reaction-add" data-react-add="${escapeHtml(msg.id)}" aria-label="Add reaction" title="Add reaction">+</button></div>`;
+  return chips ? `<div class="reactions">${chips}</div>` : '';
 }
 
 function metaHtml(msg) {
@@ -1260,12 +1260,6 @@ function onMessagesClick(event) {
     toggleReaction(reaction.getAttribute('data-react-msg'), reaction.getAttribute('data-react'));
     return;
   }
-  const reactionAdd = event.target.closest('[data-react-add]');
-  if (reactionAdd) {
-    const msg = (state.messages[state.activeConv?.id] || []).find((m) => m.id === reactionAdd.getAttribute('data-react-add'));
-    if (msg) openMessageActions(msg);
-    return;
-  }
   const retry = event.target.closest('[data-retry]');
   if (retry) {
     retryMessage(retry.getAttribute('data-retry'));
@@ -1307,9 +1301,9 @@ function openMessageActions(msg) {
     body: `<div class="sheet-pad" style="flex-direction:row;justify-content:space-between">${reactionRow}</div>
       <div class="sheet-body">${options.join('')}</div>`,
     onMount(sheet) {
-      sheet.querySelectorAll('[data-quick]').forEach((btn) => btn.addEventListener('click', () => {
-        toggleReaction(msg.id, btn.dataset.quick);
+      sheet.querySelectorAll('[data-quick]').forEach((btn) => btn.addEventListener('click', async () => {
         closeSheet();
+        await toggleReaction(msg.id, btn.dataset.quick);
       }));
       sheet.querySelectorAll('[data-act]').forEach((btn) => btn.addEventListener('click', async () => {
         const act = btn.dataset.act;
@@ -1344,7 +1338,7 @@ async function toggleReaction(messageId, reaction) {
   // optimistic
   const previousReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
   const reactions = [...previousReactions];
-  const idx = reactions.findIndex((r) => r.user_id === state.me?.id && r.reaction === reaction);
+  const idx = reactions.findIndex((r) => String(r.user_id) === String(state.me?.id) && r.reaction === reaction);
   if (idx > -1) reactions.splice(idx, 1);
   else reactions.push({ user_id: state.me?.id, reaction });
   msg.reactions = reactions;

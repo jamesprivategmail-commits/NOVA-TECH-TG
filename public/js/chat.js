@@ -34,66 +34,6 @@ let searchSeq = 0;
 let messagePollTimer = null;
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
-const WALLPAPER_PRESETS = [
-  { name: 'Midnight', value: 'linear-gradient(135deg, #101218, #1a1d2b)' },
-  { name: 'Ocean', value: 'linear-gradient(135deg, #071b2d, #123f59)' },
-  { name: 'Plum', value: 'linear-gradient(135deg, #211326, #4b244f)' },
-  { name: 'Forest', value: 'linear-gradient(135deg, #0b211b, #174638)' },
-  { name: 'Sunset', value: 'linear-gradient(135deg, #321b18, #613b25)' }
-];
-
-function wallpaperCss(value) {
-  const wallpaper = String(value || '').trim();
-  if (!wallpaper) return '';
-  if (/^(linear|radial)-gradient\(/i.test(wallpaper)) return wallpaper;
-  const url = mediaSrc(wallpaper).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  return `url("${url}")`;
-}
-
-function applyChatWallpaper() {
-  if (!els.messages) return;
-  const wallpaper = state.activeConv?.wallpaper || state.settings?.privacySettings?.chatWallpaper || '';
-  els.messages.style.backgroundImage = wallpaperCss(wallpaper);
-  els.messages.style.backgroundSize = wallpaper ? 'cover' : '';
-  els.messages.style.backgroundPosition = wallpaper ? 'center' : '';
-  els.messages.style.backgroundAttachment = wallpaper ? 'fixed' : '';
-}
-
-async function openWallpaperPicker(conv) {
-  const current = conv?.wallpaper || '';
-  openSheet({
-    title: 'Chat wallpaper',
-    body: `<div class="sheet-pad stack">
-      <div class="wallpaper-grid">${WALLPAPER_PRESETS.map((preset) => `<button type="button" class="wallpaper-choice" data-wallpaper="${escapeHtml(preset.value)}" style="background:${preset.value}">${escapeHtml(preset.name)}</button>`).join('')}</div>
-      <label class="btn btn-ghost btn-block" for="wallpaper-file">${icon('image')} Choose image<input id="wallpaper-file" type="file" accept="image/*" hidden></label>
-      <button type="button" class="btn btn-ghost btn-block" id="wallpaper-reset">${icon('refresh')} Reset to default</button>
-      <div class="muted" style="font-size:12px">This wallpaper applies only to this conversation. Use Settings for the default across all chats.</div>
-    </div>`,
-    onMount(sheet) {
-      const save = async (value) => {
-        try {
-          const result = await api.updateConversation(conv.id, { wallpaper: value || '' });
-          Object.assign(conv, result.conversation || {}, { wallpaper: value || '' });
-          applyChatWallpaper();
-          emit('conversations:changed');
-          closeSheet();
-          toast(value ? 'Chat wallpaper saved' : 'Chat wallpaper reset', 'success');
-        } catch (err) { toast(err.message || 'Could not save wallpaper'); }
-      };
-      sheet.querySelectorAll('[data-wallpaper]').forEach((button) => button.addEventListener('click', () => save(button.dataset.wallpaper)));
-      sheet.querySelector('#wallpaper-reset')?.addEventListener('click', () => save(''));
-      sheet.querySelector('#wallpaper-file')?.addEventListener('change', async (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) return toast('Wallpaper images must be 5MB or smaller');
-        try {
-          const uploaded = await api.upload(await fileToDataUrl(file), file.type, file.name);
-          await save(uploaded.url);
-        } catch (err) { toast(err.message || 'Could not upload wallpaper'); }
-      });
-    }
-  });
-}
 
 function safeEscape(val) {
   if (window.CSS && typeof CSS.escape === 'function') return CSS.escape(val);
@@ -399,7 +339,6 @@ export function initChat() {
   on('messages:read', onMessagesRead);
   on('typing', onTyping);
   on('presence', onPresence);
-  on('settings:changed', applyChatWallpaper);
 }
 
 // ---------------- open / close ----------------
@@ -413,7 +352,6 @@ export async function openConversation(conv) {
   els.screen.classList.add('active');
   document.querySelectorAll('.screen-list').forEach((s) => s.classList.add('chat-open'));
   renderHeader();
-  applyChatWallpaper();
   els.darkPairCodeBar?.classList.toggle('hidden', conv.other_user?.id !== 'u_dark_pair');
   updateBlockedChatState(conv);
   markRead(conv.id);
@@ -2117,7 +2055,6 @@ async function openConversationInfo() {
       </div>`;
       }).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
-        <button class="btn btn-ghost btn-block" id="conversation-wallpaper">${icon('image')} Chat wallpaper</button>
         ${conv.type === 'group' && canManage ? `<button class="btn btn-primary btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
         ${conv.type === 'channel' && String(conv.owner_id) === String(state.me?.id) ? `<button class="btn btn-ghost btn-block" id="rename-channel">${icon('edit')} Rename channel</button>` : ''}
         ${['group', 'channel'].includes(conv.type) && canManage ? `<button class="btn btn-ghost btn-block" id="toggle-conversation-lock">${icon(conv.is_locked ? 'unlock' : 'lock')} ${conv.is_locked ? (conv.type === 'channel' ? 'Resume channel' : 'Unlock group') : (conv.type === 'channel' ? 'Pause channel' : 'Lock group')}</button>` : ''}
@@ -2125,10 +2062,6 @@ async function openConversationInfo() {
         ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
       </div>`,
       onMount(sheet) {
-        sheet.querySelector('#conversation-wallpaper')?.addEventListener('click', () => {
-          closeSheet();
-          openWallpaperPicker(conv);
-        });
         sheet.querySelectorAll('[data-transfer-owner]').forEach((button) => button.addEventListener('click', async () => {
           const member = members.find((item) => String(item.id) === String(button.dataset.transferOwner));
           const ok = await confirmSheet({ title: 'Transfer ownership', message: `Make ${member?.display_name || 'this member'} the new owner? You will become an admin.`, confirmText: 'Transfer', danger: true });

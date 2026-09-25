@@ -2,7 +2,7 @@
 import { api, ApiError } from './api.js';
 import { state, emit } from './state.js';
 import {
-  $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy, fileToDataUrl
+  $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy
 } from './ui.js';
 
 const PRIVACY_TOGGLES = [
@@ -70,13 +70,6 @@ const ACCENT_COLORS = [
   { name: 'Emerald', hex: '#30d158' },
   { name: 'Amethyst', hex: '#bf5af2' },
   { name: 'Sunset Orange', hex: '#ff9f0a' }
-];
-const WALLPAPER_PRESETS = [
-  { name: 'Midnight', value: 'linear-gradient(135deg, #101218, #1a1d2b)' },
-  { name: 'Ocean', value: 'linear-gradient(135deg, #071b2d, #123f59)' },
-  { name: 'Plum', value: 'linear-gradient(135deg, #211326, #4b244f)' },
-  { name: 'Forest', value: 'linear-gradient(135deg, #0b211b, #174638)' },
-  { name: 'Sunset', value: 'linear-gradient(135deg, #321b18, #613b25)' }
 ];
 
 export function applyThemePreferences() {
@@ -150,7 +143,7 @@ export function settingsGroupHtml() {
   return `
     ${group('Appearance', appearanceHtml)}
     ${group('Privacy', privacy + visibility)}
-    ${group('Chats', `${chats}<button class="setting" data-settings-action="wallpaper"><span class="setting-icon">${icon('image')}</span><span class="setting-copy">Chat wallpaper<small>Set the default background for all chats</small></span><span class="chevron">${icon('chevron-right')}</span></button>`)}
+    ${group('Chats', chats)}
     ${group('Status', status)}
     ${group('Calls', calls)}
     ${group('Notifications', notifs)}
@@ -311,41 +304,9 @@ async function handleAction(action) {
   if (action === 'starred') { closeSheet(); openStarredSheet(); return; }
   if (action === 'devices') { closeSheet(); openDevicesSheet(); return; }
   if (action === 'storage') { closeSheet(); openStorageSheet(); return; }
-  if (action === 'wallpaper') { closeSheet(); openGlobalWallpaperSheet(); return; }
   if (action === 'backup') { downloadBackup(); return; }
   if (action === 'about') { closeSheet(); openAboutSheet(); return; }
   if (action === 'delete-account') { closeSheet(); openDeleteAccountSheet(); return; }
-}
-
-function openGlobalWallpaperSheet() {
-  openSheet({
-    title: 'Default chat wallpaper',
-    body: `<div class="sheet-pad stack">
-      <div class="wallpaper-grid">${WALLPAPER_PRESETS.map((preset) => `<button type="button" class="wallpaper-choice" data-global-wallpaper="${escapeHtml(preset.value)}" style="background:${preset.value}">${escapeHtml(preset.name)}</button>`).join('')}</div>
-      <label class="btn btn-ghost btn-block" for="global-wallpaper-file">${icon('image')} Choose image<input id="global-wallpaper-file" type="file" accept="image/*" hidden></label>
-      <button type="button" class="btn btn-ghost btn-block" id="global-wallpaper-reset">${icon('refresh')} Reset default wallpaper</button>
-      <div class="muted" style="font-size:12px">This applies to every chat unless that conversation has its own wallpaper.</div>
-    </div>`,
-    onMount(sheet) {
-      const save = async (value) => {
-        try {
-          await saveSetting({ chatWallpaper: value || '' });
-          closeSheet();
-        } catch (err) { toast(err.message || 'Could not save wallpaper'); }
-      };
-      sheet.querySelectorAll('[data-global-wallpaper]').forEach((button) => button.addEventListener('click', () => save(button.dataset.globalWallpaper)));
-      sheet.querySelector('#global-wallpaper-reset')?.addEventListener('click', () => save(''));
-      sheet.querySelector('#global-wallpaper-file')?.addEventListener('change', async (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) return toast('Wallpaper images must be 5MB or smaller');
-        try {
-          const uploaded = await api.upload(await fileToDataUrl(file), file.type, file.name);
-          await save(uploaded.url);
-        } catch (err) { toast(err.message || 'Could not upload wallpaper'); }
-      });
-    }
-  });
 }
 
 function openChangePasswordSheet() {

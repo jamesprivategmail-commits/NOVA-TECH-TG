@@ -346,14 +346,14 @@ router.put('/:id', async (req, res) => {
 
     const conv = await getConversationById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    if (!(conv.member_ids || []).includes(req.user.id)) {
+    if (!(conv.member_ids || []).map(String).includes(String(req.user.id))) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
 
     const updates = {};
     if (name !== undefined) {
       if (!String(name).trim()) return res.status(400).json({ error: 'Name is required' });
-      if (conv.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the owner can rename this' });
+      if (String(conv.owner_id) !== String(req.user.id)) return res.status(403).json({ error: 'Only the owner can rename this' });
       updates.name = String(name).trim().slice(0, 120);
     }
     if (description !== undefined || visibility !== undefined) {
@@ -693,18 +693,29 @@ router.delete('/:id/messages/:messageId', async (req, res) => {
 // POST /api/conversations/:id/messages/:messageId/reactions
 router.post('/:id/messages/:messageId/reactions', async (req, res) => {
   try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (!(conv.member_ids || []).map(String).includes(String(req.user.id))) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
     const msg = await getMessageById(req.params.id, req.params.messageId);
     if (!msg) return res.status(404).json({ error: 'Message not found' });
+    if (msg.conversation_id && String(msg.conversation_id) !== String(req.params.id)) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
 
     const reaction = String(req.body.reaction || '').trim().slice(0, 32);
     if (!reaction) return res.status(400).json({ error: 'Reaction is required' });
 
-    let reactions = msg.reactions || [];
-    const existingIndex = reactions.findIndex(r => r.user_id === req.user.id && r.reaction === reaction);
+    const userId = String(req.user.id);
+    let reactions = (Array.isArray(msg.reactions) ? msg.reactions : [])
+      .filter((r) => r && r.reaction)
+      .map((r) => ({ user_id: String(r.user_id), reaction: String(r.reaction).slice(0, 32) }));
+    const existingIndex = reactions.findIndex(r => r.user_id === userId && r.reaction === reaction);
     if (existingIndex > -1) {
       reactions.splice(existingIndex, 1);
     } else {
-      reactions.push({ user_id: req.user.id, reaction });
+      reactions.push({ user_id: userId, reaction });
     }
 
     await updateMessage(req.params.id, req.params.messageId, { reactions });
@@ -715,7 +726,7 @@ router.post('/:id/messages/:messageId/reactions', async (req, res) => {
       countMap[r.reaction] = (countMap[r.reaction] || 0) + 1;
     }
     const result = Object.entries(countMap).map(([k, v]) => ({ reaction: k, count: v }));
-    res.json({ reactions: result });
+    res.json({ reactions: result, entries: reactions, my_reactions: reactions.filter((r) => r.user_id === userId).map((r) => r.reaction) });
   } catch (err) {
     console.error('Reactions error:', err);
     res.status(500).json({ error: 'Failed to update reaction' });

@@ -669,7 +669,6 @@ function replyQuoteHtml(msg) {
 
 function reactionsHtml(msg) {
   const reactions = Array.isArray(msg.reactions) ? msg.reactions : [];
-  if (!reactions.length) return '';
   const counts = new Map();
   for (const r of reactions) {
     const key = r.reaction;
@@ -678,9 +677,10 @@ function reactionsHtml(msg) {
     entry.count += 1;
     if (r.user_id === state.me?.id) entry.mine = true;
   }
-  return `<div class="reactions">${[...counts.entries()].map(([emoji, info]) =>
-    `<button class="reaction ${info.mine ? 'mine' : ''}" data-react="${escapeHtml(emoji)}" data-react-msg="${escapeHtml(msg.id)}">${escapeHtml(emoji)} ${info.count}</button>`
-  ).join('')}</div>`;
+  const chips = [...counts.entries()].map(([emoji, info]) =>
+    `<button type="button" class="reaction ${info.mine ? 'mine' : ''}" data-react="${escapeHtml(emoji)}" data-react-msg="${escapeHtml(msg.id)}">${escapeHtml(emoji)} ${info.count}</button>`
+  ).join('');
+  return `<div class="reactions">${chips}<button type="button" class="reaction-add" data-react-add="${escapeHtml(msg.id)}" aria-label="Add reaction" title="Add reaction">+</button></div>`;
 }
 
 function metaHtml(msg) {
@@ -720,7 +720,7 @@ function messageHtml(msg, index, list) {
   if (grouped) cls.push('grouped');
   return `<div class="${cls.join(' ')}" data-msg="${escapeHtml(msg.id)}">
     <div class="${bubbleClass.join(' ')}" data-bubble="${escapeHtml(msg.id)}">${inner}</div>
-    ${reactionsHtml(msg)}
+    ${deleted ? '' : reactionsHtml(msg)}
     ${metaHtml(msg)}
   </div>`;
 }
@@ -1255,9 +1255,15 @@ function onMessagesClick(event) {
     }
     return;
   }
-const reaction = event.target.closest('[data-react]');
+  const reaction = event.target.closest('[data-react]');
   if (reaction) {
     toggleReaction(reaction.getAttribute('data-react-msg'), reaction.getAttribute('data-react'));
+    return;
+  }
+  const reactionAdd = event.target.closest('[data-react-add]');
+  if (reactionAdd) {
+    const msg = (state.messages[state.activeConv?.id] || []).find((m) => m.id === reactionAdd.getAttribute('data-react-add'));
+    if (msg) openMessageActions(msg);
     return;
   }
   const retry = event.target.closest('[data-retry]');
@@ -1336,7 +1342,8 @@ async function toggleReaction(messageId, reaction) {
   const msg = list.find((m) => m.id === messageId);
   if (!msg || String(msg.id).startsWith('temp_')) return;
   // optimistic
-  const reactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+  const previousReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+  const reactions = [...previousReactions];
   const idx = reactions.findIndex((r) => r.user_id === state.me?.id && r.reaction === reaction);
   if (idx > -1) reactions.splice(idx, 1);
   else reactions.push({ user_id: state.me?.id, reaction });
@@ -1344,11 +1351,11 @@ async function toggleReaction(messageId, reaction) {
   renderMessages(false);
   try {
     const res = await api.react(conv.id, messageId, reaction);
-    if (Array.isArray(res.reactions)) {
-      // rebuild full list preserving who reacted where possible
-      msg.reactions = reactions;
-    }
+    if (Array.isArray(res.entries)) msg.reactions = res.entries;
+    renderMessages(false);
   } catch (err) {
+    msg.reactions = previousReactions;
+    renderMessages(false);
     toast(err.message || 'Reaction failed');
   }
 }
@@ -1854,6 +1861,7 @@ function openChatMenu() {
   if (isGroup || isChannel) options.push(`<button class="option" data-act="members">${icon('users')}<span class="option-copy">${isChannel ? 'Channel info' : 'Group members'}<small>${(conv.member_ids || []).length} members</small></span></button>`);
   if (isGroup && canManage) options.push(`<button class="option" data-act="add">${icon('user-plus')}<span class="option-copy">Add member</span></button>`);
   if (isGroup && canManage) options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename group</span></button>`);
+  if (isChannel && role === 'owner') options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename channel</span></button>`);
   if (isChannel && conv.invite_code) options.push(`<button class="option" data-act="invite">${icon('link')}<span class="option-copy">Invite code<small>${escapeHtml(conv.invite_code)}</small></span></button>`);
   options.push(`<button class="option" data-act="search">${icon('search')}<span class="option-copy">Search in conversation</span></button>`);
   options.push(`<button class="option" data-act="mute">${icon('bell')}<span class="option-copy">${conv.muted ? 'Unmute' : 'Mute'} notifications</span></button>`);
@@ -1883,7 +1891,7 @@ async function handleChatAction(act, conv, role) {
     if (act === 'members') return openConversationInfo();
     if (act === 'add') return addMemberFlow(conv);
     if (act === 'rename') {
-      const name = await promptSheet({ title: 'Rename', label: 'Group name', value: conv.name || '', confirmText: 'Save' });
+      const name = await promptSheet({ title: `Rename ${conv.type === 'channel' ? 'channel' : 'group'}`, label: `${conv.type === 'channel' ? 'Channel' : 'Group'} name`, value: conv.name || '', confirmText: 'Save' });
       if (!name) return;
       await api.updateConversation(conv.id, { name });
       conv.name = name;
@@ -2054,6 +2062,7 @@ async function openConversationInfo() {
       }).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
         ${conv.type === 'group' && canManage ? `<button class="btn btn-primary btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
+        ${conv.type === 'channel' && String(conv.owner_id) === String(state.me?.id) ? `<button class="btn btn-ghost btn-block" id="rename-channel">${icon('edit')} Rename channel</button>` : ''}
         ${['group', 'channel'].includes(conv.type) && canManage ? `<button class="btn btn-ghost btn-block" id="toggle-conversation-lock">${icon(conv.is_locked ? 'unlock' : 'lock')} ${conv.is_locked ? (conv.type === 'channel' ? 'Resume channel' : 'Unlock group') : (conv.type === 'channel' ? 'Pause channel' : 'Lock group')}</button>` : ''}
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
         ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
@@ -2111,6 +2120,10 @@ async function openConversationInfo() {
         sheet.querySelector('#add-group-members')?.addEventListener('click', () => {
           closeSheet();
           openAddMembersSheet(conv);
+        });
+        sheet.querySelector('#rename-channel')?.addEventListener('click', () => {
+          closeSheet();
+          handleChatAction('rename', conv, role);
         });
         sheet.querySelector('#toggle-conversation-lock')?.addEventListener('click', async () => {
           const button = sheet.querySelector('#toggle-conversation-lock');

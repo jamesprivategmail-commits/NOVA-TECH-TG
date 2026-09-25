@@ -262,6 +262,10 @@ export function initChat() {
 
   // Voice recording & preview listeners
   els.voiceBtn?.addEventListener('click', () => {
+    if (els.input?.value.trim()) {
+      handleSend();
+      return;
+    }
     if (recording) stopVoiceRecording('preview');
     else startVoiceRecording();
   });
@@ -389,11 +393,13 @@ function updateBlockedChatState(conv) {
   const blocked = blockedByMe || blockedMe;
   els.blockedNotice?.classList.toggle('hidden', !blocked);
   els.composer?.classList.toggle('hidden', blocked);
+  els.composer?.setAttribute('data-state', blocked ? 'blocked' : 'open');
+  els.blockedNotice?.classList.toggle('is-blocked', blocked);
   els.darkPairCodeBar?.classList.toggle('hidden', blocked || conv?.other_user?.id !== 'u_dark_pair');
   if (!els.blockedNotice || !blocked) { renderRestrictionState(); return; }
   if (blockedByMe) {
     const name = escapeHtml(conv.other_user?.display_name || 'this user');
-    els.blockedNotice.innerHTML = `<span>You blocked ${name}.</span><button class="btn btn-ghost btn-sm" id="unblock-chat-user">Unblock</button>`;
+    els.blockedNotice.innerHTML = `<svg class="icon" aria-hidden="true"><use href="#i-ban"></use></svg><span>You blocked ${name}.</span><button class="btn btn-ghost btn-sm" id="unblock-chat-user">Unblock</button>`;
     els.blockedNotice.querySelector('#unblock-chat-user')?.addEventListener('click', async () => {
       try {
         await api.unblock(conv.other_user.id);
@@ -404,7 +410,7 @@ function updateBlockedChatState(conv) {
       } catch (err) { toast(err.message || 'Could not unblock'); }
     });
   } else {
-    els.blockedNotice.textContent = 'This user has blocked you.';
+    els.blockedNotice.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-ban"></use></svg><span>You are blocked from messaging this person</span>';
   }
   renderRestrictionState();
 }
@@ -493,6 +499,7 @@ function renderPresenceState() {
 function onInput() {
   autoGrow();
   const typing = els.input.value.length > 0;
+  updateComposerActionState();
   if (typing && !typingSent) {
     typingSent = true;
     sendTyping(state.activeConv.id, true);
@@ -916,6 +923,17 @@ function insertText(text) {
   els.input.value += text;
   els.input.focus();
   autoGrow();
+  updateComposerActionState();
+}
+
+function updateComposerActionState() {
+  const button = els.voiceBtn;
+  if (!button || !els.input) return;
+  const hasText = Boolean(els.input.value.trim());
+  button.classList.toggle('armed', hasText);
+  button.setAttribute('aria-label', hasText ? 'Send message' : 'Record voice note');
+  button.setAttribute('title', hasText ? 'Send message' : 'Record voice note');
+  button.innerHTML = hasText ? icon('send') : icon('mic');
 }
 
 const CUSTOM_EMOJIS = {
@@ -1020,6 +1038,7 @@ async function handleSend() {
   state.messages[conv.id].push(temp);
   els.input.value = '';
   autoGrow();
+  updateComposerActionState();
   clearReply();
   clearAttachment();
   renderMessages(true);

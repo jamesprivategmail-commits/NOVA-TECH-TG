@@ -224,7 +224,6 @@ export function initChat() {
     emojiPicker: $('#emoji-picker'),
     composer: $('#composer'),
     input: $('#composer-input'),
-    sendBtn: $('#send-btn'),
     attachBtn: $('#composer-attach'),
     attachInput: $('#attach-input'),
     voiceBtn: $('#composer-voice'),
@@ -456,7 +455,7 @@ function renderHeader() {
   const canPost = conv.type !== 'channel' || ['owner', 'admin'].includes(role);
   els.input.disabled = !canPost;
   els.input.placeholder = canPost ? 'Message' : 'Only admins can post in this channel';
-  els.sendBtn.disabled = !canPost;
+  if (els.voiceBtn) els.voiceBtn.disabled = !canPost;
   renderRestrictionState();
 }
 
@@ -467,7 +466,7 @@ function renderRestrictionState() {
   const lockedForMe = conv.is_locked && (conv.type === 'channel' || !['owner', 'admin'].includes(role));
   if (lockedForMe) {
     els.input.disabled = true;
-    els.sendBtn.disabled = true;
+    if (els.voiceBtn) els.voiceBtn.disabled = true;
     els.input.placeholder = conv.type === 'channel' ? 'This channel is currently paused' : 'Group is locked — only admins can send messages';
     [els.attachBtn, els.voiceBtn, els.emojiBtn].forEach((button) => { if (button) button.disabled = true; });
     if (!els.blockedNotice.textContent.includes('blocked')) {

@@ -840,6 +840,9 @@ input, textarea { font-size: 16px; }
 }
 .reaction.mine { border-color: var(--red); }
 .message.own .reaction { background: rgba(0, 0, 0, .25); }
+.wallpaper-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.wallpaper-choice { min-height: 72px; border: 1px solid var(--border); border-radius: 12px; color: #fff; text-shadow: 0 1px 3px #000; font-weight: 700; cursor: pointer; }
+.wallpaper-choice:hover { border-color: var(--blue); transform: translateY(-1px); }
 
 .typing-indicator {
   padding: 4px 16px 6px; font-size: 12.5px; color: var(--muted);

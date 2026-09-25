@@ -896,7 +896,6 @@ input, textarea { font-size: 16px; }
 .composer-icon-btn span { font-size: 18px; line-height: 1; }
 .composer-icon-btn:hover { background: #1e1e22; color: var(--text); }
 .composer-left-controls .composer-icon-btn { width: 40px; height: 40px; background: #161619; }
-.composer-inline-emoji { width: 32px; height: 32px; }
 .composer-right-controls .composer-icon-btn { width: 32px; height: 32px; }
 .composer-right-controls .composer-icon-btn.armed { background: var(--teal, #47d6c6); color: #06201c; }
 .send {
@@ -960,7 +959,6 @@ input, textarea { font-size: 16px; }
 @media (max-width: 360px) {
   .composer-right-controls #composer-sticker { display: none; }
   .composer-input-row { padding-left: 12px; }
-  .composer-inline-emoji { display: none; }
 }
 .viewer-lightbox-close { position: absolute; z-index: 5; top: calc(14px + var(--safe-t)); right: 14px; width: 38px; height: 38px; border: 0; border-radius: 50%; background: rgba(38,38,38,.86); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
 .viewer-lightbox-close .icon { width: 20px; height: 20px; }

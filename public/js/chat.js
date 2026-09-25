@@ -227,7 +227,6 @@ export function initChat() {
     attachBtn: $('#composer-attach'),
     attachInput: $('#attach-input'),
     voiceBtn: $('#composer-voice'),
-    emojiBtn: $('#composer-emoji'),
     composerMain: $('#composer-main-content'),
     voiceRecBar: $('#voice-recording-bar'),
     voiceRecTimer: $('#voice-rec-timer'),
@@ -310,7 +309,6 @@ export function initChat() {
   });
   els.attachBtn?.addEventListener('click', () => els.attachInput.click());
   els.attachInput?.addEventListener('change', onAttachSelected);
-  els.emojiBtn?.addEventListener('click', toggleEmojiPicker);
   $('#composer-sticker')?.addEventListener('click', () => {
     openStickerPicker({
       onPick: async (sticker) => {
@@ -468,13 +466,13 @@ function renderRestrictionState() {
     els.input.disabled = true;
     if (els.voiceBtn) els.voiceBtn.disabled = true;
     els.input.placeholder = conv.type === 'channel' ? 'This channel is currently paused' : 'Group is locked — only admins can send messages';
-    [els.attachBtn, els.voiceBtn, els.emojiBtn].forEach((button) => { if (button) button.disabled = true; });
+    [els.attachBtn, els.voiceBtn].forEach((button) => { if (button) button.disabled = true; });
     if (!els.blockedNotice.textContent.includes('blocked')) {
       els.blockedNotice.innerHTML = `<span>${conv.type === 'channel' ? 'This channel is currently paused by the owner.' : 'This group is locked. Only admins can send messages and manage the group.'}</span>`;
       els.blockedNotice.classList.remove('hidden');
     }
   } else {
-    [els.attachBtn, els.voiceBtn, els.emojiBtn].forEach((button) => { if (button) button.disabled = false; });
+    [els.attachBtn, els.voiceBtn].forEach((button) => { if (button) button.disabled = false; });
     if (!els.blockedNotice.textContent.includes('blocked')) els.blockedNotice.classList.add('hidden');
   }
 }

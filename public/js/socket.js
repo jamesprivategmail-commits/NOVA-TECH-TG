@@ -1,5 +1,6 @@
 // socket.js - real-time layer over the existing Socket.IO server
 import { state, emit } from './state.js';
+import { apiOrigin } from './api.js';
 
 let socket = null;
 let connecting = null;
@@ -30,8 +31,8 @@ export function connectSocket() {
         || '';
       if (base && /^https?:\/\//.test(base)) {
         serverUrl = base.replace(/\/api\/?$/, '');
-      } else if (location.hostname.includes('appassets.androidplatform.net') || location.protocol === 'file:') {
-        serverUrl = localStorage.getItem('socketUrl') || 'https://nova-tech-tg.vercel.app';
+      } else if (location.hostname.includes('appassets.androidplatform.net') || location.hostname === 'localhost' || location.protocol === 'file:') {
+        serverUrl = localStorage.getItem('socketUrl') || apiOrigin();
       }
     } catch { /* ignore */ }
     socket = io(serverUrl, { auth: { token: state.token }, transports: ['websocket', 'polling'] });

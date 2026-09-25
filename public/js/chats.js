@@ -1,7 +1,7 @@
 // chats.js - conversation list screen
 import { api, ApiError } from './api.js';
 import { pref } from './settings.js';
-import { state, emit, on, isUnread, totalUnreadCount } from './state.js';
+import { state, emit, on, isUnread, totalUnreadCount, syncAllUnread } from './state.js';
 import {
   $, avatar, icon, escapeHtml, timeAgo, conversationTitle, conversationAvatarUser, conversationIsVerified, verifyBadge,
   emptyState, errorState, skeletonList, toast, openSheet, closeSheet, setBusy
@@ -98,11 +98,12 @@ export function setConversations(list) {
       conv.unread_count = 0;
     } else if (typeof conv.unread_count === 'number') {
       state.unread[conv.id] = conv.unread_count;
-    } else if (typeof state.unread[conv.id] !== 'number') {
+    } else {
       state.unread[conv.id] = 0;
       conv.unread_count = 0;
     }
   }
+  syncAllUnread(state.unread);
   renderChats();
   updateFilterChips();
   updateChatsNavDot();

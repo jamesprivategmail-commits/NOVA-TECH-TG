@@ -66,10 +66,10 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// POST /api/auth/login { novaId, password }
+// POST /api/auth/login { novaId, password, twoFactorPin }
 router.post('/login', async (req, res) => {
   try {
-    const { novaId, password } = req.body;
+    const { novaId, password, twoFactorPin } = req.body;
     if (!novaId || !password) return res.status(400).json({ error: 'DARK CHAT ID and password are required' });
 
     const user = await getUserByNovaId(novaId.trim().toUpperCase());
@@ -80,6 +80,17 @@ router.post('/login', async (req, res) => {
 
     if (user.is_banned) {
       return res.status(403).json({ error: user.ban_reason ? `Account banned: ${user.ban_reason}` : 'Your account has been banned.' });
+    }
+
+    // Two-step verification check
+    const privacy = user.privacy_settings || {};
+    if (privacy.twoFactorEnabled && privacy.twoFactorPin) {
+      if (!twoFactorPin) {
+        return res.json({ requireTwoFactor: true, message: 'Two-step verification is enabled. Enter your 6-digit security PIN.' });
+      }
+      if (String(twoFactorPin).trim() !== String(privacy.twoFactorPin).trim()) {
+        return res.status(401).json({ error: 'Incorrect 6-digit PIN. Please try again.' });
+      }
     }
 
     const updated = await updateUser(user.id, { last_seen: new Date().toISOString() });

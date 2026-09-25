@@ -39,9 +39,18 @@ function wireComposer() {
     try {
       const dataUrl = await fileToDataUrl(file);
       composeImage = { dataUrl, mime: file.type };
-      $('#post-preview').innerHTML = file.type.startsWith('video/')
-        ? `<div class="post-image"><video src="${escapeHtml(dataUrl)}" controls playsinline style="width:100%;max-height:320px;border-radius:12px"></video></div>`
-        : `<div class="post-image"><img src="${escapeHtml(dataUrl)}" alt=""></div>`;
+      const isVid = file.type.startsWith('video/');
+      $('#post-preview').innerHTML = `<div class="post-image" style="position:relative;margin-top:8px">
+        ${isVid
+          ? `<video src="${escapeHtml(dataUrl)}" controls playsinline style="width:100%;max-height:320px;border-radius:12px;background:#000"></video>`
+          : `<img src="${escapeHtml(dataUrl)}" alt="" style="width:100%;max-height:320px;object-fit:cover;border-radius:12px">`}
+        <button type="button" id="post-media-clear" class="icon-btn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center" title="Remove media">✕</button>
+      </div>`;
+      $('#post-media-clear')?.addEventListener('click', () => {
+        composeImage = null;
+        $('#post-preview').innerHTML = '';
+        $('#post-image-input').value = '';
+      });
     } catch { toast('Could not read media'); }
   });
   $('#post-composer')?.addEventListener('submit', onPost);
@@ -119,7 +128,10 @@ function postHtml(p) {
   const canDelete = own || !!state.me?.isAdmin || !!state.me?.is_admin;
   const rawImage = p.image_url || p.image_data;
   const image = rawImage ? mediaSrc(rawImage) : null;
-  const isVideo = String(p.image_mime || '').startsWith('video/');
+  const isVideo = String(p.image_mime || '').startsWith('video/')
+    || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(image || '')
+    || (typeof rawImage === 'string' && rawImage.startsWith('data:video/'));
+
   return `<article class="post" data-post="${escapeHtml(p.id)}">
     <div class="post-head">
       ${avatar({ displayName: p.display_name, avatarUrl: p.avatar_url, avatarColor: p.avatar_color }, { size: 'sm' })}
@@ -130,7 +142,10 @@ function postHtml(p) {
       ${canDelete ? `<button type="button" class="icon-btn" data-del="${escapeHtml(p.id)}" aria-label="Delete update" title="Delete update">${icon('trash')}</button>` : ''}
     </div>
     ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
-    ${image ? (isVideo ? `<div class="post-image"><video src="${escapeHtml(image)}" controls playsinline preload="metadata" style="width:100%;max-height:480px;border-radius:12px"></video></div>` : `<div class="post-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.closest('.post-image').remove()"></div>`) : ''}
+    ${image ? (isVideo
+      ? `<div class="post-image"><video src="${escapeHtml(image)}" controls playsinline preload="auto" style="width:100%;max-height:480px;border-radius:12px;background:#000"><source src="${escapeHtml(image)}" type="${escapeHtml(p.image_mime || 'video/mp4')}">Your browser does not support video playback.</video></div>`
+      : `<div class="post-image"><img src="${escapeHtml(image)}" alt="Update photo" loading="lazy" data-open-post-image="${escapeHtml(image)}" onerror="this.onerror=null;this.classList.add('media-failed');"></div>`
+    ) : ''}
     <div class="post-actions">
       <button class="post-action ${p.liked_by_me ? 'liked' : ''}" data-like="${escapeHtml(p.id)}" aria-label="Like">
         ${icon('heart')}<span>${p.like_count || 0}</span></button>

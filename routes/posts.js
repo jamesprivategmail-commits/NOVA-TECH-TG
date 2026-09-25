@@ -35,16 +35,22 @@ router.post('/', async (req, res) => {
 
     let imageUrl = null;
     let detectedMime = imageMime || 'image/jpeg';
-    if (imageData && !/^(image|video)\//.test(detectedMime)) return res.status(400).json({ error: 'Updates support image and video files only' });
+    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:')) {
+      const match = imageData.match(/^data:([^;]+)/);
+      if (match) detectedMime = match[1];
+    }
+    if (imageData && !/^(image|video)\//.test(detectedMime)) {
+      return res.status(400).json({ error: 'Updates support image and video files only' });
+    }
     if (imageData) {
-      // Upload image to Firebase Storage
+      const ext = (detectedMime.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '');
       const uploaded = await uploadToStorage({
         data: imageData,
         mimeType: detectedMime,
-        filename: `post_${req.user.id}_${Date.now()}.${detectedMime.split('/')[1] || 'bin'}`,
+        filename: `post_${req.user.id}_${Date.now()}.${ext || 'bin'}`,
         userId: req.user.id
       });
-      imageUrl = uploaded.url;
+      imageUrl = `/api/storage/files/${uploaded.fileId}`;
       detectedMime = uploaded.mimeType;
     }
 

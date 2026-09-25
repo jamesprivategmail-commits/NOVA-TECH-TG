@@ -128,14 +128,27 @@
     </form>
 
     <form id="login-form" class="auth-form hidden" autocomplete="off">
-      <label class="field">
-        <span class="field-label">DARK CHAT ID</span>
-        <input type="text" id="login-novaid" placeholder="+1-626-715-0000" required autocomplete="off">
-      </label>
-      <label class="field">
-        <span class="field-label">Password</span>
-        <input type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
-      </label>
+      <div id="login-credentials" class="stack">
+        <label class="field">
+          <span class="field-label">DARK CHAT ID</span>
+          <input type="text" id="login-novaid" placeholder="+1-626-715-0000" required autocomplete="off">
+        </label>
+        <label class="field">
+          <span class="field-label">Password</span>
+          <input type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
+        </label>
+      </div>
+      <div id="login-2fa-section" class="hidden stack" style="margin-top:4px;margin-bottom:8px">
+        <div style="font-size:13px;line-height:1.4;color:var(--text);background:rgba(255,255,255,0.06);padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1)">
+          🔒 <b>Two-Step Verification</b><br>
+          <span class="muted" style="font-size:12px">Enter the 6-digit security PIN for this account.</span>
+        </div>
+        <label class="field" style="margin-top:8px">
+          <span class="field-label">6-Digit Security PIN</span>
+          <input type="password" id="login-2fa-pin" placeholder="••••••" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+        </label>
+        <button type="button" class="btn btn-ghost btn-sm" id="login-2fa-back" style="align-self:flex-start">← Back</button>
+      </div>
       <button type="submit" class="btn btn-primary btn-block" id="login-submit">Log in</button>
     </form>
 

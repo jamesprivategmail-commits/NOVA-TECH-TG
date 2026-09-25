@@ -4,25 +4,39 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/storage/files/:fileId - serve file from Firebase storage with Range streaming for video/audio
-router.get('/files/:fileId', async (req, res) => {
+// GET & HEAD /api/storage/files/:fileId - serve file from Firebase storage with Range streaming for video/audio
+router.all('/files/:fileId', async (req, res) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     const file = await getStorageFile(req.params.fileId);
     if (!file) {
       return res.status(404).json({ error: 'File not found' });
     }
 
+    const buffer = file.buffer || (file.data ? Buffer.from(file.data, 'base64') : Buffer.alloc(0));
     const mimeType = file.mimeType || 'application/octet-stream';
-    const totalSize = file.size || file.buffer.length;
+    const totalSize = buffer.length || file.size || 0;
     const range = req.headers.range;
 
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     if (file.filename) {
       res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.filename)}"`);
     }
 
-    if (range) {
+    if (req.method === 'HEAD') {
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', totalSize);
+      return res.end();
+    }
+
+    if (range && totalSize > 0) {
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
@@ -38,11 +52,11 @@ router.get('/files/:fileId', async (req, res) => {
       res.setHeader('Content-Length', chunkLength);
       res.setHeader('Content-Type', mimeType);
 
-      return res.end(file.buffer.subarray(start, end + 1));
+      return res.end(buffer.subarray(start, end + 1));
     } else {
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', totalSize);
-      return res.end(file.buffer);
+      return res.end(buffer);
     }
   } catch (err) {
     console.error('Storage get error:', err);

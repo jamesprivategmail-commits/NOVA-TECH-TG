@@ -2,25 +2,27 @@
 import { state, emit } from './state.js';
 
 function resolveApiBase() {
-  const PROD_API = 'https://nova-tech-tg.vercel.app/api';
+  const PROD_API = 'https://ais-dev-si4qe2vjzzkc5btvtulch6-866141125336.europe-west2.run.app/api';
   try {
     if (typeof window !== 'undefined' && window.__API_BASE__) return String(window.__API_BASE__).replace(/\/$/, '');
     const meta = typeof document !== 'undefined' ? document.querySelector('meta[name="api-base"]') : null;
     const metaVal = meta?.content?.trim();
-    if (metaVal && metaVal !== PROD_API) return metaVal.replace(/\/$/, '');
+    if (metaVal && !metaVal.includes('vercel.app')) return metaVal.replace(/\/$/, '');
     const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('apiBase') : null;
-    if (stored) return stored.replace(/\/$/, '');
-    // Standard web browser / AI Studio preview / Web deploy: use current origin's /api
+    if (stored && !stored.includes('vercel.app')) return stored.replace(/\/$/, '');
+    // Standard web browser / AI Studio preview: use current origin's /api
     if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
-        && !location.hostname.includes('appassets.androidplatform.net')) {
+        && !location.hostname.includes('appassets.androidplatform.net')
+        && location.hostname !== 'localhost') {
       return '/api';
     }
     // APK WebView / local file fallback
     if (typeof location !== 'undefined' && (
       location.hostname.includes('appassets.androidplatform.net')
+      || location.hostname === 'localhost'
       || location.protocol === 'file:'
     )) {
-      return metaVal || PROD_API;
+      return (metaVal && !metaVal.includes('vercel.app')) ? metaVal : PROD_API;
     }
   } catch { /* ignore */ }
   return '/api';
@@ -28,7 +30,7 @@ function resolveApiBase() {
 
 const BASE = resolveApiBase();
 
-/** Origin of the API host (no trailing slash), e.g. https://nova-tech-tg.vercel.app */
+/** Origin of the API host (no trailing slash) */
 export function apiOrigin() {
   try {
     if (/^https?:\/\//i.test(BASE)) {
@@ -36,19 +38,31 @@ export function apiOrigin() {
     }
   } catch { /* ignore */ }
   if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
-      && !location.hostname.includes('appassets.androidplatform.net')) {
+      && !location.hostname.includes('appassets.androidplatform.net')
+      && location.hostname !== 'localhost') {
     return location.origin;
   }
-  return 'https://nova-tech-tg.vercel.app';
+  return 'https://ais-dev-si4qe2vjzzkc5btvtulch6-866141125336.europe-west2.run.app';
 }
 
-/** Make media/storage URLs absolute so APK WebView and web both load them */
+/** Make media/storage URLs absolute and fix dead domains so APK WebView and web load properly */
 export function mediaSrc(url) {
   if (!url) return '';
-  const u = String(url);
-  if (u.startsWith('data:') || u.startsWith('blob:') || /^https?:\/\//i.test(u)) return u;
+  let u = String(url);
+  // Normalize old vercel or obsolete host URLs pointing to storage
+  if (/vercel\.app/i.test(u) || /darkchat.*\.app/i.test(u)) {
+    const storageIdx = u.indexOf('/api/storage/files/');
+    if (storageIdx !== -1) {
+      u = u.slice(storageIdx);
+    } else {
+      const assetIdx = u.indexOf('/assets/');
+      if (assetIdx !== -1) u = u.slice(assetIdx);
+    }
+  }
+  if (u.startsWith('data:') || u.startsWith('blob:')) return u;
   if (u.startsWith('/')) return apiOrigin() + u;
-  return u;
+  if (/^https?:\/\//i.test(u)) return u;
+  return apiOrigin() + '/' + u;
 }
 
 export function apiBase() { return BASE; }
@@ -100,7 +114,7 @@ export const api = {
 
   // auth
   signup: (displayName, password) => request('/auth/signup', { method: 'POST', body: { displayName, password }, auth: false }),
-  login: (novaId, password) => request('/auth/login', { method: 'POST', body: { novaId, password }, auth: false }),
+  login: (novaId, password, twoFactorPin = null) => request('/auth/login', { method: 'POST', body: { novaId, password, twoFactorPin }, auth: false }),
   me: () => request('/auth/me'),
   updateMe: (payload) => request('/auth/me', { method: 'PUT', body: payload }),
   lookup: (novaId) => request(`/auth/lookup/${encodeURIComponent(novaId)}`),

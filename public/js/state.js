@@ -84,6 +84,13 @@ export function markRead(conversationId, timestamp) {
   emit('unread:changed');
 }
 
+export function syncAllUnread(unreadMap) {
+  if (unreadMap && typeof unreadMap === 'object') {
+    state.unread = { ...unreadMap };
+    writeJson(UNREAD_KEY, state.unread);
+  }
+}
+
 export function bumpUnread(conversationId) {
   if (!conversationId) return;
   // Do not count messages we are currently looking at in active tab.

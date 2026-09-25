@@ -11,6 +11,11 @@ export function initAuth() {
     error: $('#auth-error'),
     signupForm: $('#signup-form'),
     loginForm: $('#login-form'),
+    loginCredentials: $('#login-credentials'),
+    login2faSection: $('#login-2fa-section'),
+    login2faPin: $('#login-2fa-pin'),
+    login2faBack: $('#login-2fa-back'),
+    loginSubmit: $('#login-submit'),
     signupName: $('#signup-name'),
     signupPassword: $('#signup-password'),
     loginNovaId: $('#login-novaid'),
@@ -27,6 +32,7 @@ export function initAuth() {
   els.toSignup.querySelector('button')?.addEventListener('click', () => switchMode('signup'));
   els.signupForm.addEventListener('submit', onSignup);
   els.loginForm.addEventListener('submit', onLogin);
+  els.login2faBack?.addEventListener('click', reset2faStep);
   els.copyBtn.addEventListener('click', copyId);
   els.revealContinue.addEventListener('click', () => {
     els.reveal.classList.add('hidden');
@@ -34,8 +40,18 @@ export function initAuth() {
   });
 }
 
+function reset2faStep() {
+  showError('');
+  els.loginCredentials?.classList.remove('hidden');
+  els.login2faSection?.classList.add('hidden');
+  if (els.login2faPin) els.login2faPin.value = '';
+  if (els.loginSubmit) els.loginSubmit.textContent = 'Log in';
+  els.loginPassword?.focus();
+}
+
 function switchMode(mode) {
   showError('');
+  reset2faStep();
   const login = mode === 'login';
   els.signupForm.classList.toggle('hidden', login);
   els.loginForm.classList.toggle('hidden', !login);
@@ -89,12 +105,28 @@ async function onLogin(event) {
   const password = els.loginPassword.value;
   if (!novaId || !password) return showError('Enter your DARK CHAT ID and password');
 
+  const is2faActive = els.login2faSection && !els.login2faSection.classList.contains('hidden');
+  let pin = null;
+  if (is2faActive) {
+    pin = els.login2faPin ? els.login2faPin.value.trim() : '';
+    if (!pin) return showError('Enter your 6-digit security PIN');
+    if (!/^\d{6}$/.test(pin)) return showError('PIN must be exactly 6 digits');
+  }
+
   const btn = $('#login-submit');
-  setBusy(btn, true, 'Logging in...');
+  setBusy(btn, true, is2faActive ? 'Verifying...' : 'Logging in...');
   try {
-    const res = await api.login(novaId, password);
+    const res = await api.login(novaId, password, pin);
+    if (res.requireTwoFactor) {
+      els.loginCredentials?.classList.add('hidden');
+      els.login2faSection?.classList.remove('hidden');
+      if (els.loginSubmit) els.loginSubmit.textContent = 'Verify PIN & Log in';
+      els.login2faPin?.focus();
+      return;
+    }
     saveToken(res.token);
     state.me = res.user;
+    reset2faStep();
     els.loginForm.reset();
     emit('auth:signed-in', res.user);
   } catch (err) {

@@ -171,11 +171,16 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
   let base64Data = data;
   let detectedMime = mimeType;
   if (typeof data === 'string' && data.startsWith('data:')) {
-    const match = data.match(/^data:([^;]+);base64,(.+)$/);
-    if (match) {
-      detectedMime = match[1];
-      base64Data = match[2];
+    const commaIndex = data.indexOf(',');
+    if (commaIndex !== -1) {
+      const header = data.slice(0, commaIndex);
+      const mimeMatch = header.match(/^data:([^;]+)/);
+      if (mimeMatch) detectedMime = mimeMatch[1];
+      base64Data = data.slice(commaIndex + 1);
     }
+  }
+  if (typeof base64Data === 'string') {
+    base64Data = base64Data.replace(/\s+/g, '');
   }
 
   const byteLength = Buffer.from(base64Data, 'base64').length;
@@ -234,12 +239,7 @@ async function uploadToStorage({ data, mimeType = 'image/jpeg', filename = 'uplo
     }
   }
 
-  const publicBase = (process.env.PUBLIC_BASE_URL || process.env.VERCEL_URL
-    ? (process.env.PUBLIC_BASE_URL || `https://${process.env.VERCEL_URL}`)
-    : '').replace(/\/$/, '');
-  const downloadUrl = publicBase
-    ? `${publicBase}/api/storage/files/${fileId}`
-    : `/api/storage/files/${fileId}`;
+  const downloadUrl = `/api/storage/files/${fileId}`;
   return { fileId, url: downloadUrl, mimeType: detectedMime, size: byteLength };
 }
 
@@ -595,12 +595,17 @@ async function getConversationsForUser(userId) {
 
     if (isLastSenderMe || !conv.last_message_at) {
       conv.unread_count = 0;
-    } else if (typeof memberMeta.unread_count === 'number') {
-      conv.unread_count = memberMeta.unread_count;
     } else if (memberMeta.last_read_at && new Date(memberMeta.last_read_at).getTime() >= new Date(conv.last_message_at).getTime()) {
       conv.unread_count = 0;
+    } else if (typeof memberMeta.unread_count === 'number' && memberMeta.unread_count > 0) {
+      conv.unread_count = memberMeta.unread_count;
     } else {
-      conv.unread_count = 0;
+      // Unread messages arrived after last_read_at (or user hasn't marked as read yet)
+      if (memberMeta.joined_at && new Date(memberMeta.joined_at).getTime() > new Date(conv.last_message_at).getTime()) {
+        conv.unread_count = 0;
+      } else {
+        conv.unread_count = Math.max(1, typeof memberMeta.unread_count === 'number' ? memberMeta.unread_count : 1);
+      }
     }
 
     if (conv.type === 'dm') {
@@ -817,7 +822,7 @@ async function createMessage(convId, msgData) {
     if (convSnap.exists()) {
       const convData = convSnap.data();
       members = { ...(convData.members || {}) };
-      const memberIds = convData.member_ids || [];
+      const memberIds = Array.from(new Set([...(convData.member_ids || []), ...Object.keys(members)]));
       for (const mid of memberIds) {
         const current = members[mid] || {};
         if (String(mid) === String(message.sender_id)) {

@@ -347,36 +347,58 @@ function openChangePasswordSheet() {
 }
 
 function openTwoFactorSheet() {
-  const current = state.settings.privacySettings?.twoFactorEnabled || false;
+  const currentEnabled = !!state.settings.privacySettings?.twoFactorEnabled;
+  const currentPin = state.settings.privacySettings?.twoFactorPin || '';
+
   openSheet({
     title: 'Two-Step Verification',
     body: `<div class="sheet-pad stack">
-      <div class="muted" style="font-size:13px;line-height:1.5">Two-step verification adds an extra layer of security. When enabled, a 6-digit PIN is required whenever your DARK CHAT ID is used to log in.</div>
-      <div class="setting" style="margin-top:10px">
-        <span class="setting-icon">${icon('shield')}</span>
-        <span class="setting-copy">Enable 2-Step PIN</span>
-        <button class="toggle" role="switch" aria-checked="${current}" id="2fa-toggle" aria-label="Two step verification"></button>
+      <div class="muted" style="font-size:13px;line-height:1.5">
+        Two-step verification adds an extra layer of security to your account. When enabled, your 6-digit PIN will be required whenever you sign in with your DARK CHAT ID.
       </div>
-      <div id="2fa-pin-box" class="${current ? '' : 'hidden'} stack" style="margin-top:12px">
-        <label class="field"><span class="field-label">Set 6-digit PIN</span>
-          <input class="input" type="password" id="2fa-pin" maxlength="6" inputmode="numeric" placeholder="••••••" value="${escapeHtml(state.settings.privacySettings?.twoFactorPin || '')}"></label>
-        <button class="btn btn-primary btn-sm" id="2fa-save-pin">Save PIN</button>
+      <div class="setting" style="margin-top:12px">
+        <span class="setting-icon">${icon('shield')}</span>
+        <span class="setting-copy">Two-Step Verification<small>${currentEnabled ? 'Currently Enabled 🔒' : 'Currently Disabled'}</small></span>
+        <button class="toggle" role="switch" aria-checked="${currentEnabled}" id="2fa-toggle" aria-label="Two step verification"></button>
+      </div>
+      <div id="2fa-pin-box" class="${currentEnabled ? '' : 'hidden'} stack" style="margin-top:14px">
+        <label class="field"><span class="field-label">Account 6-Digit PIN</span>
+          <input class="input" type="password" id="2fa-pin" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" value="${escapeHtml(currentPin)}" autocomplete="off">
+        </label>
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Enter exactly 6 numbers (e.g. 123456) that you will use to verify your identity upon login.</div>
+        <button class="btn btn-primary btn-block" id="2fa-save-pin">Save & Activate 6-Digit PIN</button>
       </div>
     </div>`,
     onMount(sheet) {
       const toggle = sheet.querySelector('#2fa-toggle');
       const pinBox = sheet.querySelector('#2fa-pin-box');
+      const pinInput = sheet.querySelector('#2fa-pin');
+
       toggle.addEventListener('click', async () => {
         const next = !(toggle.getAttribute('aria-checked') === 'true');
-        toggle.setAttribute('aria-checked', String(next));
-        pinBox.classList.toggle('hidden', !next);
-        await saveSetting({ twoFactorEnabled: next });
+        if (next) {
+          toggle.setAttribute('aria-checked', 'true');
+          pinBox.classList.remove('hidden');
+          pinInput.focus();
+        } else {
+          toggle.setAttribute('aria-checked', 'false');
+          pinBox.classList.add('hidden');
+          await saveSetting({ twoFactorEnabled: false });
+          toast('Two-step verification disabled');
+          renderSettingsList();
+        }
       });
+
       sheet.querySelector('#2fa-save-pin')?.addEventListener('click', async () => {
-        const pin = sheet.querySelector('#2fa-pin').value.trim();
-        if (pin.length < 4) { toast('PIN must be at least 4 digits'); return; }
+        const pin = pinInput.value.trim();
+        if (!/^\d{6}$/.test(pin)) {
+          toast('PIN must be exactly 6 digits (numbers only)');
+          pinInput.focus();
+          return;
+        }
         await saveSetting({ twoFactorPin: pin, twoFactorEnabled: true });
-        toast('2-Step PIN saved', 'success');
+        toast('Two-step verification 6-digit PIN saved & activated!', 'success');
+        renderSettingsList();
         closeSheet();
       });
     }

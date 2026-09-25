@@ -182,6 +182,7 @@ export const api = {
 
   // discover
   discover: (search) => request(`/discover/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  discoverChannels: (search) => request(`/discover/channels${search ? `?search=${encodeURIComponent(search)}` : ''}`),
 
   // admin
   adminUsers: (search) => request(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),

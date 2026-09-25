@@ -2,6 +2,7 @@
 import { api, ApiError , mediaSrc} from './api.js';
 import { pref } from './settings.js';
 import { state, emit, on } from './state.js';
+import { refreshConversations } from './chats.js';
 import {
   $, avatar, icon, escapeHtml, timeAgo, emptyState, errorState, skeletonList, verifyBadge,
   toast, openSheet, closeSheet, confirmSheet, setBusy, fileToDataUrl, fileToDataUrl as readFile
@@ -20,14 +21,17 @@ export function initStatus() {
   els = {
     list: $('#status-list'),
     channels: $('#channel-list'),
+    channelDiscover: $('#channel-discover-list'),
     newBtn: $('#new-status-btn'),
     viewer: $('#viewer')
   };
   els.newBtn?.addEventListener('click', openNewStatusSheet);
   on('status:changed', () => renderStatus());
-  on('conversations:changed', renderChannels);
+  on('conversations:changed', () => { renderChannels(); loadChannelDiscovery(); });
+  on('tab:show', (name) => { if (name === 'status') loadChannelDiscovery(); });
   renderStatus();
   renderChannels();
+  loadChannelDiscovery();
 }
 
 export async function loadStatuses() {
@@ -109,6 +113,48 @@ function renderChannels() {
   els.channels.querySelectorAll('[data-channel-id]').forEach((button) => button.addEventListener('click', () => {
     const channel = channels.find((item) => item.id === button.dataset.channelId);
     if (channel) emit('chat:open', channel);
+  }));
+}
+
+let discoverChannelsCache = [];
+
+async function loadChannelDiscovery() {
+  if (!els.channelDiscover) return;
+  try {
+    const res = await api.discoverChannels();
+    discoverChannelsCache = res.channels || [];
+    renderChannelDiscovery();
+  } catch (err) {
+    // Quiet failure — this is a secondary section, not the primary status feed.
+    els.channelDiscover.innerHTML = '';
+  }
+}
+
+function renderChannelDiscovery() {
+  if (!els.channelDiscover) return;
+  if (!discoverChannelsCache.length) {
+    els.channelDiscover.innerHTML = emptyState({ title: 'No new channels to find', subtitle: 'You are following every public channel right now.' });
+    return;
+  }
+  els.channelDiscover.innerHTML = discoverChannelsCache.map((channel) => `<div class="channel-row" style="cursor:default" data-discover-channel-id="${escapeHtml(channel.id)}">
+    ${avatar({ displayName: channel.name, avatarUrl: channel.avatarUrl, avatarColor: channel.avatarColor }, { size: 'sm' })}
+    <span class="channel-info"><span class="channel-name truncate">${escapeHtml(channel.name)} ${verifyBadge(channel.isVerified)}</span><span class="channel-meta truncate">${channel.memberCount} follower${channel.memberCount === 1 ? '' : 's'}${channel.description ? ' · ' + escapeHtml(channel.description) : ''}</span></span>
+    <button type="button" class="btn btn-ghost btn-sm" data-follow-channel="${escapeHtml(channel.id)}" ${channel.inviteCode ? '' : 'disabled'}>Follow</button>
+  </div>`).join('');
+  els.channelDiscover.querySelectorAll('[data-follow-channel]').forEach((button) => button.addEventListener('click', async () => {
+    const channel = discoverChannelsCache.find((item) => item.id === button.dataset.followChannel);
+    if (!channel?.inviteCode) return;
+    setBusy(button, true);
+    try {
+      await api.joinConversation(channel.inviteCode);
+      await refreshConversations();
+      toast(`Following ${channel.name}`, 'success');
+      discoverChannelsCache = discoverChannelsCache.filter((item) => item.id !== channel.id);
+      renderChannelDiscovery();
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : 'Could not follow channel', 'error');
+      setBusy(button, false);
+    }
   }));
 }
 

@@ -33,7 +33,6 @@ export function initCalls() {
     controls: $('#call-controls'),
     incoming: $('#call-incoming'),
     mute: $('#call-mute'),
-    speaker: $('#call-speaker'),
     camera: $('#call-camera'),
     end: $('#call-end'),
     accept: $('#call-accept'),
@@ -41,7 +40,6 @@ export function initCalls() {
   };
 
   els.mute?.addEventListener('click', toggleMute);
-  els.speaker?.addEventListener('click', toggleSpeaker);
   els.camera?.addEventListener('click', toggleCamera);
   els.end?.addEventListener('click', () => endCall('ended'));
   els.accept?.addEventListener('click', acceptIncoming);
@@ -71,7 +69,7 @@ async function startCall(conversation, kind) {
     const call = res.call;
     session = {
       call, kind, targetUserId: target.id, direction: 'outgoing',
-      pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, speakerOn: false, outputDeviceId: null, cameraOff: kind !== 'video', state: 'ringing'
+      pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, cameraOff: kind !== 'video', state: 'ringing'
     };
     showCallUi(conversation, target, kind, 'Ringing...', 'outgoing');
     await setupPeer();
@@ -109,7 +107,7 @@ async function onIncoming({ call, fromUserId }) {
   }
   session = {
     call, kind: call.kind, targetUserId: fromUserId, direction: 'incoming',
-    pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, speakerOn: false, outputDeviceId: null, cameraOff: call.kind !== 'video', state: 'ringing'
+    pc: null, localStream: null, remoteStream: null, pendingSignals: [], pendingIce: [], muted: false, cameraOff: call.kind !== 'video', state: 'ringing'
   };
   showCallUi(conv || { name: peer.display_name }, peer, call.kind, 'Incoming call', 'incoming');
 }
@@ -170,11 +168,9 @@ async function setupPeer() {
         els.remoteAudio.srcObject = session.remoteStream;
         els.remoteAudio.play?.().catch(() => {});
       }
-      applySpeakerOutput().catch(() => {});
     } else {
       els.remoteAudio.srcObject = session.remoteStream;
       els.remoteAudio.play?.().catch(() => {});
-      applySpeakerOutput().catch(() => {});
     }
   };
 
@@ -295,12 +291,6 @@ function showCallUi(conversation, peer, kind, stateText, direction) {
     els.mute.classList.remove('off');
     els.mute.innerHTML = icon('mic');
   }
-  if (els.speaker) {
-    els.speaker.classList.remove('off');
-    els.speaker.setAttribute('aria-pressed', 'false');
-    els.speaker.setAttribute('aria-label', 'Turn speaker on');
-    els.speaker.innerHTML = icon('volume-off');
-  }
   if (direction === 'incoming') {
     els.incoming.hidden = false;
     els.controls.hidden = true;
@@ -336,43 +326,6 @@ function toggleCamera() {
   els.camera.innerHTML = icon(session.cameraOff ? 'video-off' : 'video');
 }
 
-async function setAudioOutput(element, deviceId) {
-  if (element && typeof element.setSinkId === 'function') {
-    await element.setSinkId(deviceId);
-    return true;
-  }
-  return false;
-}
-
-async function applySpeakerOutput() {
-  if (!session) return false;
-  const elements = [els.remoteAudio, els.remoteVideo].filter(Boolean);
-  const supported = await Promise.all(elements.map((element) => setAudioOutput(element, session.outputDeviceId || 'default')));
-  return supported.some(Boolean);
-}
-
-async function toggleSpeaker() {
-  if (!session) return;
-  const next = !session.speakerOn;
-  session.speakerOn = next;
-  try {
-    if (next && !session.outputDeviceId && typeof navigator.mediaDevices?.selectAudioOutput === 'function') {
-      const output = await navigator.mediaDevices.selectAudioOutput();
-      session.outputDeviceId = output?.deviceId || null;
-    }
-    if (!next) session.outputDeviceId = null;
-    const supported = await applySpeakerOutput();
-    els.speaker?.classList.toggle('off', !next);
-    els.speaker?.setAttribute('aria-pressed', String(next));
-    els.speaker?.setAttribute('aria-label', next ? 'Speaker on' : 'Speaker off');
-    if (els.speaker) els.speaker.innerHTML = icon(next ? 'volume' : 'volume-off');
-    if (!supported && next) toast('Speaker routing is controlled by your browser or device');
-  } catch {
-    session.speakerOn = !next;
-    toast('Could not change speaker output');
-  }
-}
-
 async function endCall(finalState) {
   if (!session || session.ending) return;
   session.ending = true;
@@ -399,10 +352,6 @@ function cleanup() {
   els.remoteVideo.classList.add('hidden');
   els.localVideo.classList.add('hidden');
   els.mute?.classList.remove('off');
-  els.speaker?.classList.remove('off');
-  els.speaker?.setAttribute('aria-pressed', 'false');
-  els.speaker?.setAttribute('aria-label', 'Turn speaker on');
-  if (els.speaker) els.speaker.innerHTML = icon('volume-off');
   els.camera?.classList.remove('off');
   if (els.mute) els.mute.innerHTML = icon('mic');
   if (els.camera) {

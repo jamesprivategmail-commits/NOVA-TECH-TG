@@ -788,6 +788,7 @@ async function createMessage(convId, msgData) {
     media_data: msgData.mediaData || msgData.media_data || null,
     media_mime: msgData.mediaMime || msgData.media_mime || null,
     media_duration: msgData.mediaDuration || msgData.media_duration || null,
+    waveform: Array.isArray(msgData.waveform) ? msgData.waveform.slice(0, 40) : null,
     reply_to_id: msgData.replyToId || msgData.reply_to_id || null,
     status_reply: msgData.statusReply || msgData.status_reply || null,
     forwarded_from_id: msgData.forwardedFromId || msgData.forwarded_from_id || null,

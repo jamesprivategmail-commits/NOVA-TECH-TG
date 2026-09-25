@@ -512,7 +512,8 @@ router.post('/:id/messages', async (req, res) => {
       mediaUrl: mediaUrl || null,
       mediaData: mediaUrl || null,
       mediaMime: mediaMime || (media ? media.mime : null),
-      mediaDuration: media?.duration || null,
+      mediaDuration: media?.duration || req.body?.mediaDuration || null,
+      waveform: media?.waveform || req.body?.waveform || null,
       replyToId: req.body?.replyToId || null,
       statusReply: req.body?.statusReply || null
     });

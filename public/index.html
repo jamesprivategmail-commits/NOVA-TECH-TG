@@ -319,21 +319,67 @@
     <div class="blocked-chat-notice hidden" id="blocked-chat-notice"></div>
 
     <form class="composer" id="composer">
-      <div class="composer-input-row">
-        <textarea id="composer-input" class="composer-input" rows="1" placeholder="Message" aria-label="Message" autocomplete="off"></textarea>
-      </div>
-      <div class="emoji-picker hidden" id="emoji-picker" aria-label="Custom emojis"></div>
-      <div class="composer-controls-row">
-        <div class="composer-left-controls">
-          <button type="button" class="composer-icon-btn" id="composer-attach" aria-label="Add attachment"><svg class="icon"><use href="#i-plus"></use></svg></button>
-          <button type="button" class="composer-icon-btn" id="composer-emoji" aria-label="Emoji"><span aria-hidden="true">😊</span></button>
-          <button type="button" class="composer-icon-btn" id="composer-sticker" aria-label="Stickers" title="Stickers"><span aria-hidden="true">🎨</span></button>
+      <!-- Active Voice Recording Bar (hidden by default) -->
+      <div class="voice-recording-bar hidden" id="voice-recording-bar" aria-label="Voice recording">
+        <div class="voice-rec-info">
+          <span class="voice-rec-dot" aria-hidden="true"></span>
+          <span class="voice-rec-timer" id="voice-rec-timer">0:00</span>
         </div>
-        <div class="composer-right-controls">
-          <button type="button" class="composer-icon-btn" id="composer-voice" aria-label="Record voice note"><svg class="icon"><use href="#i-mic"></use></svg></button>
-          <button type="submit" class="send" id="send-btn" aria-label="Send">
+        <div class="voice-rec-waveform-wrap">
+          <canvas id="voice-rec-canvas" class="voice-rec-canvas" width="160" height="32"></canvas>
+        </div>
+        <div class="voice-rec-actions">
+          <button type="button" class="voice-btn voice-btn-cancel" id="voice-rec-cancel" aria-label="Cancel recording" title="Cancel recording">
+            <svg class="icon"><use href="#i-trash"></use></svg>
+          </button>
+          <button type="button" class="voice-btn voice-btn-stop" id="voice-rec-stop" aria-label="Stop recording" title="Stop & preview">
+            <svg class="icon"><use href="#i-stop"></use></svg>
+          </button>
+          <button type="button" class="voice-btn voice-btn-send" id="voice-rec-send" aria-label="Send voice note" title="Send immediately">
             <svg class="icon"><use href="#i-send"></use></svg>
           </button>
+        </div>
+      </div>
+
+      <!-- Voice Preview Bar (hidden by default) -->
+      <div class="voice-preview-bar hidden" id="voice-preview-bar" aria-label="Voice preview">
+        <button type="button" class="voice-btn voice-preview-play" id="voice-preview-play" aria-label="Play preview">
+          <svg class="icon" id="voice-preview-play-icon"><use href="#i-play"></use></svg>
+        </button>
+        <div class="voice-preview-track">
+          <div class="voice-preview-scrubber" id="voice-preview-scrubber" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="voice-preview-progress" id="voice-preview-progress"></div>
+          </div>
+          <span class="voice-preview-time" id="voice-preview-time">0:00</span>
+        </div>
+        <div class="voice-preview-actions">
+          <button type="button" class="voice-btn voice-btn-delete" id="voice-preview-delete" aria-label="Discard recording" title="Discard">
+            <svg class="icon"><use href="#i-trash"></use></svg>
+          </button>
+          <button type="button" class="voice-btn voice-btn-send" id="voice-preview-send" aria-label="Send voice note" title="Send voice note">
+            <svg class="icon"><use href="#i-send"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Standard Composer Input & Controls -->
+      <div class="composer-main-content" id="composer-main-content">
+        <div class="composer-input-row">
+          <textarea id="composer-input" class="composer-input" rows="1" placeholder="Message" aria-label="Message" autocomplete="off"></textarea>
+        </div>
+        <div class="emoji-picker hidden" id="emoji-picker" aria-label="Custom emojis"></div>
+        <div class="composer-controls-row">
+          <div class="composer-left-controls">
+            <button type="button" class="composer-icon-btn" id="composer-attach" aria-label="Add attachment"><svg class="icon"><use href="#i-plus"></use></svg></button>
+            <button type="button" class="composer-icon-btn" id="composer-emoji" aria-label="Emoji"><span aria-hidden="true">😊</span></button>
+            <button type="button" class="composer-icon-btn" id="composer-sticker" aria-label="Stickers" title="Stickers"><span aria-hidden="true">🎨</span></button>
+          </div>
+          <div class="composer-right-controls">
+            <button type="button" class="composer-icon-btn" id="composer-voice" aria-label="Record voice note" title="Record voice note"><svg class="icon"><use href="#i-mic"></use></svg></button>
+            <button type="submit" class="send" id="send-btn" aria-label="Send">
+              <svg class="icon"><use href="#i-send"></use></svg>
+            </button>
+          </div>
         </div>
       </div>
       <input type="file" id="attach-input" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" class="hidden">

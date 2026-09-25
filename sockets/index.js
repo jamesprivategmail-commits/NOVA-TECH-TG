@@ -128,6 +128,7 @@ function initSockets(io) {
           mediaData: mediaUrl, // provide URL so existing frontend renders immediately
           mediaMime: mediaMime,
           mediaDuration: media?.duration || null,
+          waveform: media?.waveform || null,
           replyToId: replyToId || null,
           statusReply: statusReply || null
         });
@@ -142,6 +143,7 @@ function initSockets(io) {
           media_data: mediaUrl,
           media_mime: msg.media_mime,
           media_duration: msg.media_duration,
+          waveform: msg.waveform || null,
           reply_to_id: msg.reply_to_id,
           status_reply: msg.status_reply,
           edited_at: msg.edited_at,

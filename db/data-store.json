@@ -1,0 +1,3788 @@
+{
+  "users": {
+    "u_1789899726676_828027": {
+      "password_hash": "$2a$10$2s80F0d5F3M2KdLXZ6Rr6.iFpcKSMPSOup/D0YAPD1H2/z6GKj5TK",
+      "privacy_settings": {
+        "fontSize": "small",
+        "theme": "dark",
+        "accentColor": "#3da9ff",
+        "whoCanAddToGroups": "everyone",
+        "accountType": "business",
+        "chatWallpaper": "/api/storage/files/file_1790372857283_ad46e736",
+        "readReceipts": true,
+        "showUnreadBadges": true,
+        "notifications": true
+      },
+      "dark_pair_code_consumed": true,
+      "blocked_user_ids": [],
+      "avatar_color": "#ff3131",
+      "online": false,
+      "created_at": "2026-09-20T10:22:06.676Z",
+      "dark_pair_code_expires_at": "2026-09-21T00:06:24.901Z",
+      "is_verified": true,
+      "dark_pair_code_consumed_at": "2026-09-20T23:56:37.488Z",
+      "dark_pair_code_created_at": "2026-09-20T23:56:24.901Z",
+      "avatar_mime": "image/jpeg",
+      "nova_id": "+1-999-234-8321",
+      "avatar_data": "/api/storage/files/file_1789932298737_a15455bc",
+      "is_banned": false,
+      "sticker_packs": [
+        {
+          "name": "My stickers",
+          "stickers": [
+            {
+              "url": "https://nova-tech-dtrysb09f-beckyhan19-6136.vercel.app/api/storage/files/file_1790280301769_27d90848",
+              "created_at": "2026-09-24T20:05:02.512Z",
+              "mime": "image/png",
+              "id": "stk_1790280302512_llfy7",
+              "type": "image"
+            },
+            {
+              "id": "stk_1790232680105_d9unr",
+              "url": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790232679367_b7f00420",
+              "type": "image",
+              "created_at": "2026-09-24T06:51:20.105Z",
+              "mime": "image/png"
+            }
+          ],
+          "id": "default"
+        }
+      ],
+      "display_name": "𝕾⃟MR DARKHEX𖤍",
+      "id": "u_1789899726676_828027",
+      "ban_reason": null,
+      "avatar_url": "/api/storage/files/file_1789932298737_a15455bc",
+      "dark_pair_linked": true,
+      "last_seen": "2026-09-26T04:58:04.988Z",
+      "dark_pair_linked_at": "2026-09-20T23:56:37.488Z",
+      "bio": "MR DARKHEX OWNER AND FOUNDER ",
+      "dark_pair_code": "167598"
+    },
+    "u_admin_master": {
+      "id": "u_admin_master",
+      "nova_id": "+1-999-234-8321",
+      "display_name": "DARK CHAT Admin",
+      "password_hash": "$2a$10$2s80F0d5F3M2KdLXZ6Rr6.iFpcKSMPSOup/D0YAPD1H2/z6GKj5TK",
+      "avatar_color": "#ff3131",
+      "avatar_url": "/assets/logo.jpg",
+      "bio": "Official DARK CHAT Administrator",
+      "is_verified": true,
+      "is_banned": false,
+      "created_at": "2026-09-20T10:22:06.676Z",
+      "last_seen": "2026-09-26T04:57:24.573Z"
+    },
+    "u_dark_pair": {
+      "id": "u_dark_pair",
+      "nova_id": "DARK-PAIR",
+      "display_name": "DARK PAIR",
+      "password_hash": null,
+      "avatar_color": "#7C3AED",
+      "avatar_url": "/assets/logo.jpg",
+      "bio": "DARK CHAT quick assistant. Send /start to see the menu.",
+      "is_verified": true,
+      "is_system": true,
+      "is_banned": false,
+      "created_at": "2026-09-20T10:22:06.676Z",
+      "last_seen": "2026-09-26T04:57:24.573Z"
+    },
+    "u_1789910861507_94c5bf": {
+      "avatar_color": "#FF453A",
+      "avatar_data": null,
+      "avatar_mime": null,
+      "id": "u_1789910861507_94c5bf",
+      "created_at": "2026-09-20T13:27:41.507Z",
+      "ban_reason": null,
+      "avatar_url": null,
+      "is_banned": false,
+      "is_verified": false,
+      "password_hash": "$2a$10$2.RqHa4HmtkZnuttBzEwkev4.ruH/jqsBMtRCDfVRKdgfNzK5R8Hi",
+      "nova_id": "+1-626-715-5504",
+      "last_seen": "2026-09-20T13:28:54.173Z",
+      "display_name": "DARKHEX",
+      "bio": ""
+    },
+    "u_1789917946989_a460fc": {
+      "password_hash": "$2a$10$d3S8JFalVZ8n2HobNog0ge8TXQ3VuQqgbF5Qy60DxtU02avOLbuh.",
+      "avatar_data": null,
+      "ban_reason": null,
+      "created_at": "2026-09-20T15:25:46.989Z",
+      "avatar_mime": null,
+      "avatar_url": null,
+      "nova_id": "+1-626-715-5259",
+      "display_name": "Isa Bashir",
+      "bio": "",
+      "avatar_color": "#FF453A",
+      "is_banned": false,
+      "last_seen": "2026-09-20T19:01:47.364Z",
+      "is_verified": false,
+      "id": "u_1789917946989_a460fc"
+    },
+    "u_1789918304516_9aae1d": {
+      "avatar_mime": "image/jpeg",
+      "id": "u_1789918304516_9aae1d",
+      "privacy_settings": {
+        "readReceipts": true,
+        "online": true,
+        "lastSeen": true
+      },
+      "avatar_data": "/api/storage/files/file_1789986009876_2aab5655",
+      "last_seen": "2026-09-21T10:22:48.011Z",
+      "is_banned": false,
+      "nova_id": "+1-626-715-1268",
+      "display_name": "𝕾⃟ᴍʀ~V̷E̷X̷A̷T̷R̷O̷N̷ 𝕀 𖤍",
+      "avatar_color": "#FF453A",
+      "bio": "The fate of the holie",
+      "ban_reason": null,
+      "created_at": "2026-09-20T15:31:44.516Z",
+      "password_hash": "$2a$10$SBiRFl7wpc1fil7CXuUX.uhF.EguozA7/7bNd0r1AnNTvwbERFFQq",
+      "avatar_url": "/api/storage/files/file_1789986009876_2aab5655",
+      "is_verified": true
+    },
+    "u_1789918441060_93eb44": {
+      "display_name": "Btc_junnior",
+      "bio": "",
+      "privacy_settings": {
+        "enterToSend": false,
+        "accentColor": "#ff3b45",
+        "whoCanAddToGroups": "everyone",
+        "theme": "dark",
+        "accountType": "personal"
+      },
+      "avatar_data": "/api/storage/files/file_1789918505468_1ecb875a",
+      "avatar_mime": "image/jpeg",
+      "password_hash": "$2a$10$4ItOWIWMBpf2ynrW97XSnez3SyuRb5ktTxBGuGqCLU9ztEYalVJ1C",
+      "is_verified": false,
+      "nova_id": "+1-626-715-5339",
+      "last_seen": "2026-09-25T09:39:36.855Z",
+      "created_at": "2026-09-20T15:34:01.060Z",
+      "ban_reason": null,
+      "is_banned": false,
+      "id": "u_1789918441060_93eb44",
+      "avatar_color": "#FF453A",
+      "avatar_url": "/api/storage/files/file_1789918505468_1ecb875a"
+    },
+    "u_1789918468058_d7a907": {
+      "nova_id": "+1-626-715-5961",
+      "avatar_mime": null,
+      "password_hash": "$2a$10$gVx9wQooVn.Gw8lckoiy/e9hlRW2/7hhbrNI4A0ts7oiAqXl7q7Dq",
+      "avatar_data": null,
+      "created_at": "2026-09-20T15:34:28.059Z",
+      "ban_reason": null,
+      "bio": "",
+      "avatar_color": "#FF453A",
+      "avatar_url": null,
+      "is_banned": false,
+      "display_name": "wealthgaming",
+      "id": "u_1789918468058_d7a907",
+      "is_verified": false,
+      "last_seen": "2026-09-20T15:35:20.709Z"
+    },
+    "u_1789918713019_a60087": {
+      "id": "u_1789918713019_a60087",
+      "avatar_url": null,
+      "created_at": "2026-09-20T15:38:33.019Z",
+      "ban_reason": null,
+      "is_verified": false,
+      "nova_id": "+1-626-715-9134",
+      "avatar_color": "#FF453A",
+      "password_hash": "$2a$10$e18uQtT2swtR8pERR1GvtOqtPRN1MKwEgux5xPhTcJiDCIM.m/Iea",
+      "bio": "",
+      "last_seen": "2026-09-20T15:42:32.606Z",
+      "display_name": "Btc_junnior",
+      "is_banned": false,
+      "avatar_mime": null,
+      "avatar_data": null
+    },
+    "u_1789918750464_6a1d08": {
+      "id": "u_1789918750464_6a1d08",
+      "password_hash": "$2a$10$RgsXVx3hh0ngwWi1nDhLVuSoUPMHfG1bBFugRjbv.whA61b8cfMCy",
+      "is_banned": false,
+      "bio": "",
+      "last_seen": "2026-09-21T04:18:21.142Z",
+      "avatar_mime": null,
+      "avatar_data": null,
+      "avatar_url": null,
+      "avatar_color": "#FF453A",
+      "ban_reason": null,
+      "created_at": "2026-09-20T15:39:10.465Z",
+      "is_verified": false,
+      "display_name": "Scubby",
+      "nova_id": "+1-626-715-5441"
+    },
+    "u_1789918948661_7deaf1": {
+      "nova_id": "+1-626-715-7252",
+      "is_banned": false,
+      "display_name": "Mizzy",
+      "last_seen": "2026-09-20T15:49:15.235Z",
+      "is_verified": false,
+      "password_hash": "$2a$10$EYOICDjXfkF.PaME58Tq3e7C8umsn.1wPxMtcX59jqaJz0N8Qy6U6",
+      "avatar_url": null,
+      "ban_reason": null,
+      "created_at": "2026-09-20T15:42:28.661Z",
+      "avatar_color": "#30D158",
+      "avatar_mime": null,
+      "avatar_data": null,
+      "bio": "",
+      "id": "u_1789918948661_7deaf1"
+    },
+    "u_1789918963881_d8e938": {
+      "privacy_settings": {
+        "profilePhoto": true
+      },
+      "nova_id": "+1-626-715-6465",
+      "avatar_url": "/api/storage/files/file_1789919053845_440262d6",
+      "is_banned": false,
+      "ban_reason": null,
+      "created_at": "2026-09-20T15:42:43.881Z",
+      "is_verified": false,
+      "last_seen": "2026-09-21T09:11:00.625Z",
+      "avatar_color": "#FF375F",
+      "id": "u_1789918963881_d8e938",
+      "avatar_mime": "image/webp",
+      "avatar_data": "/api/storage/files/file_1789919053845_440262d6",
+      "display_name": "Mrai Himself",
+      "password_hash": "$2a$10$5pb5MyXGpTRsrBVndq0zzukKys55waUPeIzwZAazEhhMgQ7PjuwVS",
+      "bio": "Mʀᴀɪ - Tʜᴀᴛs Aʟʟ."
+    },
+    "u_1789919103245_80fe75": {
+      "nova_id": "+1-626-715-4972",
+      "bio": "",
+      "id": "u_1789919103245_80fe75",
+      "avatar_mime": null,
+      "avatar_data": null,
+      "ban_reason": null,
+      "created_at": "2026-09-20T15:45:03.245Z",
+      "display_name": "Saint fx",
+      "avatar_url": null,
+      "password_hash": "$2a$10$iootbqZR3OWFvKhhPySWke6FuuNOCs9vZ4hCQFUC1sMi5hjhrlzpi",
+      "is_verified": false,
+      "is_banned": false,
+      "avatar_color": "#64D2FF",
+      "last_seen": "2026-09-21T05:01:27.271Z"
+    },
+    "u_1789920296720_936c53": {
+      "created_at": "2026-09-20T16:04:56.720Z",
+      "ban_reason": null,
+      "avatar_url": null,
+      "avatar_mime": null,
+      "avatar_data": null,
+      "bio": "",
+      "display_name": "pklaksks@gmail.com",
+      "is_banned": false,
+      "password_hash": "$2a$10$ZeaePv/NTcSqRSk92JQIoOmx1qaTA1Luw0ZK41pGzughvI5uHOXkS",
+      "nova_id": "+1-626-715-0802",
+      "is_verified": false,
+      "id": "u_1789920296720_936c53",
+      "avatar_color": "#5E5CE6",
+      "last_seen": "2026-09-23T23:46:52.601Z"
+    },
+    "u_1789921787406_9ec3de": {
+      "is_banned": false,
+      "id": "u_1789921787406_9ec3de",
+      "avatar_mime": null,
+      "bio": "",
+      "avatar_color": "#64D2FF",
+      "avatar_data": null,
+      "password_hash": "$2a$10$nv.a9M1.DH4kvhQpsOGVvug2RM5Z8G8OWIKIxyTGOuo68h.MWpYqK",
+      "last_seen": "2026-09-20T16:35:05.950Z",
+      "nova_id": "+1-626-715-4196",
+      "is_verified": false,
+      "display_name": "BLUE ANGEL",
+      "created_at": "2026-09-20T16:29:47.406Z",
+      "ban_reason": null,
+      "avatar_url": null
+    },
+    "u_1789921851921_2a2ea2": {
+      "avatar_url": null,
+      "avatar_color": "#BF5AF2",
+      "created_at": "2026-09-20T16:30:51.921Z",
+      "ban_reason": null,
+      "nova_id": "+1-626-715-8132",
+      "id": "u_1789921851921_2a2ea2",
+      "bio": "",
+      "password_hash": "$2a$10$eCX8//OHrXRd9t7FsrmqXeMcFCC8hF00cvW244DHCfeOhVQ823XH.",
+      "is_verified": false,
+      "avatar_mime": null,
+      "last_seen": "2026-09-20T16:36:13.534Z",
+      "avatar_data": null,
+      "display_name": "+1-626-715-5339",
+      "is_banned": false
+    },
+    "u_1789923520594_815d4b": {
+      "dark_pair_code_consumed": true,
+      "avatar_data": "/api/storage/files/file_1789932238585_9797d508",
+      "id": "u_1789923520594_815d4b",
+      "display_name": "Mr Elon",
+      "avatar_mime": "image/jpeg",
+      "dark_pair_linked": true,
+      "sticker_packs": [
+        {
+          "stickers": [
+            {
+              "mime": "video/quicktime",
+              "created_at": "2026-09-25T17:58:07.560Z",
+              "type": "video",
+              "id": "stk_1790359087559_u3gfy",
+              "url": "https://nova-tech-dtrysb09f-beckyhan19-6136.vercel.app/api/storage/files/file_1790359085889_66848300"
+            }
+          ],
+          "id": "default",
+          "name": "My stickers"
+        }
+      ],
+      "password_hash": "$2a$10$bTOQtOKHHQp9wAvNxPF6zuZQfY5/PtYHWkT3u/1glnaROlGTZ81Ny",
+      "bio": "",
+      "is_banned": false,
+      "nova_id": "+1-626-715-9506",
+      "dark_pair_code_consumed_at": "2026-09-25T14:57:55.054Z",
+      "dark_pair_linked_at": "2026-09-25T14:57:55.054Z",
+      "avatar_url": "/api/storage/files/file_1789932238585_9797d508",
+      "dark_pair_code": "889424",
+      "dark_pair_code_created_at": "2026-09-25T14:57:46.347Z",
+      "ban_reason": null,
+      "created_at": "2026-09-20T16:58:40.594Z",
+      "privacy_settings": {
+        "accentColor": "#30d158"
+      },
+      "last_seen": "2026-09-25T17:58:50.849Z",
+      "is_verified": true,
+      "dark_pair_code_expires_at": "2026-09-25T15:07:46.347Z",
+      "avatar_color": "#64D2FF"
+    },
+    "u_1789925956124_121465": {
+      "avatar_color": "#BF5AF2",
+      "last_seen": "2026-09-20T17:39:35.290Z",
+      "is_banned": false,
+      "avatar_mime": null,
+      "avatar_url": null,
+      "avatar_data": null,
+      "nova_id": "+1-626-715-5007",
+      "ban_reason": null,
+      "created_at": "2026-09-20T17:39:16.125Z",
+      "is_verified": false,
+      "bio": "",
+      "id": "u_1789925956124_121465",
+      "display_name": "Olamide",
+      "password_hash": "$2a$10$t.0FKtLo8f.0QF3Zba.ViOC.A/XHfFHvTcpr.SgJGYHEeDVs1p0H6"
+    },
+    "u_1789926007787_ae86b8": {
+      "privacy_settings": {
+        "accountType": "creator",
+        "whoCanAddToGroups": "nobody",
+        "accentColor": "#3da9ff"
+      },
+      "nova_id": "+1-626-715-9343",
+      "is_verified": true,
+      "display_name": "ÑØÑÇHÅLÅÑT",
+      "is_banned": false,
+      "avatar_data": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790099056101_193a5b89",
+      "avatar_mime": "image/jpeg",
+      "avatar_color": "#30D158",
+      "bio": "Sup Everyone",
+      "password_hash": "$2a$10$cWcEvz/XKrEItoq6LPw1W.U2X8op5KOGB/bRszh1Prq3hcLomwyPq",
+      "ban_reason": null,
+      "created_at": "2026-09-20T17:40:07.787Z",
+      "id": "u_1789926007787_ae86b8",
+      "avatar_url": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790099056101_193a5b89",
+      "last_seen": "2026-09-25T07:37:00.961Z"
+    },
+    "u_1789927556838_a20bb7": {
+      "id": "u_1789927556838_a20bb7",
+      "avatar_data": null,
+      "avatar_mime": null,
+      "avatar_color": "#FF375F",
+      "created_at": "2026-09-20T18:05:56.838Z",
+      "ban_reason": null,
+      "bio": "",
+      "password_hash": "$2a$10$r2hH/RlmQkd3h5P6sCxd7.72tk1Bz8kxHoxxpWTvxGkMlBcTjx93u",
+      "avatar_url": null,
+      "is_banned": false,
+      "nova_id": "+1-626-715-2886",
+      "last_seen": "2026-09-20T18:07:49.316Z",
+      "is_verified": false,
+      "display_name": "Big j"
+    },
+    "u_1789929273979_a907dd": {
+      "ban_reason": null,
+      "created_at": "2026-09-20T18:34:33.979Z",
+      "is_banned": false,
+      "avatar_url": "/api/storage/files/file_1789929324402_b26e6b24",
+      "is_verified": false,
+      "nova_id": "+1-626-715-6461",
+      "last_seen": "2026-09-20T18:36:16.139Z",
+      "avatar_color": "#30D158",
+      "display_name": "mr man",
+      "id": "u_1789929273979_a907dd",
+      "bio": "",
+      "avatar_data": "/api/storage/files/file_1789929324402_b26e6b24",
+      "password_hash": "$2a$10$slmC9/VY6xAr/BcoDbcQ6uuJDVUvOmDSYEcYQV61osrU9DgjBFr6m",
+      "avatar_mime": "image/jpeg"
+    },
+    "u_1789930600409_99eb1a": {
+      "dark_pair_code_created_at": "2026-09-21T00:36:47.321Z",
+      "display_name": "𝕾⃟ᴍʀ LOVE 𖤍",
+      "ban_reason": null,
+      "created_at": "2026-09-20T18:56:40.409Z",
+      "privacy_settings": {
+        "readReceipts": false
+      },
+      "dark_pair_code_expires_at": "2026-09-21T00:46:47.321Z",
+      "avatar_data": "/api/storage/files/file_1789931269261_eece0c50",
+      "bio": "Kinda a dark hex fan🌜🌛",
+      "avatar_mime": "image/jpeg",
+      "avatar_url": "/api/storage/files/file_1789931269261_eece0c50",
+      "nova_id": "+1-626-715-0800",
+      "is_banned": false,
+      "last_seen": "2026-09-25T02:23:18.934Z",
+      "dark_pair_code_consumed": true,
+      "dark_pair_code": "439555",
+      "dark_pair_code_consumed_at": "2026-09-21T00:36:58.488Z",
+      "dark_pair_linked": true,
+      "id": "u_1789930600409_99eb1a",
+      "dark_pair_linked_at": "2026-09-21T00:36:58.488Z",
+      "password_hash": "$2a$10$TWhIzKwpCk30j0xnOqRoPOOkYkWU/UFTPHly0zsx0yZ7v9Ps7jjmq",
+      "avatar_color": "#64D2FF",
+      "is_verified": false
+    },
+    "u_1789932225778_ceb16b": {
+      "last_seen": "2026-09-20T19:56:19.600Z",
+      "id": "u_1789932225778_ceb16b",
+      "display_name": "Lxmba",
+      "avatar_mime": null,
+      "avatar_data": null,
+      "created_at": "2026-09-20T19:23:45.778Z",
+      "ban_reason": null,
+      "privacy_settings": {
+        "readReceipts": false,
+        "lastSeen": false,
+        "online": false
+      },
+      "avatar_url": null,
+      "nova_id": "+1-626-715-9853",
+      "is_banned": false,
+      "bio": "",
+      "password_hash": "$2a$10$NpHCFG6Rq2Hyj9boXqzkWOtbHn/PnJ7fQwWG.Q1tURe.XkFi6QqZa",
+      "avatar_color": "#64D2FF",
+      "is_verified": false
+    },
+    "u_1789932796669_6f372c": {
+      "is_verified": false,
+      "id": "u_1789932796669_6f372c",
+      "avatar_color": "#0A84FF",
+      "bio": "",
+      "password_hash": "$2a$10$FkT4cQZyEWaG9.okc6qf/O7mjK9tbkdCN2SppFRBIRRvpIPIuA.Ii",
+      "display_name": "Jerry",
+      "nova_id": "+1-626-715-2319",
+      "is_banned": false,
+      "last_seen": "2026-09-20T19:34:54.038Z",
+      "avatar_url": null,
+      "avatar_mime": null,
+      "avatar_data": null,
+      "ban_reason": null,
+      "created_at": "2026-09-20T19:33:16.669Z"
+    },
+    "u_1789932822740_e0fdd7": {
+      "avatar_url": null,
+      "is_verified": false,
+      "avatar_color": "#30D158",
+      "ban_reason": null,
+      "created_at": "2026-09-20T19:33:42.740Z",
+      "nova_id": "+1-626-715-7823",
+      "bio": "",
+      "password_hash": "$2a$10$O636XHpzhAaiHx4acxtNKODMeC0sqGy/MFj3oGyRhv2VYU1uE6iai",
+      "is_banned": false,
+      "last_seen": "2026-09-21T21:14:22.373Z",
+      "avatar_mime": null,
+      "id": "u_1789932822740_e0fdd7",
+      "avatar_data": null,
+      "display_name": "Kizzo"
+    },
+    "u_1789932962367_7a6587": {
+      "id": "u_1789932962367_7a6587",
+      "is_banned": false,
+      "last_seen": "2026-09-23T17:07:17.688Z",
+      "display_name": "AI_BEN_CREATIVITT",
+      "is_verified": false,
+      "nova_id": "+1-626-715-4137",
+      "avatar_color": "#30D158",
+      "avatar_mime": "image/jpeg",
+      "avatar_data": "/api/storage/files/file_1789940704939_2b22bccc",
+      "bio": "",
+      "password_hash": "$2a$10$wxrpXKoi0KMG80a/wshD7OIoD3pNJasa1HJVpz5bm1Dt/.m/aV.E2",
+      "avatar_url": "/api/storage/files/file_1789940704939_2b22bccc",
+      "ban_reason": null,
+      "created_at": "2026-09-20T19:36:02.367Z"
+    },
+    "u_1789933249875_4c12a3": {
+      "is_verified": false,
+      "nova_id": "+1-626-715-9824",
+      "id": "u_1789933249875_4c12a3",
+      "display_name": "Zino",
+      "avatar_data": null,
+      "avatar_url": null,
+      "created_at": "2026-09-20T19:40:49.875Z",
+      "ban_reason": null,
+      "avatar_mime": null,
+      "is_banned": false,
+      "bio": "",
+      "avatar_color": "#FF453A",
+      "last_seen": "2026-09-23T07:00:07.430Z",
+      "password_hash": "$2a$10$kfZkSuxRYmdKOVctUBlauucMIyeSzMasYhcJ2yoSZ42jF5s8PLMMy"
+    },
+    "u_1789935096816_b29834": {
+      "last_seen": "2026-09-20T20:12:52.534Z",
+      "avatar_color": "#0A84FF",
+      "avatar_mime": "image/jpeg",
+      "is_banned": false,
+      "password_hash": "$2a$10$Ba685v4CKj26RzhVz8l30ebRbx7kPgBON8eQ77oL8RuQHdqiv3Z6G",
+      "avatar_data": "/api/storage/files/file_1789935148213_756b8027",
+      "bio": "",
+      "display_name": "Videx",
+      "is_verified": false,
+      "id": "u_1789935096816_b29834",
+      "nova_id": "+1-626-715-7562",
+      "ban_reason": null,
+      "created_at": "2026-09-20T20:11:36.816Z",
+      "avatar_url": "/api/storage/files/file_1789935148213_756b8027"
+    },
+    "u_1789941682305_89e8ef": {
+      "bio": "",
+      "is_verified": false,
+      "last_seen": "2026-09-20T22:03:42.062Z",
+      "is_banned": false,
+      "display_name": "D",
+      "id": "u_1789941682305_89e8ef",
+      "avatar_color": "#FF375F",
+      "ban_reason": null,
+      "created_at": "2026-09-20T22:01:22.306Z",
+      "password_hash": "$2a$10$1Pq1Cd5BRMiNuThG.kg8VOWqyRBCg3drtdbLjFi8iYr8yYIJN4m1K",
+      "avatar_url": null,
+      "avatar_mime": null,
+      "nova_id": "+1-626-715-9791",
+      "avatar_data": null
+    },
+    "u_1789943599903_0f392e": {
+      "is_verified": false,
+      "password_hash": "$2a$10$TvgrAY0buCmjJVeLfqSelOJCl31fQ9NZIMEH1ZeU5cU0pJ9GbGDQe",
+      "avatar_url": "/api/storage/files/file_1789943905022_de96fb99",
+      "display_name": "NOVA TECH",
+      "ban_reason": null,
+      "created_at": "2026-09-20T22:33:19.903Z",
+      "id": "u_1789943599903_0f392e",
+      "privacy_settings": {
+        "profilePhoto": true,
+        "notifications": false,
+        "readReceipts": false,
+        "online": false,
+        "lastSeen": false
+      },
+      "is_banned": false,
+      "bio": "",
+      "nova_id": "+1-626-715-5279",
+      "avatar_mime": "image/jpeg",
+      "avatar_data": "/api/storage/files/file_1789943905022_de96fb99",
+      "avatar_color": "#BF5AF2",
+      "last_seen": "2026-09-20T22:42:37.638Z"
+    },
+    "u_1789972898382_79f0d6": {
+      "nova_id": "+1-626-715-6055",
+      "avatar_url": "/api/storage/files/file_1789972953566_e7484702",
+      "bio": "",
+      "ban_reason": null,
+      "created_at": "2026-09-21T06:41:38.382Z",
+      "avatar_color": "#BF5AF2",
+      "id": "u_1789972898382_79f0d6",
+      "last_seen": "2026-09-21T06:43:21.042Z",
+      "avatar_mime": "image/webp",
+      "is_banned": false,
+      "avatar_data": "/api/storage/files/file_1789972953566_e7484702",
+      "is_verified": false,
+      "password_hash": "$2a$10$UbRt0C5AIp3lkEydoE7dFev36mm3G2Pd6Q3n07J6q4jPyDW38nU1q",
+      "display_name": "◄─☠⃟_𝘽𝙇𝘼𝘾𝙆_𝙋𝙍𝙄𝙈𝙀_ᶜᴼᴿᴱ_𝐕³⃟─►"
+    },
+    "u_1789975678326_5d7b9e": {
+      "bio": "",
+      "avatar_data": null,
+      "avatar_mime": null,
+      "avatar_color": "#BF5AF2",
+      "id": "u_1789975678326_5d7b9e",
+      "display_name": "WEB TESTING",
+      "is_banned": false,
+      "password_hash": "$2a$10$dnNpF4n7LMGmTU.nK8oEfexwHIZMYBEJPyjRronhFulZgQxnu.Zd.",
+      "nova_id": "+1-626-715-4419",
+      "last_seen": "2026-09-21T07:29:53.907Z",
+      "avatar_url": null,
+      "is_verified": false,
+      "created_at": "2026-09-21T07:27:58.326Z",
+      "ban_reason": null
+    },
+    "u_1789982074394_01fedc": {
+      "is_verified": false,
+      "nova_id": "+1-626-715-9256",
+      "password_hash": "$2a$10$zN9aXwCv9w0YXU6FcDBrB.8luFWhsyFylSiMgS2nJse07lZff8PEG",
+      "last_seen": "2026-09-21T19:36:22.400Z",
+      "is_banned": false,
+      "avatar_color": "#FF375F",
+      "display_name": "Mark Zuckerberg",
+      "bio": "",
+      "id": "u_1789982074394_01fedc",
+      "avatar_url": null,
+      "avatar_mime": null,
+      "avatar_data": null,
+      "created_at": "2026-09-21T09:14:34.394Z",
+      "ban_reason": null
+    },
+    "u_1789982398831_6c5ea1": {
+      "avatar_url": null,
+      "ban_reason": null,
+      "created_at": "2026-09-21T09:19:58.831Z",
+      "display_name": "nba_cpm",
+      "avatar_data": null,
+      "id": "u_1789982398831_6c5ea1",
+      "nova_id": "+1-626-715-3193",
+      "avatar_mime": null,
+      "password_hash": "$2a$10$JwbxHszXbXJm6bg7dPBCmuQG8ZeBlRyvd9Ro7zntyMeSG/E61KVyG",
+      "avatar_color": "#30D158",
+      "is_banned": false,
+      "is_verified": false,
+      "last_seen": "2026-09-21T09:20:55.563Z",
+      "bio": ""
+    },
+    "u_1789984022749_e1a169": {
+      "id": "u_1789984022749_e1a169",
+      "password_hash": "$2a$10$7j9eVRBSqY.nid1E7So.KuFs16vDpwaHd5xM1M1vhRnJjiYVCMSiW",
+      "ban_reason": null,
+      "created_at": "2026-09-21T09:47:02.749Z",
+      "nova_id": "+1-626-715-9503",
+      "avatar_url": null,
+      "avatar_data": null,
+      "avatar_mime": null,
+      "avatar_color": "#FF453A",
+      "last_seen": "2026-09-24T00:00:02.566Z",
+      "is_banned": false,
+      "bio": "",
+      "is_verified": false,
+      "display_name": "player1789925900923_23_8193@gmail.com"
+    },
+    "u_1790005641592_5fe4fe": {
+      "display_name": "Kaptainblood🩸",
+      "nova_id": "+1-626-715-4598",
+      "is_verified": false,
+      "id": "u_1790005641592_5fe4fe",
+      "avatar_mime": null,
+      "is_banned": false,
+      "avatar_data": null,
+      "password_hash": "$2a$10$luUmKf1wpPqtdpz6LQxJNerbGXOoE6OJe26WSU27Z5yIHT4DZW0bi",
+      "bio": "I'm blood ",
+      "last_seen": "2026-09-24T20:15:47.468Z",
+      "avatar_url": null,
+      "created_at": "2026-09-21T15:47:21.592Z",
+      "ban_reason": null,
+      "avatar_color": "#FF453A",
+      "privacy_settings": {
+        "theme": "dark"
+      }
+    },
+    "u_1790015543526_edef6f": {
+      "id": "u_1790015543526_edef6f",
+      "avatar_url": "/api/storage/files/file_1790017542705_ebd881ca",
+      "bio": "Aloyinekpon:> Zaylevelten",
+      "last_seen": "2026-09-21T21:27:07.097Z",
+      "ban_reason": null,
+      "created_at": "2026-09-21T18:32:23.526Z",
+      "nova_id": "+1-626-715-3200",
+      "is_verified": false,
+      "is_banned": false,
+      "avatar_color": "#FF453A",
+      "avatar_data": "/api/storage/files/file_1790017542705_ebd881ca",
+      "avatar_mime": "image/jpeg",
+      "display_name": "Tenskii",
+      "password_hash": "$2a$10$E.o5eIIC3hxBtIlrO82t0uz/N9cVv0GNEmXIxshS//EFQyhmqTIMe"
+    },
+    "u_1790015703214_86f6d1": {
+      "avatar_url": null,
+      "created_at": "2026-09-21T18:35:03.214Z",
+      "ban_reason": null,
+      "display_name": "Pk",
+      "bio": "",
+      "avatar_mime": null,
+      "password_hash": "$2a$10$L1PSOu8tnRToPMJmUuxZv.OkMbKPKsYL4gcQWc1Qh4Nyp5WprIVgO",
+      "avatar_data": null,
+      "id": "u_1790015703214_86f6d1",
+      "is_banned": false,
+      "is_verified": false,
+      "nova_id": "+1-626-715-3393",
+      "last_seen": "2026-09-23T01:26:42.391Z",
+      "avatar_color": "#0A84FF"
+    },
+    "u_1790016071810_4b90a0": {
+      "avatar_mime": null,
+      "id": "u_1790016071810_4b90a0",
+      "avatar_data": null,
+      "nova_id": "+1-626-715-4067",
+      "password_hash": "$2a$10$ChKYIdar/DF2r5hDCfB1jOC4C/zs1IV3wIkU/wWLpGDu5cdzXyeqG",
+      "display_name": "Lord Chris",
+      "avatar_color": "#BF5AF2",
+      "last_seen": "2026-09-21T18:43:47.741Z",
+      "is_banned": false,
+      "bio": "",
+      "is_verified": false,
+      "created_at": "2026-09-21T18:41:11.810Z",
+      "ban_reason": null,
+      "avatar_url": null
+    },
+    "u_1790016943941_378252": {
+      "is_verified": false,
+      "is_banned": false,
+      "avatar_color": "#30D158",
+      "nova_id": "+1-626-715-0886",
+      "id": "u_1790016943941_378252",
+      "last_seen": "2026-09-25T12:07:25.130Z",
+      "avatar_url": "/api/storage/files/file_1790017186760_1bd0f771",
+      "created_at": "2026-09-21T18:55:43.941Z",
+      "ban_reason": null,
+      "avatar_data": "/api/storage/files/file_1790017186760_1bd0f771",
+      "display_name": "Dino🧃🫧",
+      "password_hash": "$2a$10$.k8f6gutc6e.6tH7riEK1.76PRO9OGap7Eyjyt/S15pLvAqLTIlpW",
+      "avatar_mime": "image/jpeg",
+      "bio": ""
+    },
+    "u_1790020412266_3837bd": {
+      "privacy_settings": {
+        "online": false
+      },
+      "avatar_mime": null,
+      "avatar_data": null,
+      "display_name": "Lord",
+      "last_seen": "2026-09-21T22:05:56.785Z",
+      "is_banned": false,
+      "avatar_url": null,
+      "password_hash": "$2a$10$Jyq0OUBMxBp01xly1dcZp.MhPxUYqI8VpojokOTt/sNXR8ch/wNhi",
+      "ban_reason": null,
+      "created_at": "2026-09-21T19:53:32.266Z",
+      "nova_id": "+1-626-715-3295",
+      "is_verified": false,
+      "bio": "",
+      "id": "u_1790020412266_3837bd",
+      "avatar_color": "#5E5CE6"
+    },
+    "u_1790020503923_23090a": {
+      "is_verified": false,
+      "created_at": "2026-09-21T19:55:03.923Z",
+      "ban_reason": null,
+      "avatar_url": null,
+      "bio": "",
+      "display_name": "Treyko",
+      "nova_id": "+1-626-715-1177",
+      "avatar_color": "#FF453A",
+      "id": "u_1790020503923_23090a",
+      "is_banned": false,
+      "avatar_mime": null,
+      "password_hash": "$2a$10$wjvo/BW7r6pvSB2BPu1rl.wV7AQWXoeqEN/EXWS1ESCywPnTYVvqO",
+      "avatar_data": null,
+      "last_seen": "2026-09-21T19:57:01.643Z"
+    },
+    "u_1790021091615_affb04": {
+      "avatar_color": "#FF375F",
+      "is_verified": false,
+      "last_seen": "2026-09-21T20:04:51.615Z",
+      "bio": "",
+      "is_banned": false,
+      "password_hash": "$2a$10$a4iS24eD/zo4OnVbj3jn7eKuj6d.CKobAg9JehP2t7UYtjwtud0pm",
+      "nova_id": "+1-626-715-5509",
+      "id": "u_1790021091615_affb04",
+      "avatar_mime": null,
+      "display_name": "El_Pabilito",
+      "avatar_data": null,
+      "created_at": "2026-09-21T20:04:51.615Z",
+      "ban_reason": null,
+      "avatar_url": null
+    },
+    "u_1790022046340_2868ac": {
+      "avatar_url": null,
+      "created_at": "2026-09-21T20:20:46.340Z",
+      "ban_reason": null,
+      "id": "u_1790022046340_2868ac",
+      "password_hash": "$2a$10$XJ/Aiq/nI99fdf0kj70.lOsIm/UsOG8bEEJfSHWCRSL1k454p/4Ia",
+      "privacy_settings": {
+        "lastSeen": false,
+        "online": false
+      },
+      "avatar_color": "#0A84FF",
+      "is_verified": false,
+      "nova_id": "+1-626-715-4041",
+      "display_name": "Malikmohsin 🇵🇰",
+      "bio": "",
+      "avatar_data": null,
+      "is_banned": false,
+      "avatar_mime": null,
+      "last_seen": "2026-09-22T14:18:20.427Z"
+    },
+    "u_1790022164862_f13cb3": {
+      "id": "u_1790022164862_f13cb3",
+      "is_verified": false,
+      "nova_id": "+1-626-715-1463",
+      "avatar_color": "#FF375F",
+      "is_banned": false,
+      "avatar_data": null,
+      "avatar_url": null,
+      "ban_reason": null,
+      "created_at": "2026-09-21T20:22:44.863Z",
+      "avatar_mime": null,
+      "display_name": "FLAWLESS",
+      "password_hash": "$2a$10$HZ6tUywCqWIfzd.0TDmRY.2Vw1F9XSEesIpHj5iMomGNURyQ4/2/O",
+      "last_seen": "2026-09-22T19:13:06.169Z",
+      "bio": ""
+    },
+    "u_1790022909640_38679f": {
+      "id": "u_1790022909640_38679f",
+      "nova_id": "+1-626-715-7219",
+      "avatar_data": null,
+      "display_name": "Zxtra",
+      "avatar_mime": null,
+      "last_seen": "2026-09-21T20:35:53.530Z",
+      "bio": "",
+      "is_banned": false,
+      "ban_reason": null,
+      "created_at": "2026-09-21T20:35:09.640Z",
+      "avatar_url": null,
+      "password_hash": "$2a$10$VGfRQXQTXBKcDJZJSMQzgeJnkabZ5/vs4E6JxneD8T6o48qsSv6kW",
+      "is_verified": false,
+      "avatar_color": "#64D2FF"
+    },
+    "u_1790023197760_fec094": {
+      "last_seen": "2026-09-23T22:38:31.065Z",
+      "id": "u_1790023197760_fec094",
+      "is_verified": false,
+      "bio": "",
+      "display_name": "Avatar",
+      "password_hash": "$2a$10$Aaluc2DmzB6W2bj92y.nEuX2/GJXTUUEjwzYN0bised82grNNl1bW",
+      "is_banned": false,
+      "avatar_data": null,
+      "avatar_mime": null,
+      "avatar_color": "#0A84FF",
+      "avatar_url": null,
+      "ban_reason": null,
+      "created_at": "2026-09-21T20:39:57.760Z",
+      "nova_id": "+1-626-715-1509"
+    },
+    "u_1790023279149_cf0b1d": {
+      "is_banned": false,
+      "id": "u_1790023279149_cf0b1d",
+      "is_verified": true,
+      "nova_id": "+1-626-715-8006",
+      "last_seen": "2026-09-21T20:47:46.940Z",
+      "avatar_color": "#FF453A",
+      "created_at": "2026-09-21T20:41:19.149Z",
+      "ban_reason": null,
+      "avatar_data": null,
+      "avatar_url": null,
+      "avatar_mime": null,
+      "display_name": "Virus",
+      "bio": "",
+      "password_hash": "$2a$10$lvoDlVUKQbY.hlUiKqM6kueO0arSEotC5as88Wf8rV8tm3vBr.pL."
+    },
+    "u_1790023671376_486d73": {
+      "created_at": "2026-09-21T20:47:51.376Z",
+      "ban_reason": null,
+      "avatar_url": null,
+      "password_hash": "$2a$10$3ZzTRsdtCKP5bmMGjfszxOU4kIAmYKpC2/JhI7jDvaTIBK7JBTDeS",
+      "last_seen": "2026-09-21T20:48:44.061Z",
+      "nova_id": "+1-626-715-0534",
+      "is_banned": false,
+      "avatar_color": "#FF9F0A",
+      "bio": "",
+      "is_verified": false,
+      "display_name": "Saeed",
+      "avatar_mime": null,
+      "avatar_data": null,
+      "id": "u_1790023671376_486d73"
+    },
+    "u_1790023909795_f1dfe0": {
+      "password_hash": "$2a$10$eq0h75UsOut99gs6ZOFv4edH0mYqKiXDpNvqTHowKs/rgZHoiEL7C",
+      "avatar_mime": null,
+      "avatar_data": null,
+      "bio": "",
+      "dark_pair_code_expires_at": "2026-09-21T21:06:00.516Z",
+      "dark_pair_code_consumed": true,
+      "dark_pair_code_created_at": "2026-09-21T20:56:00.516Z",
+      "dark_pair_linked_at": "2026-09-21T20:56:08.855Z",
+      "dark_pair_linked": true,
+      "display_name": "𝕂𝕚𝕟𝕘 𝕊𝕝𝕚𝕧𝕖𝕣 𝕀",
+      "avatar_url": null,
+      "nova_id": "+1-626-715-0645",
+      "created_at": "2026-09-21T20:51:49.795Z",
+      "ban_reason": null,
+      "dark_pair_code_consumed_at": "2026-09-21T20:56:08.855Z",
+      "dark_pair_code": "582086",
+      "last_seen": "2026-09-21T20:57:03.738Z",
+      "avatar_color": "#0A84FF",
+      "id": "u_1790023909795_f1dfe0",
+      "is_verified": false,
+      "is_banned": false
+    },
+    "u_1790024960572_6b6801": {
+      "id": "u_1790024960572_6b6801",
+      "is_verified": false,
+      "password_hash": "$2a$10$f0qbq11LPl06kf3qT86iyO7rfooU2h0TiRqR4.8oakIRUDsOJEGAW",
+      "nova_id": "+1-626-715-0925",
+      "display_name": "Göd's Tïmë 💲",
+      "last_seen": "2026-09-22T21:41:55.245Z",
+      "avatar_data": null,
+      "avatar_mime": null,
+      "avatar_color": "#FF453A",
+      "avatar_url": null,
+      "created_at": "2026-09-21T21:09:20.572Z",
+      "ban_reason": null,
+      "bio": "",
+      "is_banned": false
+    },
+    "u_1790024963114_10e414": {
+      "id": "u_1790024963114_10e414",
+      "is_banned": false,
+      "avatar_color": "#FF453A",
+      "avatar_url": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790090985577_4ac995d2",
+      "sticker_packs": [
+        {
+          "id": "default",
+          "name": "My stickers",
+          "stickers": [
+            {
+              "id": "stk_1790035102568_k8h0h",
+              "mime": "video/webm;codecs=vp9",
+              "url": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790035101299_7d77d5aa",
+              "created_at": "2026-09-21T23:58:22.568Z",
+              "type": "video"
+            },
+            {
+              "id": "stk_1790035044232_f1ao8",
+              "url": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790035043765_f6decdde",
+              "type": "image",
+              "created_at": "2026-09-21T23:57:24.232Z",
+              "mime": "image/png"
+            }
+          ]
+        }
+      ],
+      "ban_reason": null,
+      "created_at": "2026-09-21T21:09:23.114Z",
+      "nova_id": "+1-626-715-4797",
+      "is_verified": true,
+      "last_seen": "2026-09-25T15:54:41.941Z",
+      "privacy_settings": {
+        "allowVoiceCalls": true,
+        "statusVideoAutoplay": false,
+        "enterToSend": false,
+        "allowVideoCalls": false,
+        "notifications": false
+      },
+      "bio": "https://t.me/mr_ai_v4_bot\nKali here.",
+      "avatar_mime": "image/jpeg",
+      "avatar_data": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790090985577_4ac995d2",
+      "display_name": "Mrai Himself",
+      "password_hash": "$2a$10$7OElT6AUYv6W3EYuZCpQy.Up2MFF5PWNxdzz3w6kZaNIY10qVCtWG"
+    },
+    "u_1790398653830_994ebd": {
+      "id": "u_1790398653830_994ebd",
+      "nova_id": "+1-626-715-9620",
+      "display_name": "Sam Smith",
+      "password_hash": "$2a$10$eigZs1tFCNWiZsIsvsXnuub6kQXXxbHkrqsyUUF6r4dDVvxegZHtO",
+      "avatar_color": "#30D158",
+      "avatar_url": null,
+      "avatar_data": null,
+      "avatar_mime": null,
+      "bio": "",
+      "is_verified": false,
+      "is_banned": false,
+      "ban_reason": null,
+      "created_at": "2026-09-26T04:57:33.830Z",
+      "last_seen": "2026-09-26T04:57:36.969Z"
+    },
+    "u_1790398684776_0f9239": {
+      "id": "u_1790398684776_0f9239",
+      "nova_id": "+1-626-715-0697",
+      "display_name": "Final Tester",
+      "password_hash": "$2a$10$eiy06FkwRPNC3FDcrWRYx.xkKCebvucvZeonDMURjVQZJqW4pu6Fi",
+      "avatar_color": "#FF453A",
+      "avatar_url": null,
+      "avatar_data": null,
+      "avatar_mime": null,
+      "bio": "",
+      "is_verified": false,
+      "is_banned": false,
+      "ban_reason": null,
+      "created_at": "2026-09-26T04:58:04.776Z",
+      "last_seen": "2026-09-26T04:58:04.887Z"
+    }
+  },
+  "conversations": {
+    "c_1789899647338_cf9f50": {
+      "invite_code": null,
+      "last_sender_id": "u_1789899645590_7998fb",
+      "avatar_color": "#8E8E93",
+      "created_at": "2026-09-20T10:20:47.338Z",
+      "member_ids": [
+        "u_1789899645590_7998fb"
+      ],
+      "id": "c_1789899647338_cf9f50",
+      "owner_id": "u_1789899645590_7998fb",
+      "last_message": "Welcome to Firebase-powered DARK CHAT!",
+      "name": "General Broadcast",
+      "last_message_at": "2026-09-20T10:20:47.532Z",
+      "members": {
+        "u_1789899645590_7998fb": {
+          "role": "owner",
+          "joined_at": "2026-09-20T10:20:47.338Z"
+        }
+      },
+      "type": "channel"
+    },
+    "c_1789899806984_d90bdb": {
+      "member_ids": [
+        "u_1789899806007_ba3e5a",
+        "u_1789899806812_01fce4"
+      ],
+      "last_message": "Check this image!",
+      "id": "c_1789899806984_d90bdb",
+      "last_sender_id": "u_1789899806007_ba3e5a",
+      "owner_id": "u_1789899806007_ba3e5a",
+      "last_message_at": "2026-09-20T10:23:27.163Z",
+      "members": {},
+      "name": null,
+      "type": "dm",
+      "avatar_color": "#8E8E93",
+      "invite_code": null,
+      "created_at": "2026-09-20T10:23:26.984Z"
+    },
+    "c_1789899950334_3e6d88": {
+      "last_sender_id": "u_1789899914502_7c6e8d",
+      "type": "group",
+      "created_at": "2026-09-20T10:25:50.334Z",
+      "invite_code": null,
+      "avatar_color": "#8E8E93",
+      "last_message_at": "2026-09-20T10:40:45.590Z",
+      "name": "SQUAD",
+      "members": {
+        "u_1789899914502_7c6e8d": {
+          "role": "owner",
+          "joined_at": "2026-09-20T10:25:50.334Z"
+        }
+      },
+      "id": "c_1789899950334_3e6d88",
+      "owner_id": "u_1789899914502_7c6e8d",
+      "member_ids": [
+        "u_1789899914502_7c6e8d"
+      ],
+      "last_message": "lol"
+    },
+    "c_1789906021478_ac9152": {
+      "created_at": "2026-09-20T12:07:01.478Z",
+      "type": "dm",
+      "owner_id": "u_1789899726676_828027",
+      "pinned": false,
+      "last_sender_id": "u_1789899726676_828027",
+      "id": "c_1789906021478_ac9152",
+      "name": null,
+      "archived": false,
+      "wallpaper": null,
+      "muted": false,
+      "avatar_color": "#8E8E93",
+      "members": {
+        "u_1789899645590_7998fb": {
+          "role": "member",
+          "joined_at": "2026-09-20T12:07:01.477Z"
+        },
+        "u_1789899726676_828027": {
+          "role": "member",
+          "last_read_at": "2026-09-24T19:49:56.076Z",
+          "joined_at": "2026-09-20T12:07:01.477Z",
+          "unread_count": 0
+        }
+      },
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789899645590_7998fb"
+      ],
+      "last_message": "📷 Photo",
+      "invite_code": null,
+      "last_message_at": "2026-09-20T13:03:11.713Z",
+      "role": "member",
+      "unread_count": 0
+    },
+    "c_1789910887994_f3b4f0": {
+      "member_ids": [
+        "u_1789910861507_94c5bf",
+        "u_1789899726676_828027"
+      ],
+      "last_message": "DARKHEX has been blocked.",
+      "avatar_color": "#FF453A",
+      "wallpaper": null,
+      "invite_code": null,
+      "last_sender_id": "u_1789899726676_828027",
+      "muted": false,
+      "id": "c_1789910887994_f3b4f0",
+      "archived": false,
+      "type": "dm",
+      "members": {
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-20T13:28:07.994Z"
+        },
+        "u_1789910861507_94c5bf": {
+          "joined_at": "2026-09-20T13:28:07.994Z",
+          "role": "member"
+        }
+      },
+      "name": "DARKHEX",
+      "owner_id": "u_1789910861507_94c5bf",
+      "pinned": false,
+      "last_message_at": "2026-09-21T00:23:15.597Z",
+      "created_at": "2026-09-20T13:28:07.994Z",
+      "role": "member",
+      "unread_count": 0,
+      "other_user": {
+        "id": "u_1789910861507_94c5bf",
+        "nova_id": "+1-626-715-5504",
+        "display_name": "DARKHEX",
+        "avatar_color": "#FF453A",
+        "avatar_url": null,
+        "is_verified": false
+      },
+      "blocked_by_me": false,
+      "blocked_me": false
+    },
+    "c_1789915677977_b175f5": {
+      "invite_code": null,
+      "last_message": null,
+      "last_sender_id": null,
+      "created_at": "2026-09-20T14:47:57.977Z",
+      "name": null,
+      "last_message_at": null,
+      "type": "dm",
+      "avatar_color": "#8E8E93",
+      "muted": false,
+      "wallpaper": null,
+      "pinned": false,
+      "owner_id": "u_1789899726676_828027",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789899806007_ba3e5a"
+      ],
+      "members": {
+        "u_1789899806007_ba3e5a": {
+          "joined_at": "2026-09-20T14:47:57.977Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T14:47:57.977Z",
+          "role": "member"
+        }
+      },
+      "id": "c_1789915677977_b175f5",
+      "archived": false,
+      "role": "member",
+      "unread_count": 0
+    },
+    "c_1789917666985_2e4d74": {
+      "members": {
+        "u_1789932962367_7a6587": {
+          "joined_at": "2026-09-21T07:10:42.679Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789919103245_80fe75": {
+          "joined_at": "2026-09-21T07:10:46.188Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1790016071810_4b90a0": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T19:47:56.816Z"
+        },
+        "u_1789943599903_0f392e": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:41.603Z"
+        },
+        "u_1789899726676_828027": {
+          "last_read_at": "2026-09-25T21:47:48.899Z",
+          "role": "owner",
+          "unread_count": 1,
+          "joined_at": "2026-09-20T15:21:06.985Z"
+        },
+        "u_1790234724143_832261": {
+          "role": "member",
+          "joined_at": "2026-09-24T07:35:31.209Z",
+          "unread_count": 10,
+          "last_read_at": "2026-09-25T17:11:13.038Z"
+        },
+        "u_1790022164862_f13cb3": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T20:40:38.720Z"
+        },
+        "u_1790022046340_2868ac": {
+          "role": "member",
+          "joined_at": "2026-09-21T20:40:39.021Z",
+          "unread_count": 13
+        },
+        "u_1790187392885_1883a7": {
+          "role": "member",
+          "joined_at": "2026-09-23T22:50:07.918Z",
+          "unread_count": 13
+        },
+        "u_1790065403002_3e1296": {
+          "unread_count": 13,
+          "joined_at": "2026-09-23T22:50:09.795Z",
+          "role": "member"
+        },
+        "u_1790152329501_abdfd9": {
+          "role": "member",
+          "last_read_at": "2026-09-25T22:24:51.030Z",
+          "joined_at": "2026-09-23T22:50:08.186Z",
+          "unread_count": 0
+        },
+        "u_1790023197760_fec094": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T20:40:38.156Z"
+        },
+        "u_1790150540560_ef45f2": {
+          "unread_count": 13,
+          "joined_at": "2026-09-23T22:50:08.467Z",
+          "role": "member"
+        },
+        "u_1790281107618_c788da": {
+          "joined_at": "2026-09-25T05:39:54.263Z",
+          "unread_count": 13,
+          "last_read_at": "2026-09-25T11:57:31.572Z",
+          "role": "member"
+        },
+        "u_1790102288029_bd4f12": {
+          "joined_at": "2026-09-23T22:50:08.748Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789918750464_6a1d08": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:47.000Z",
+          "role": "member"
+        },
+        "u_1790020412266_3837bd": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T20:40:39.884Z"
+        },
+        "u_1790016943941_378252": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T19:47:56.555Z",
+          "role": "member"
+        },
+        "u_1789932822740_e0fdd7": {
+          "joined_at": "2026-09-21T07:10:42.933Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789918948661_7deaf1": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:46.733Z"
+        },
+        "u_1789984022749_e1a169": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T19:47:57.864Z"
+        },
+        "u_1790340732064_a4ca66": {
+          "joined_at": "2026-09-25T17:36:25.227Z",
+          "role": "member",
+          "unread_count": 10
+        },
+        "u_1790024963114_10e414": {
+          "last_read_at": "2026-09-25T15:48:18.653Z",
+          "unread_count": 11,
+          "joined_at": "2026-09-21T21:28:01.558Z",
+          "role": "admin"
+        },
+        "u_1789930600409_99eb1a": {
+          "joined_at": "2026-09-21T07:10:43.762Z",
+          "muted_until": null,
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1790226768610_e847e5": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-24T07:35:32.106Z"
+        },
+        "u_1790192847021_49b13a": {
+          "unread_count": 4,
+          "joined_at": "2026-09-23T22:50:07.382Z",
+          "role": "member",
+          "last_read_at": "2026-09-25T20:29:26.323Z"
+        },
+        "u_1790316386860_0eadb7": {
+          "role": "member",
+          "joined_at": "2026-09-25T17:36:26.106Z",
+          "unread_count": 10
+        },
+        "u_1789920296720_936c53": {
+          "joined_at": "2026-09-21T07:10:45.912Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1789918713019_a60087": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:47.267Z"
+        },
+        "u_1789925956124_121465": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:44.869Z"
+        },
+        "u_1790192799719_cb8d84": {
+          "joined_at": "2026-09-23T22:50:07.654Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1789918441060_93eb44": {
+          "joined_at": "2026-09-21T07:10:47.740Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1790352733545_aa482c": {
+          "role": "member",
+          "unread_count": 10,
+          "joined_at": "2026-09-25T17:36:24.922Z"
+        },
+        "u_1790020503923_23090a": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T20:40:39.602Z"
+        },
+        "u_1789972898382_79f0d6": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:41.227Z",
+          "muted_until": "9999-12-31T23:59:59.999Z"
+        },
+        "u_1790023671376_486d73": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T20:57:52.198Z"
+        },
+        "u_1790227035552_23a4fe": {
+          "unread_count": 13,
+          "joined_at": "2026-09-24T07:35:31.842Z",
+          "role": "member"
+        },
+        "u_1789910861507_94c5bf": {
+          "joined_at": "2026-09-21T07:10:48.556Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789941682305_89e8ef": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:41.886Z"
+        },
+        "u_1789982074394_01fedc": {
+          "joined_at": "2026-09-21T19:47:58.367Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1790094109402_6f1721": {
+          "joined_at": "2026-09-23T22:50:09.268Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1790005641592_5fe4fe": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T19:47:57.571Z",
+          "last_read_at": "2026-09-24T20:13:48.214Z",
+          "role": "member"
+        },
+        "u_1790067172785_9d3d20": {
+          "role": "member",
+          "joined_at": "2026-09-23T22:50:09.529Z",
+          "unread_count": 13
+        },
+        "u_1790340618043_dd0863": {
+          "role": "member",
+          "unread_count": 10,
+          "joined_at": "2026-09-25T17:36:25.519Z"
+        },
+        "u_1790023279149_cf0b1d": {
+          "joined_at": "2026-09-21T20:41:33.179Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1790024960572_6b6801": {
+          "joined_at": "2026-09-21T21:28:01.860Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789918468058_d7a907": {
+          "joined_at": "2026-09-21T07:10:47.541Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789927556838_a20bb7": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:44.325Z",
+          "role": "member"
+        },
+        "u_1789923520594_815d4b": {
+          "role": "member",
+          "last_read_at": "2026-09-25T17:58:20.754Z",
+          "unread_count": 8,
+          "joined_at": "2026-09-21T07:10:45.146Z"
+        },
+        "u_1790358170468_39af92": {
+          "unread_count": 5
+        },
+        "u_1789917946989_a460fc": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:48.287Z"
+        },
+        "u_1790320478654_041894": {
+          "unread_count": 10,
+          "joined_at": "2026-09-25T17:36:25.811Z",
+          "role": "member"
+        },
+        "u_1789975678326_5d7b9e": {
+          "joined_at": "2026-09-21T19:47:58.614Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1789982398831_6c5ea1": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T19:47:58.119Z"
+        },
+        "u_1790021091615_affb04": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T20:40:39.325Z",
+          "role": "member"
+        },
+        "u_1789918963881_d8e938": {
+          "joined_at": "2026-09-21T07:10:46.470Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1790236426801_9ca593": {
+          "joined_at": "2026-09-24T14:16:30.321Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789932796669_6f372c": {
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:43.206Z",
+          "unread_count": 13
+        },
+        "u_1789918304516_9aae1d": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:48.028Z",
+          "role": "member"
+        },
+        "u_1789929273979_a907dd": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:44.045Z"
+        },
+        "u_1790293104026_420005": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-25T05:39:54.004Z"
+        },
+        "u_1789921851921_2a2ea2": {
+          "unread_count": 13,
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:45.409Z"
+        },
+        "u_1789921787406_9ec3de": {
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:45.640Z",
+          "role": "member"
+        },
+        "u_1790015703214_86f6d1": {
+          "role": "member",
+          "joined_at": "2026-09-21T19:47:57.061Z",
+          "unread_count": 13
+        },
+        "u_1789932225778_ceb16b": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T07:10:43.478Z"
+        },
+        "u_1789935096816_b29834": {
+          "joined_at": "2026-09-21T07:10:42.155Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1790023909795_f1dfe0": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T20:57:51.951Z"
+        },
+        "u_1790202609762_5c598d": {
+          "joined_at": "2026-09-23T22:50:06.728Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1789933249875_4c12a3": {
+          "joined_at": "2026-09-21T07:10:42.420Z",
+          "role": "member",
+          "unread_count": 13
+        },
+        "u_1790015543526_edef6f": {
+          "role": "member",
+          "unread_count": 13,
+          "joined_at": "2026-09-21T19:47:57.318Z"
+        },
+        "u_1790101670371_ea9baa": {
+          "joined_at": "2026-09-23T22:50:09.000Z",
+          "unread_count": 13,
+          "role": "member"
+        },
+        "u_1789926007787_ae86b8": {
+          "role": "member",
+          "joined_at": "2026-09-21T07:10:44.597Z",
+          "unread_count": 13
+        },
+        "u_1790022909640_38679f": {
+          "role": "member",
+          "joined_at": "2026-09-21T20:40:38.442Z",
+          "unread_count": 13
+        }
+      },
+      "type": "group",
+      "banned_user_ids": [],
+      "is_locked": false,
+      "name": "DARK CHAT",
+      "wallpaper": null,
+      "created_at": "2026-09-20T15:21:06.985Z",
+      "archived": false,
+      "avatar_url": "/api/storage/files/file_1789952749061_9bd4c2fe",
+      "id": "c_1789917666985_2e4d74",
+      "owner_id": "u_1789899726676_828027",
+      "pinned": false,
+      "invite_code": null,
+      "last_sender_id": "u_1790152329501_abdfd9",
+      "locked_by": null,
+      "locked_at": null,
+      "avatar_color": "#8E8E93",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789972898382_79f0d6",
+        "u_1789943599903_0f392e",
+        "u_1789941682305_89e8ef",
+        "u_1789935096816_b29834",
+        "u_1789933249875_4c12a3",
+        "u_1789932962367_7a6587",
+        "u_1789932822740_e0fdd7",
+        "u_1789932796669_6f372c",
+        "u_1789932225778_ceb16b",
+        "u_1789930600409_99eb1a",
+        "u_1789929273979_a907dd",
+        "u_1789927556838_a20bb7",
+        "u_1789926007787_ae86b8",
+        "u_1789925956124_121465",
+        "u_1789923520594_815d4b",
+        "u_1789921851921_2a2ea2",
+        "u_1789921787406_9ec3de",
+        "u_1789920296720_936c53",
+        "u_1789919103245_80fe75",
+        "u_1789918963881_d8e938",
+        "u_1789918948661_7deaf1",
+        "u_1789918750464_6a1d08",
+        "u_1789918713019_a60087",
+        "u_1789918468058_d7a907",
+        "u_1789918441060_93eb44",
+        "u_1789918304516_9aae1d",
+        "u_1789917946989_a460fc",
+        "u_1789910861507_94c5bf",
+        "u_1790016943941_378252",
+        "u_1790016071810_4b90a0",
+        "u_1790015703214_86f6d1",
+        "u_1790015543526_edef6f",
+        "u_1790005641592_5fe4fe",
+        "u_1789984022749_e1a169",
+        "u_1789982398831_6c5ea1",
+        "u_1789982074394_01fedc",
+        "u_1789975678326_5d7b9e",
+        "u_1790023197760_fec094",
+        "u_1790022909640_38679f",
+        "u_1790022164862_f13cb3",
+        "u_1790022046340_2868ac",
+        "u_1790021091615_affb04",
+        "u_1790020503923_23090a",
+        "u_1790020412266_3837bd",
+        "u_1790023279149_cf0b1d",
+        "u_1790023909795_f1dfe0",
+        "u_1790023671376_486d73",
+        "u_1790024963114_10e414",
+        "u_1790024960572_6b6801",
+        "u_1790202609762_5c598d",
+        "u_1790192847021_49b13a",
+        "u_1790192799719_cb8d84",
+        "u_1790187392885_1883a7",
+        "u_1790152329501_abdfd9",
+        "u_1790150540560_ef45f2",
+        "u_1790102288029_bd4f12",
+        "u_1790101670371_ea9baa",
+        "u_1790094109402_6f1721",
+        "u_1790067172785_9d3d20",
+        "u_1790065403002_3e1296",
+        "u_1790234724143_832261",
+        "u_1790227035552_23a4fe",
+        "u_1790226768610_e847e5",
+        "u_1790236426801_9ca593",
+        "u_1790293104026_420005",
+        "u_1790281107618_c788da",
+        "u_1790352733545_aa482c",
+        "u_1790340732064_a4ca66",
+        "u_1790340618043_dd0863",
+        "u_1790320478654_041894",
+        "u_1790316386860_0eadb7",
+        "u_1790358170468_39af92"
+      ],
+      "last_message": "Am online",
+      "last_message_at": "2026-09-25T22:24:45.230Z",
+      "audit_log": [
+        {
+          "reason": null,
+          "action_type": "member_promoted",
+          "timestamp": "2026-09-21T07:54:23.433Z",
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1789930600409_99eb1a"
+        },
+        {
+          "reason": null,
+          "action_type": "admin_demoted",
+          "timestamp": "2026-09-21T07:54:42.701Z",
+          "target_id": "u_1789930600409_99eb1a",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_mute",
+          "timestamp": "2026-09-21T07:55:12.548Z",
+          "target_id": "u_1789930600409_99eb1a"
+        },
+        {
+          "target_id": "u_1789930600409_99eb1a",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_unmute",
+          "timestamp": "2026-09-21T07:55:26.415Z",
+          "reason": null
+        },
+        {
+          "reason": null,
+          "target_id": null,
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "conversation_locked",
+          "timestamp": "2026-09-21T07:55:45.768Z"
+        },
+        {
+          "action_type": "conversation_unlocked",
+          "target_id": null,
+          "reason": null,
+          "timestamp": "2026-09-21T07:55:57.686Z",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "action_type": "member_added",
+          "target_id": "u_1790016943941_378252"
+        },
+        {
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "action_type": "member_added",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790016071810_4b90a0"
+        },
+        {
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "reason": null,
+          "target_id": "u_1790015703214_86f6d1"
+        },
+        {
+          "target_id": "u_1790015543526_edef6f",
+          "reason": null,
+          "action_type": "member_added",
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-21T19:47:58.691Z"
+        },
+        {
+          "reason": null,
+          "action_type": "member_added",
+          "target_id": "u_1790005641592_5fe4fe",
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "reason": null,
+          "target_id": "u_1789984022749_e1a169"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "target_id": "u_1789982398831_6c5ea1",
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "action_type": "member_added"
+        },
+        {
+          "reason": null,
+          "target_id": "u_1789982074394_01fedc",
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "timestamp": "2026-09-21T19:47:58.691Z",
+          "reason": null,
+          "target_id": "u_1789975678326_5d7b9e"
+        },
+        {
+          "action_type": "member_added",
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790023197760_fec094",
+          "reason": null,
+          "timestamp": "2026-09-21T20:40:39.976Z"
+        },
+        {
+          "timestamp": "2026-09-21T20:40:39.977Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "target_id": "u_1790022909640_38679f",
+          "reason": null
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790022164862_f13cb3",
+          "reason": null,
+          "timestamp": "2026-09-21T20:40:39.977Z",
+          "action_type": "member_added"
+        },
+        {
+          "action_type": "member_added",
+          "timestamp": "2026-09-21T20:40:39.977Z",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "target_id": "u_1790022046340_2868ac"
+        },
+        {
+          "timestamp": "2026-09-21T20:40:39.977Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "target_id": "u_1790021091615_affb04",
+          "reason": null
+        },
+        {
+          "action_type": "member_added",
+          "timestamp": "2026-09-21T20:40:39.977Z",
+          "reason": null,
+          "target_id": "u_1790020503923_23090a",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "timestamp": "2026-09-21T20:40:39.977Z",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790020412266_3837bd",
+          "action_type": "member_added"
+        },
+        {
+          "target_id": "u_1790023279149_cf0b1d",
+          "action_type": "member_added",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "timestamp": "2026-09-21T20:41:33.284Z"
+        },
+        {
+          "action_type": "member_added",
+          "timestamp": "2026-09-21T20:57:52.290Z",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "target_id": "u_1790023909795_f1dfe0"
+        },
+        {
+          "timestamp": "2026-09-21T20:57:52.290Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "target_id": "u_1790023671376_486d73",
+          "reason": null
+        },
+        {
+          "action_type": "member_added",
+          "target_id": "u_1790024963114_10e414",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-21T21:28:01.954Z"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790024960572_6b6801",
+          "reason": null,
+          "timestamp": "2026-09-21T21:28:01.954Z",
+          "action_type": "member_added"
+        },
+        {
+          "action_type": "member_promoted",
+          "timestamp": "2026-09-21T21:42:11.256Z",
+          "target_id": "u_1790024963114_10e414",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "target_id": "u_1789972898382_79f0d6",
+          "timestamp": "2026-09-21T21:42:20.649Z",
+          "action_type": "member_mute"
+        },
+        {
+          "target_id": "u_1790202609762_5c598d",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "reason": null
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "target_id": "u_1790192847021_49b13a",
+          "action_type": "member_added",
+          "timestamp": "2026-09-23T22:50:09.885Z"
+        },
+        {
+          "action_type": "member_added",
+          "reason": null,
+          "target_id": "u_1790192799719_cb8d84",
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-23T22:50:09.885Z"
+        },
+        {
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790187392885_1883a7",
+          "action_type": "member_added"
+        },
+        {
+          "target_id": "u_1790152329501_abdfd9",
+          "action_type": "member_added",
+          "reason": null,
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "target_id": "u_1790150540560_ef45f2",
+          "action_type": "member_added",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790102288029_bd4f12",
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "action_type": "member_added",
+          "reason": null
+        },
+        {
+          "target_id": "u_1790101670371_ea9baa",
+          "reason": null,
+          "action_type": "member_added",
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "reason": null,
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790094109402_6f1721",
+          "action_type": "member_added"
+        },
+        {
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "target_id": "u_1790067172785_9d3d20",
+          "action_type": "member_added"
+        },
+        {
+          "target_id": "u_1790065403002_3e1296",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-23T22:50:09.885Z",
+          "action_type": "member_added"
+        },
+        {
+          "action_type": "member_added",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "timestamp": "2026-09-24T07:35:32.199Z",
+          "target_id": "u_1790234724143_832261"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-24T07:35:32.199Z",
+          "reason": null,
+          "action_type": "member_added",
+          "target_id": "u_1790227035552_23a4fe"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "timestamp": "2026-09-24T07:35:32.199Z",
+          "reason": null,
+          "target_id": "u_1790226768610_e847e5"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-24T14:16:30.423Z",
+          "action_type": "member_added",
+          "reason": null,
+          "target_id": "u_1790236426801_9ca593"
+        },
+        {
+          "target_id": "u_1790293104026_420005",
+          "action_type": "member_added",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "timestamp": "2026-09-25T05:39:54.368Z"
+        },
+        {
+          "timestamp": "2026-09-25T05:39:54.368Z",
+          "target_id": "u_1790281107618_c788da",
+          "reason": null,
+          "action_type": "member_added",
+          "actor_id": "u_1789899726676_828027"
+        },
+        {
+          "timestamp": "2026-09-25T17:36:26.211Z",
+          "actor_id": "u_1789899726676_828027",
+          "action_type": "member_added",
+          "reason": null,
+          "target_id": "u_1790352733545_aa482c"
+        },
+        {
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790340732064_a4ca66",
+          "action_type": "member_added",
+          "timestamp": "2026-09-25T17:36:26.211Z",
+          "reason": null
+        },
+        {
+          "timestamp": "2026-09-25T17:36:26.211Z",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "action_type": "member_added",
+          "target_id": "u_1790340618043_dd0863"
+        },
+        {
+          "timestamp": "2026-09-25T17:36:26.211Z",
+          "target_id": "u_1790320478654_041894",
+          "actor_id": "u_1789899726676_828027",
+          "reason": null,
+          "action_type": "member_added"
+        },
+        {
+          "timestamp": "2026-09-25T17:36:26.211Z",
+          "action_type": "member_added",
+          "reason": null,
+          "actor_id": "u_1789899726676_828027",
+          "target_id": "u_1790316386860_0eadb7"
+        },
+        {
+          "target_id": "u_1790358170468_39af92",
+          "reason": null,
+          "action_type": "member_added",
+          "timestamp": "2026-09-25T19:26:43.183Z",
+          "actor_id": "u_1789899726676_828027"
+        }
+      ],
+      "muted": false
+    },
+    "c_1789918058049_78e68e": {
+      "avatar_color": "#8E8E93",
+      "archived": false,
+      "owner_id": "u_1789899726676_828027",
+      "last_sender_id": "u_1789899726676_828027",
+      "wallpaper": null,
+      "last_message": "How e be",
+      "id": "c_1789918058049_78e68e",
+      "created_at": "2026-09-20T15:27:38.049Z",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789917946989_a460fc"
+      ],
+      "members": {
+        "u_1789917946989_a460fc": {
+          "role": "member",
+          "joined_at": "2026-09-20T15:27:38.049Z"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T15:27:38.049Z",
+          "role": "member"
+        }
+      },
+      "pinned": false,
+      "last_message_at": "2026-09-20T15:27:52.427Z",
+      "type": "dm",
+      "name": null,
+      "invite_code": null,
+      "muted": false
+    },
+    "c_1789918334371_77ba49": {
+      "last_message_at": "2026-09-21T23:10:19.592Z",
+      "wallpaper": null,
+      "invite_code": null,
+      "last_message": "╭━━〔 DARK BOT 〕━━┈⊷\n┃ ⚡ *Speed Test Completed!*\n┃\n┃ 📡 *Latency:* 446.1330 ms\n┃ 🟢 Status: Stable & Responsive\n╰━━━━━━━━━━━━━━",
+      "avatar_color": "#8E8E93",
+      "type": "dm",
+      "archived": false,
+      "muted": false,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789918304516_9aae1d"
+      ],
+      "owner_id": "u_1789899726676_828027",
+      "name": null,
+      "id": "c_1789918334371_77ba49",
+      "members": {
+        "u_1789918304516_9aae1d": {
+          "joined_at": "2026-09-20T15:32:14.370Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T15:32:14.370Z",
+          "role": "member"
+        }
+      },
+      "pinned": false,
+      "created_at": "2026-09-20T15:32:14.371Z",
+      "last_sender_id": "u_1789899726676_828027"
+    },
+    "c_1789918582344_bb7a51": {
+      "last_message": "welcome",
+      "archived": false,
+      "id": "c_1789918582344_bb7a51",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789918441060_93eb44"
+      ],
+      "owner_id": "u_1789899726676_828027",
+      "avatar_color": "#8E8E93",
+      "last_sender_id": "u_1789899726676_828027",
+      "type": "dm",
+      "last_message_at": "2026-09-20T15:36:28.652Z",
+      "name": null,
+      "members": {
+        "u_1789918441060_93eb44": {
+          "role": "member",
+          "joined_at": "2026-09-20T15:36:22.344Z"
+        },
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-20T15:36:22.344Z"
+        }
+      },
+      "wallpaper": null,
+      "invite_code": null,
+      "pinned": false,
+      "created_at": "2026-09-20T15:36:22.344Z",
+      "muted": false
+    },
+    "c_1789918605512_132b01": {
+      "id": "c_1789918605512_132b01",
+      "created_at": "2026-09-20T15:36:45.513Z",
+      "last_sender_id": "u_1789899726676_828027",
+      "last_message": "Welcome",
+      "avatar_color": "#8E8E93",
+      "wallpaper": null,
+      "name": null,
+      "type": "dm",
+      "last_message_at": "2026-09-20T15:36:52.263Z",
+      "muted": false,
+      "pinned": false,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789918468058_d7a907"
+      ],
+      "owner_id": "u_1789899726676_828027",
+      "invite_code": null,
+      "members": {
+        "u_1789918468058_d7a907": {
+          "joined_at": "2026-09-20T15:36:45.512Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T15:36:45.512Z",
+          "role": "member"
+        }
+      },
+      "archived": false
+    },
+    "c_1789919086428_2555b9": {
+      "pinned": false,
+      "last_message_at": "2026-09-20T17:23:39.665Z",
+      "invite_code": null,
+      "id": "c_1789919086428_2555b9",
+      "muted": false,
+      "member_ids": [
+        "u_1789918963881_d8e938",
+        "u_1789899726676_828027"
+      ],
+      "created_at": "2026-09-20T15:44:46.428Z",
+      "name": null,
+      "avatar_color": "#8E8E93",
+      "members": {
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T15:44:46.427Z",
+          "role": "member"
+        },
+        "u_1789918963881_d8e938": {
+          "role": "member",
+          "joined_at": "2026-09-20T15:44:46.427Z"
+        }
+      },
+      "archived": false,
+      "type": "dm",
+      "wallpaper": null,
+      "owner_id": "u_1789918963881_d8e938",
+      "last_sender_id": "u_1789899726676_828027",
+      "last_message": "i need to do am directly to ny repo unless e no go work"
+    },
+    "c_1789920185856_0c1792": {
+      "created_at": "2026-09-20T16:03:05.856Z",
+      "wallpaper": null,
+      "last_sender_id": "u_1789899726676_828027",
+      "id": "c_1789920185856_0c1792",
+      "type": "dm",
+      "last_message_at": "2026-09-20T16:03:11.758Z",
+      "name": null,
+      "pinned": false,
+      "muted": false,
+      "avatar_color": "#8E8E93",
+      "last_message": "Welcome",
+      "invite_code": null,
+      "owner_id": "u_1789899726676_828027",
+      "archived": false,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789918750464_6a1d08"
+      ],
+      "members": {
+        "u_1789918750464_6a1d08": {
+          "role": "member",
+          "joined_at": "2026-09-20T16:03:05.856Z"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T16:03:05.856Z",
+          "role": "member"
+        }
+      }
+    },
+    "c_1789921588404_35d579": {
+      "invite_code": null,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789920296720_936c53"
+      ],
+      "muted": false,
+      "id": "c_1789921588404_35d579",
+      "members": {
+        "u_1789920296720_936c53": {
+          "role": "member",
+          "joined_at": "2026-09-20T16:26:28.404Z"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T16:26:28.404Z",
+          "role": "member"
+        }
+      },
+      "name": null,
+      "last_message": "Welcome to dark chat",
+      "last_sender_id": "u_1789899726676_828027",
+      "created_at": "2026-09-20T16:26:28.404Z",
+      "type": "dm",
+      "pinned": false,
+      "wallpaper": null,
+      "owner_id": "u_1789899726676_828027",
+      "last_message_at": "2026-09-21T21:26:51.641Z",
+      "avatar_color": "#8E8E93",
+      "archived": false
+    },
+    "c_1789925046807_1b9d62": {
+      "last_message": "Lol",
+      "name": null,
+      "created_at": "2026-09-20T17:24:06.807Z",
+      "pinned": false,
+      "type": "dm",
+      "muted": false,
+      "wallpaper": null,
+      "invite_code": null,
+      "avatar_color": "#8E8E93",
+      "archived": false,
+      "members": {
+        "u_1789899726676_828027": {
+          "unread_count": 0,
+          "joined_at": "2026-09-20T17:24:06.807Z",
+          "role": "member",
+          "last_read_at": "2026-09-25T22:03:30.356Z"
+        },
+        "u_1789923520594_815d4b": {
+          "role": "member",
+          "unread_count": 4,
+          "joined_at": "2026-09-20T17:24:06.807Z",
+          "last_read_at": "2026-09-25T14:50:11.787Z"
+        }
+      },
+      "owner_id": "u_1789899726676_828027",
+      "id": "c_1789925046807_1b9d62",
+      "last_sender_id": "u_1789899726676_828027",
+      "last_message_at": "2026-09-25T20:47:54.142Z",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789923520594_815d4b"
+      ]
+    },
+    "c_1789925064162_b980a5": {
+      "avatar_color": "#8E8E93",
+      "muted": false,
+      "members": {
+        "u_1789921787406_9ec3de": {
+          "joined_at": "2026-09-20T17:24:24.162Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "last_read_at": "2026-09-24T20:04:10.411Z",
+          "joined_at": "2026-09-20T17:24:24.162Z",
+          "unread_count": 0,
+          "role": "member"
+        }
+      },
+      "pinned": false,
+      "wallpaper": null,
+      "invite_code": null,
+      "created_at": "2026-09-20T17:24:24.162Z",
+      "last_message": "Hope you be girl",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789921787406_9ec3de"
+      ],
+      "id": "c_1789925064162_b980a5",
+      "archived": false,
+      "last_message_at": "2026-09-20T17:24:33.777Z",
+      "owner_id": "u_1789899726676_828027",
+      "name": null,
+      "type": "dm",
+      "last_sender_id": "u_1789899726676_828027"
+    },
+    "c_1789925076587_ccd2bc": {
+      "members": {
+        "u_1789921851921_2a2ea2": {
+          "role": "member",
+          "joined_at": "2026-09-20T17:24:36.587Z"
+        },
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-20T17:24:36.587Z"
+        }
+      },
+      "invite_code": null,
+      "last_sender_id": "u_1789899726676_828027",
+      "muted": false,
+      "pinned": false,
+      "name": null,
+      "type": "dm",
+      "created_at": "2026-09-20T17:24:36.587Z",
+      "avatar_color": "#8E8E93",
+      "last_message_at": "2026-09-20T17:24:42.461Z",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789921851921_2a2ea2"
+      ],
+      "archived": false,
+      "owner_id": "u_1789899726676_828027",
+      "id": "c_1789925076587_ccd2bc",
+      "wallpaper": null,
+      "last_message": "welcome"
+    },
+    "c_1789926510641_dd81ed": {
+      "id": "c_1789926510641_dd81ed",
+      "type": "dm",
+      "invite_code": null,
+      "last_sender_id": null,
+      "created_at": "2026-09-20T17:48:30.641Z",
+      "last_message_at": null,
+      "name": null,
+      "members": {
+        "u_1789919103245_80fe75": {
+          "joined_at": "2026-09-20T17:48:30.641Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-20T17:48:30.641Z"
+        }
+      },
+      "pinned": false,
+      "owner_id": "u_1789899726676_828027",
+      "muted": false,
+      "archived": false,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789919103245_80fe75"
+      ],
+      "wallpaper": null,
+      "avatar_color": "#8E8E93",
+      "last_message": null
+    },
+    "c_1789927621634_0506ab": {
+      "owner_id": "u_1789927556838_a20bb7",
+      "last_message": "Good",
+      "type": "dm",
+      "last_sender_id": "u_1789926007787_ae86b8",
+      "pinned": false,
+      "archived": false,
+      "name": null,
+      "member_ids": [
+        "u_1789927556838_a20bb7",
+        "u_1789926007787_ae86b8"
+      ],
+      "avatar_color": "#8E8E93",
+      "wallpaper": null,
+      "last_message_at": "2026-09-20T19:49:09.914Z",
+      "created_at": "2026-09-20T18:07:01.634Z",
+      "muted": false,
+      "members": {
+        "u_1789926007787_ae86b8": {
+          "role": "member",
+          "joined_at": "2026-09-20T18:07:01.633Z"
+        },
+        "u_1789927556838_a20bb7": {
+          "role": "member",
+          "joined_at": "2026-09-20T18:07:01.633Z"
+        }
+      },
+      "id": "c_1789927621634_0506ab",
+      "invite_code": null
+    },
+    "c_1789928917335_46ab5e": {
+      "last_sender_id": "u_1789899726676_828027",
+      "id": "c_1789928917335_46ab5e",
+      "members": {
+        "u_1789927556838_a20bb7": {
+          "joined_at": "2026-09-20T18:28:37.335Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T18:28:37.335Z",
+          "role": "member"
+        }
+      },
+      "muted": false,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789927556838_a20bb7"
+      ],
+      "last_message": "welcome",
+      "avatar_color": "#8E8E93",
+      "last_message_at": "2026-09-20T18:28:44.359Z",
+      "archived": false,
+      "wallpaper": null,
+      "owner_id": "u_1789899726676_828027",
+      "pinned": false,
+      "type": "dm",
+      "created_at": "2026-09-20T18:28:37.335Z",
+      "name": null,
+      "invite_code": null
+    },
+    "c_1789928929765_ec01a8": {
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789926007787_ae86b8"
+      ],
+      "last_message_at": "2026-09-21T12:27:43.185Z",
+      "last_sender_id": "u_1789926007787_ae86b8",
+      "avatar_color": "#8E8E93",
+      "last_message": "Yes o",
+      "muted": false,
+      "pinned": false,
+      "members": {
+        "u_1789899726676_828027": {
+          "last_read_at": "2026-09-25T19:24:29.875Z",
+          "unread_count": 0,
+          "joined_at": "2026-09-20T18:28:49.764Z",
+          "role": "member"
+        },
+        "u_1789926007787_ae86b8": {
+          "joined_at": "2026-09-20T18:28:49.764Z",
+          "role": "member"
+        }
+      },
+      "id": "c_1789928929765_ec01a8",
+      "invite_code": null,
+      "owner_id": "u_1789899726676_828027",
+      "archived": false,
+      "type": "dm",
+      "wallpaper": null,
+      "name": null,
+      "created_at": "2026-09-20T18:28:49.765Z"
+    },
+    "c_1789930803398_001d81": {
+      "id": "c_1789930803398_001d81",
+      "type": "dm",
+      "owner_id": "u_1789930600409_99eb1a",
+      "wallpaper": null,
+      "created_at": "2026-09-20T19:00:03.399Z",
+      "archived": false,
+      "name": null,
+      "last_sender_id": "u_1789899726676_828027",
+      "pinned": false,
+      "last_message_at": "2026-09-23T22:53:20.461Z",
+      "avatar_color": "#8E8E93",
+      "member_ids": [
+        "u_1789930600409_99eb1a",
+        "u_1789899726676_828027"
+      ],
+      "invite_code": null,
+      "members": {
+        "u_1789930600409_99eb1a": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:00:03.398Z"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T19:00:03.398Z",
+          "role": "member"
+        }
+      },
+      "last_message": "Lol",
+      "muted": false
+    },
+    "c_1789931292373_f53a74": {
+      "wallpaper": null,
+      "members": {
+        "u_1789910861507_94c5bf": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:08:12.373Z"
+        },
+        "u_1789930600409_99eb1a": {
+          "joined_at": "2026-09-20T19:08:12.373Z",
+          "role": "member"
+        }
+      },
+      "last_message": null,
+      "avatar_color": "#8E8E93",
+      "id": "c_1789931292373_f53a74",
+      "created_at": "2026-09-20T19:08:12.373Z",
+      "archived": false,
+      "muted": false,
+      "member_ids": [
+        "u_1789930600409_99eb1a",
+        "u_1789910861507_94c5bf"
+      ],
+      "owner_id": "u_1789930600409_99eb1a",
+      "last_sender_id": null,
+      "pinned": false,
+      "last_message_at": null,
+      "type": "dm",
+      "invite_code": null,
+      "name": null
+    },
+    "c_1789932420080_dec3b1": {
+      "wallpaper": null,
+      "created_at": "2026-09-20T19:27:00.080Z",
+      "avatar_color": "#8E8E93",
+      "archived": false,
+      "name": null,
+      "last_message_at": "2026-09-20T19:49:10.277Z",
+      "pinned": false,
+      "last_message": "Yh",
+      "type": "dm",
+      "owner_id": "u_1789923520594_815d4b",
+      "last_sender_id": "u_1789932225778_ceb16b",
+      "id": "c_1789932420080_dec3b1",
+      "members": {
+        "u_1789932225778_ceb16b": {
+          "joined_at": "2026-09-20T19:27:00.080Z",
+          "role": "member"
+        },
+        "u_1789923520594_815d4b": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:27:00.080Z"
+        }
+      },
+      "invite_code": null,
+      "muted": false,
+      "member_ids": [
+        "u_1789923520594_815d4b",
+        "u_1789932225778_ceb16b"
+      ]
+    },
+    "c_1789933054957_94e716": {
+      "wallpaper": null,
+      "last_message_at": "2026-09-20T19:57:10.610Z",
+      "created_at": "2026-09-20T19:37:34.957Z",
+      "owner_id": "u_1789923520594_815d4b",
+      "id": "c_1789933054957_94e716",
+      "archived": false,
+      "avatar_color": "#8E8E93",
+      "pinned": false,
+      "invite_code": null,
+      "last_sender_id": "u_1789932822740_e0fdd7",
+      "muted": false,
+      "members": {
+        "u_1789932822740_e0fdd7": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:37:34.956Z"
+        },
+        "u_1789923520594_815d4b": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:37:34.956Z"
+        }
+      },
+      "name": null,
+      "member_ids": [
+        "u_1789923520594_815d4b",
+        "u_1789932822740_e0fdd7"
+      ],
+      "type": "dm",
+      "last_message": "Share update"
+    },
+    "c_1789933092149_715e0f": {
+      "avatar_color": "#8E8E93",
+      "wallpaper": null,
+      "last_message_at": "2026-09-20T19:57:00.077Z",
+      "id": "c_1789933092149_715e0f",
+      "type": "dm",
+      "created_at": "2026-09-20T19:38:12.149Z",
+      "last_message": "Never 😡",
+      "name": null,
+      "pinned": false,
+      "last_sender_id": "u_1789932822740_e0fdd7",
+      "muted": false,
+      "member_ids": [
+        "u_1789932225778_ceb16b",
+        "u_1789932822740_e0fdd7"
+      ],
+      "owner_id": "u_1789932225778_ceb16b",
+      "invite_code": null,
+      "archived": false,
+      "members": {
+        "u_1789932822740_e0fdd7": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:38:12.148Z"
+        },
+        "u_1789932225778_ceb16b": {
+          "joined_at": "2026-09-20T19:38:12.148Z",
+          "role": "member"
+        }
+      }
+    },
+    "c_1789933303791_fbfbfd": {
+      "members": {
+        "u_1789933249875_4c12a3": {
+          "joined_at": "2026-09-20T19:41:43.791Z",
+          "role": "member"
+        },
+        "u_1789932225778_ceb16b": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:41:43.791Z"
+        }
+      },
+      "member_ids": [
+        "u_1789932225778_ceb16b",
+        "u_1789933249875_4c12a3"
+      ],
+      "last_message_at": "2026-09-20T19:42:00.819Z",
+      "wallpaper": null,
+      "pinned": false,
+      "archived": false,
+      "owner_id": "u_1789932225778_ceb16b",
+      "last_message": "Hi",
+      "avatar_color": "#8E8E93",
+      "last_sender_id": "u_1789933249875_4c12a3",
+      "muted": false,
+      "type": "dm",
+      "id": "c_1789933303791_fbfbfd",
+      "invite_code": null,
+      "name": null,
+      "created_at": "2026-09-20T19:41:43.791Z"
+    },
+    "c_1789933886444_a6b747": {
+      "created_at": "2026-09-20T19:51:26.444Z",
+      "id": "c_1789933886444_a6b747",
+      "members": {
+        "u_1789932822740_e0fdd7": {
+          "joined_at": "2026-09-20T19:52:20.547Z",
+          "role": "member"
+        },
+        "u_1789932225778_ceb16b": {
+          "role": "owner",
+          "joined_at": "2026-09-20T19:51:26.443Z"
+        },
+        "u_1789933249875_4c12a3": {
+          "role": "member",
+          "joined_at": "2026-09-20T19:52:02.365Z"
+        }
+      },
+      "last_message_at": "2026-09-20T19:57:30.660Z",
+      "last_message": "Hiiii",
+      "name": "Nyxus Legion",
+      "pinned": false,
+      "muted": false,
+      "type": "group",
+      "wallpaper": null,
+      "owner_id": "u_1789932225778_ceb16b",
+      "invite_code": null,
+      "archived": false,
+      "member_ids": [
+        "u_1789932225778_ceb16b",
+        "u_1789933249875_4c12a3",
+        "u_1789932822740_e0fdd7"
+      ],
+      "last_sender_id": "u_1789932822740_e0fdd7",
+      "avatar_color": "#8E8E93"
+    },
+    "c_1789940814450_ca66fd": {
+      "last_sender_id": "u_1789932962367_7a6587",
+      "created_at": "2026-09-20T21:46:54.450Z",
+      "type": "dm",
+      "name": null,
+      "wallpaper": null,
+      "members": {
+        "u_1789932962367_7a6587": {
+          "joined_at": "2026-09-20T21:46:54.449Z",
+          "role": "member"
+        },
+        "u_1789918963881_d8e938": {
+          "joined_at": "2026-09-20T21:46:54.449Z",
+          "role": "member"
+        }
+      },
+      "pinned": false,
+      "owner_id": "u_1789932962367_7a6587",
+      "muted": false,
+      "archived": false,
+      "avatar_color": "#8E8E93",
+      "id": "c_1789940814450_ca66fd",
+      "invite_code": null,
+      "member_ids": [
+        "u_1789932962367_7a6587",
+        "u_1789918963881_d8e938"
+      ],
+      "last_message": "Hi",
+      "last_message_at": "2026-09-20T21:47:00.019Z"
+    },
+    "c_1789940974070_fa16e9": {
+      "archived": false,
+      "last_sender_id": "u_1789932962367_7a6587",
+      "type": "dm",
+      "owner_id": "u_1789932962367_7a6587",
+      "member_ids": [
+        "u_1789932962367_7a6587",
+        "u_1789926007787_ae86b8"
+      ],
+      "wallpaper": null,
+      "name": null,
+      "members": {
+        "u_1789932962367_7a6587": {
+          "joined_at": "2026-09-20T21:49:34.070Z",
+          "role": "member"
+        },
+        "u_1789926007787_ae86b8": {
+          "role": "member",
+          "joined_at": "2026-09-20T21:49:34.070Z"
+        }
+      },
+      "pinned": false,
+      "last_message": "Sharp",
+      "invite_code": null,
+      "id": "c_1789940974070_fa16e9",
+      "created_at": "2026-09-20T21:49:34.070Z",
+      "avatar_color": "#8E8E93",
+      "last_message_at": "2026-09-20T21:49:37.143Z",
+      "muted": false
+    },
+    "c_1789941172059_4f8579": {
+      "owner_id": "u_1789932962367_7a6587",
+      "id": "c_1789941172059_4f8579",
+      "wallpaper": null,
+      "archived": false,
+      "member_ids": [
+        "u_1789932962367_7a6587",
+        "u_1789899726676_828027"
+      ],
+      "invite_code": null,
+      "last_sender_id": "u_1789899726676_828027",
+      "members": {
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T21:52:52.058Z",
+          "role": "member"
+        },
+        "u_1789932962367_7a6587": {
+          "joined_at": "2026-09-20T21:52:52.058Z",
+          "role": "member"
+        }
+      },
+      "avatar_color": "#8E8E93",
+      "created_at": "2026-09-20T21:52:52.059Z",
+      "last_message_at": "2026-09-21T19:48:44.798Z",
+      "name": null,
+      "muted": false,
+      "pinned": false,
+      "type": "dm",
+      "last_message": "40 users in 2 days am just getting started"
+    },
+    "c_1789941239670_a72ee8": {
+      "id": "c_1789941239670_a72ee8",
+      "members": {
+        "u_1789935096816_b29834": {
+          "joined_at": "2026-09-20T21:53:59.670Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-20T21:53:59.670Z",
+          "role": "member"
+        }
+      },
+      "last_sender_id": "u_1789899726676_828027",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1789935096816_b29834"
+      ],
+      "pinned": false,
+      "archived": false,
+      "last_message_at": "2026-09-21T00:23:23.724Z",
+      "owner_id": "u_1789899726676_828027",
+      "name": null,
+      "avatar_color": "#8E8E93",
+      "wallpaper": null,
+      "type": "dm",
+      "created_at": "2026-09-20T21:53:59.671Z",
+      "muted": false,
+      "last_message": "╭━━〔 DARK BOT 〕━━┈⊷\n┃ ⚡ *Speed Test Completed!*\n┃\n┃ 📡 *Latency:* 395.0121 ms\n┃ 🟢 Status: Stable & Responsive\n╰━━━━━━━━━━━━━━",
+      "invite_code": null
+    },
+    "c_1789951246465_8d7a2b": {
+      "owner_id": "u_1789930600409_99eb1a",
+      "type": "dm",
+      "last_message": "Fine",
+      "last_sender_id": "u_1789926007787_ae86b8",
+      "name": null,
+      "pinned": false,
+      "archived": false,
+      "muted": false,
+      "invite_code": null,
+      "created_at": "2026-09-21T00:40:46.465Z",
+      "avatar_color": "#8E8E93",
+      "member_ids": [
+        "u_1789930600409_99eb1a",
+        "u_1789926007787_ae86b8"
+      ],
+      "last_message_at": "2026-09-22T17:43:06.315Z",
+      "id": "c_1789951246465_8d7a2b",
+      "wallpaper": null,
+      "members": {
+        "u_1789930600409_99eb1a": {
+          "role": "member",
+          "joined_at": "2026-09-21T00:40:46.465Z"
+        },
+        "u_1789926007787_ae86b8": {
+          "role": "member",
+          "joined_at": "2026-09-21T00:40:46.465Z"
+        }
+      }
+    },
+    "c_1789951839128_3e4e81": {
+      "created_at": "2026-09-21T00:50:39.128Z",
+      "name": "DARK CHAT",
+      "owner_id": "u_1789899726676_828027",
+      "type": "channel",
+      "archived": false,
+      "wallpaper": null,
+      "muted": false,
+      "invite_code": "QKN9PTU",
+      "last_sender_id": "u_1789899726676_828027",
+      "avatar_color": "#8E8E93",
+      "id": "c_1789951839128_3e4e81",
+      "last_message": "OFFICIAL CHANNEL",
+      "is_verified": true,
+      "member_ids": [
+        "u_1789899726676_828027"
+      ],
+      "members": {
+        "u_1789899726676_828027": {
+          "last_read_at": "2026-09-25T07:31:15.213Z",
+          "joined_at": "2026-09-21T00:50:39.128Z",
+          "unread_count": 0,
+          "role": "owner"
+        }
+      },
+      "pinned": false,
+      "last_message_at": "2026-09-21T00:50:52.709Z"
+    },
+    "c_1789952503009_44c4b9": {
+      "last_sender_id": null,
+      "type": "channel",
+      "wallpaper": null,
+      "avatar_color": "#8E8E93",
+      "muted": false,
+      "name": "THE DARK CHANNEL",
+      "members": {
+        "u_1789899726676_828027": {
+          "unread_count": 0,
+          "joined_at": "2026-09-21T01:01:43.009Z",
+          "role": "owner",
+          "last_read_at": "2026-09-25T21:33:00.658Z"
+        }
+      },
+      "last_message": null,
+      "id": "c_1789952503009_44c4b9",
+      "member_ids": [
+        "u_1789899726676_828027"
+      ],
+      "created_at": "2026-09-21T01:01:43.009Z",
+      "avatar_url": "/api/storage/files/file_1789953139047_118e8d5f",
+      "is_verified": true,
+      "archived": false,
+      "invite_code": "RQJAHM7",
+      "last_message_at": null,
+      "pinned": false,
+      "owner_id": "u_1789899726676_828027"
+    },
+    "c_1789995179527_091124": {
+      "created_at": "2026-09-21T12:52:59.527Z",
+      "avatar_color": "#8E8E93",
+      "is_locked": false,
+      "id": "c_1789995179527_091124",
+      "audit_log": [],
+      "muted": false,
+      "last_message_at": "2026-09-21T12:53:25.022Z",
+      "is_verified": false,
+      "owner_id": "u_1789930600409_99eb1a",
+      "settings": {
+        "who_can_add_members": "all",
+        "who_can_edit_info": "admin",
+        "public": false
+      },
+      "wallpaper": null,
+      "last_message": "Use .block <DARK-CHAT-ID>",
+      "visibility": "private",
+      "banned_user_ids": [],
+      "avatar_url": null,
+      "admin_permissions": {},
+      "slow_mode_seconds": 0,
+      "invite_code": null,
+      "members": {
+        "u_1789975678326_5d7b9e": {
+          "joined_at": "2026-09-21T12:52:59.527Z",
+          "role": "member"
+        },
+        "u_1789930600409_99eb1a": {
+          "role": "member",
+          "joined_at": "2026-09-21T12:52:59.527Z"
+        }
+      },
+      "locked_permissions": {
+        "add_members": true,
+        "pin_messages": true,
+        "voice_calls": true,
+        "messaging": true,
+        "edit_info": true,
+        "create_polls": true,
+        "reactions": false,
+        "media": true
+      },
+      "archived": false,
+      "locked_by": null,
+      "member_ids": [
+        "u_1789930600409_99eb1a",
+        "u_1789975678326_5d7b9e"
+      ],
+      "type": "dm",
+      "description": "",
+      "last_sender_id": "u_1789930600409_99eb1a",
+      "name": null,
+      "pinned": false,
+      "locked_at": null
+    },
+    "c_1790005904131_218700": {
+      "type": "dm",
+      "audit_log": [],
+      "name": null,
+      "id": "c_1790005904131_218700",
+      "settings": {
+        "who_can_edit_info": "admin",
+        "public": false,
+        "who_can_add_members": "all"
+      },
+      "created_at": "2026-09-21T15:51:44.132Z",
+      "pinned": false,
+      "avatar_color": "#8E8E93",
+      "members": {
+        "u_1789926007787_ae86b8": {
+          "role": "member",
+          "joined_at": "2026-09-21T15:51:44.131Z"
+        },
+        "u_1790005641592_5fe4fe": {
+          "role": "member",
+          "joined_at": "2026-09-21T15:51:44.131Z"
+        }
+      },
+      "locked_permissions": {
+        "reactions": false,
+        "create_polls": true,
+        "pin_messages": true,
+        "voice_calls": true,
+        "media": true,
+        "messaging": true,
+        "edit_info": true,
+        "add_members": true
+      },
+      "last_sender_id": "u_1790005641592_5fe4fe",
+      "archived": false,
+      "is_verified": false,
+      "banned_user_ids": [],
+      "is_locked": false,
+      "last_message": "Nothing",
+      "last_message_at": "2026-09-24T13:54:10.844Z",
+      "avatar_url": null,
+      "locked_by": null,
+      "locked_at": null,
+      "visibility": "private",
+      "slow_mode_seconds": 0,
+      "wallpaper": null,
+      "invite_code": null,
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789926007787_ae86b8"
+      ],
+      "muted": false,
+      "admin_permissions": {},
+      "owner_id": "u_1790005641592_5fe4fe",
+      "description": ""
+    },
+    "c_1790006038530_594f24": {
+      "name": null,
+      "archived": false,
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789982074394_01fedc"
+      ],
+      "type": "dm",
+      "last_message": "U d here",
+      "id": "c_1790006038530_594f24",
+      "description": "",
+      "invite_code": null,
+      "banned_user_ids": [],
+      "pinned": false,
+      "audit_log": [],
+      "is_locked": false,
+      "locked_permissions": {
+        "reactions": false,
+        "pin_messages": true,
+        "media": true,
+        "create_polls": true,
+        "edit_info": true,
+        "messaging": true,
+        "voice_calls": true,
+        "add_members": true
+      },
+      "visibility": "private",
+      "settings": {
+        "public": false,
+        "who_can_add_members": "all",
+        "who_can_edit_info": "admin"
+      },
+      "avatar_url": null,
+      "locked_at": null,
+      "locked_by": null,
+      "admin_permissions": {},
+      "is_verified": false,
+      "owner_id": "u_1790005641592_5fe4fe",
+      "avatar_color": "#8E8E93",
+      "slow_mode_seconds": 0,
+      "muted": false,
+      "last_message_at": "2026-09-21T15:54:07.009Z",
+      "members": {
+        "u_1790005641592_5fe4fe": {
+          "joined_at": "2026-09-21T15:53:58.529Z",
+          "role": "member"
+        },
+        "u_1789982074394_01fedc": {
+          "joined_at": "2026-09-21T15:53:58.529Z",
+          "role": "member"
+        }
+      },
+      "last_sender_id": "u_1790005641592_5fe4fe",
+      "wallpaper": null,
+      "created_at": "2026-09-21T15:53:58.530Z"
+    },
+    "c_1790006080548_851d5a": {
+      "locked_permissions": {
+        "messaging": true,
+        "edit_info": true,
+        "pin_messages": true,
+        "media": true,
+        "create_polls": true,
+        "add_members": true,
+        "voice_calls": true,
+        "reactions": false
+      },
+      "locked_at": null,
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789899726676_828027"
+      ],
+      "locked_by": null,
+      "avatar_color": "#8E8E93",
+      "muted": false,
+      "pinned": false,
+      "type": "dm",
+      "admin_permissions": {},
+      "name": null,
+      "is_verified": false,
+      "owner_id": "u_1790005641592_5fe4fe",
+      "slow_mode_seconds": 0,
+      "last_sender_id": "u_1790005641592_5fe4fe",
+      "id": "c_1790006080548_851d5a",
+      "avatar_url": null,
+      "banned_user_ids": [],
+      "wallpaper": null,
+      "visibility": "private",
+      "last_message_at": "2026-09-24T20:15:04.709Z",
+      "last_message": "Verified batch ooo",
+      "members": {
+        "u_1790005641592_5fe4fe": {
+          "role": "member",
+          "last_read_at": "2026-09-24T20:15:04.709Z",
+          "joined_at": "2026-09-21T15:54:40.548Z",
+          "unread_count": 0
+        },
+        "u_1789899726676_828027": {
+          "last_read_at": "2026-09-25T05:44:28.316Z",
+          "joined_at": "2026-09-21T15:54:40.548Z",
+          "role": "member",
+          "unread_count": 0
+        }
+      },
+      "audit_log": [],
+      "settings": {
+        "who_can_add_members": "all",
+        "public": false,
+        "who_can_edit_info": "admin"
+      },
+      "description": "",
+      "is_locked": false,
+      "archived": false,
+      "created_at": "2026-09-21T15:54:40.548Z",
+      "invite_code": null
+    },
+    "c_1790006085419_a20d8c": {
+      "admin_permissions": {},
+      "audit_log": [],
+      "settings": {
+        "who_can_edit_info": "admin",
+        "who_can_add_members": "all",
+        "public": false
+      },
+      "avatar_color": "#8E8E93",
+      "archived": false,
+      "locked_permissions": {
+        "voice_calls": true,
+        "add_members": true,
+        "pin_messages": true,
+        "create_polls": true,
+        "messaging": true,
+        "edit_info": true,
+        "media": true,
+        "reactions": false
+      },
+      "slow_mode_seconds": 0,
+      "last_message_at": null,
+      "is_locked": false,
+      "is_verified": false,
+      "created_at": "2026-09-21T15:54:45.419Z",
+      "pinned": false,
+      "last_message": null,
+      "muted": false,
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789917946989_a460fc"
+      ],
+      "last_sender_id": null,
+      "members": {
+        "u_1790005641592_5fe4fe": {
+          "joined_at": "2026-09-21T15:54:45.419Z",
+          "role": "member"
+        },
+        "u_1789917946989_a460fc": {
+          "role": "member",
+          "joined_at": "2026-09-21T15:54:45.419Z"
+        }
+      },
+      "type": "dm",
+      "banned_user_ids": [],
+      "locked_at": null,
+      "locked_by": null,
+      "id": "c_1790006085419_a20d8c",
+      "name": null,
+      "invite_code": null,
+      "owner_id": "u_1790005641592_5fe4fe",
+      "wallpaper": null,
+      "avatar_url": null,
+      "description": "",
+      "visibility": "private"
+    },
+    "c_1790006085922_cb5f34": {
+      "name": null,
+      "audit_log": [],
+      "type": "dm",
+      "settings": {
+        "who_can_edit_info": "admin",
+        "public": false,
+        "who_can_add_members": "all"
+      },
+      "last_message": null,
+      "pinned": false,
+      "invite_code": null,
+      "archived": false,
+      "created_at": "2026-09-21T15:54:45.922Z",
+      "is_locked": false,
+      "description": "",
+      "members": {
+        "u_1789910861507_94c5bf": {
+          "role": "member",
+          "joined_at": "2026-09-21T15:54:45.922Z"
+        },
+        "u_1790005641592_5fe4fe": {
+          "joined_at": "2026-09-21T15:54:45.922Z",
+          "role": "member"
+        }
+      },
+      "id": "c_1790006085922_cb5f34",
+      "last_message_at": null,
+      "locked_permissions": {
+        "edit_info": true,
+        "messaging": true,
+        "add_members": true,
+        "media": true,
+        "voice_calls": true,
+        "pin_messages": true,
+        "create_polls": true,
+        "reactions": false
+      },
+      "banned_user_ids": [],
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789910861507_94c5bf"
+      ],
+      "admin_permissions": {},
+      "locked_at": null,
+      "locked_by": null,
+      "owner_id": "u_1790005641592_5fe4fe",
+      "slow_mode_seconds": 0,
+      "muted": false,
+      "wallpaper": null,
+      "last_sender_id": null,
+      "avatar_url": null,
+      "is_verified": false,
+      "visibility": "private",
+      "avatar_color": "#8E8E93"
+    },
+    "c_1790006163891_ab2093": {
+      "is_verified": false,
+      "settings": {
+        "who_can_add_members": "all",
+        "public": false,
+        "who_can_edit_info": "admin"
+      },
+      "is_locked": false,
+      "last_message_at": "2026-09-21T15:56:13.844Z",
+      "pinned": false,
+      "created_at": "2026-09-21T15:56:03.891Z",
+      "avatar_color": "#8E8E93",
+      "audit_log": [],
+      "last_sender_id": "u_1790005641592_5fe4fe",
+      "archived": false,
+      "description": "",
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789918963881_d8e938"
+      ],
+      "wallpaper": null,
+      "name": null,
+      "locked_permissions": {
+        "add_members": true,
+        "edit_info": true,
+        "messaging": true,
+        "voice_calls": true,
+        "reactions": false,
+        "pin_messages": true,
+        "create_polls": true,
+        "media": true
+      },
+      "admin_permissions": {},
+      "invite_code": null,
+      "type": "dm",
+      "locked_by": null,
+      "locked_at": null,
+      "banned_user_ids": [],
+      "last_message": "My oga u d here",
+      "members": {
+        "u_1790005641592_5fe4fe": {
+          "joined_at": "2026-09-21T15:56:03.891Z",
+          "role": "member"
+        },
+        "u_1789918963881_d8e938": {
+          "joined_at": "2026-09-21T15:56:03.891Z",
+          "role": "member"
+        }
+      },
+      "muted": false,
+      "id": "c_1790006163891_ab2093",
+      "owner_id": "u_1790005641592_5fe4fe",
+      "avatar_url": null,
+      "slow_mode_seconds": 0,
+      "visibility": "private"
+    },
+    "c_1790006179620_141856": {
+      "members": {
+        "u_1789923520594_815d4b": {
+          "joined_at": "2026-09-21T15:56:19.620Z",
+          "last_read_at": "2026-09-25T14:57:36.605Z",
+          "unread_count": 0,
+          "role": "member"
+        },
+        "u_1790005641592_5fe4fe": {
+          "joined_at": "2026-09-21T15:56:19.620Z",
+          "role": "member"
+        }
+      },
+      "avatar_url": null,
+      "audit_log": [],
+      "owner_id": "u_1790005641592_5fe4fe",
+      "last_sender_id": "u_1790005641592_5fe4fe",
+      "visibility": "private",
+      "description": "",
+      "invite_code": null,
+      "is_locked": false,
+      "muted": false,
+      "name": null,
+      "member_ids": [
+        "u_1790005641592_5fe4fe",
+        "u_1789923520594_815d4b"
+      ],
+      "avatar_color": "#8E8E93",
+      "type": "dm",
+      "last_message_at": "2026-09-21T15:56:44.440Z",
+      "id": "c_1790006179620_141856",
+      "pinned": false,
+      "banned_user_ids": [],
+      "archived": false,
+      "created_at": "2026-09-21T15:56:19.620Z",
+      "is_verified": false,
+      "locked_permissions": {
+        "add_members": true,
+        "reactions": false,
+        "voice_calls": true,
+        "media": true,
+        "pin_messages": true,
+        "edit_info": true,
+        "messaging": true,
+        "create_polls": true
+      },
+      "locked_at": null,
+      "locked_by": null,
+      "admin_permissions": {},
+      "last_message": "Ma carry buy water",
+      "wallpaper": null,
+      "settings": {
+        "who_can_edit_info": "admin",
+        "public": false,
+        "who_can_add_members": "all"
+      },
+      "slow_mode_seconds": 0
+    },
+    "c_1790017119595_e4818f": {
+      "member_ids": [
+        "u_1790015543526_edef6f",
+        "u_1790016943941_378252"
+      ],
+      "pinned": false,
+      "owner_id": "u_1790015543526_edef6f",
+      "admin_permissions": {},
+      "last_message": "Umm",
+      "wallpaper": null,
+      "name": null,
+      "locked_at": null,
+      "is_verified": false,
+      "locked_by": null,
+      "type": "dm",
+      "visibility": "private",
+      "slow_mode_seconds": 0,
+      "last_message_at": "2026-09-25T09:28:49.398Z",
+      "avatar_url": null,
+      "banned_user_ids": [],
+      "is_locked": false,
+      "archived": false,
+      "muted": false,
+      "avatar_color": "#8E8E93",
+      "description": "",
+      "members": {
+        "u_1790015543526_edef6f": {
+          "unread_count": 1,
+          "role": "member",
+          "joined_at": "2026-09-21T18:58:39.595Z"
+        },
+        "u_1790016943941_378252": {
+          "role": "member",
+          "last_read_at": "2026-09-25T12:06:55.487Z",
+          "unread_count": 0,
+          "joined_at": "2026-09-21T18:58:39.595Z"
+        }
+      },
+      "id": "c_1790017119595_e4818f",
+      "locked_permissions": {
+        "pin_messages": true,
+        "create_polls": true,
+        "messaging": true,
+        "edit_info": true,
+        "add_members": true,
+        "voice_calls": true,
+        "media": true,
+        "reactions": false
+      },
+      "last_sender_id": "u_1790016943941_378252",
+      "settings": {
+        "who_can_edit_info": "admin",
+        "public": false,
+        "who_can_add_members": "all"
+      },
+      "audit_log": [],
+      "invite_code": null,
+      "created_at": "2026-09-21T18:58:39.595Z"
+    },
+    "c_1790019349710_007d40": {
+      "last_message": "You too",
+      "settings": {
+        "who_can_add_members": "all",
+        "who_can_edit_info": "admin",
+        "public": false
+      },
+      "members": {
+        "u_1790005641592_5fe4fe": {
+          "role": "member",
+          "joined_at": "2026-09-21T19:35:49.710Z"
+        },
+        "u_1789932962367_7a6587": {
+          "role": "member",
+          "joined_at": "2026-09-21T19:35:49.710Z"
+        }
+      },
+      "last_sender_id": "u_1789932962367_7a6587",
+      "member_ids": [
+        "u_1789932962367_7a6587",
+        "u_1790005641592_5fe4fe"
+      ],
+      "invite_code": null,
+      "locked_permissions": {
+        "reactions": false,
+        "pin_messages": true,
+        "messaging": true,
+        "edit_info": true,
+        "voice_calls": true,
+        "media": true,
+        "create_polls": true,
+        "add_members": true
+      },
+      "description": "",
+      "wallpaper": null,
+      "banned_user_ids": [],
+      "id": "c_1790019349710_007d40",
+      "locked_by": null,
+      "name": null,
+      "type": "dm",
+      "locked_at": null,
+      "visibility": "private",
+      "archived": false,
+      "muted": false,
+      "avatar_url": null,
+      "pinned": false,
+      "slow_mode_seconds": 0,
+      "is_locked": false,
+      "is_verified": false,
+      "avatar_color": "#8E8E93",
+      "last_message_at": "2026-09-21T19:35:51.778Z",
+      "admin_permissions": {},
+      "audit_log": [],
+      "created_at": "2026-09-21T19:35:49.710Z",
+      "owner_id": "u_1789932962367_7a6587"
+    },
+    "c_1790023314018_a015a6": {
+      "last_message_at": "2026-09-21T20:43:29.268Z",
+      "wallpaper": null,
+      "archived": false,
+      "pinned": false,
+      "slow_mode_seconds": 0,
+      "invite_code": null,
+      "avatar_color": "#8E8E93",
+      "settings": {
+        "who_can_edit_info": "admin",
+        "public": false,
+        "who_can_add_members": "all"
+      },
+      "members": {
+        "u_1790023279149_cf0b1d": {
+          "joined_at": "2026-09-21T20:41:54.018Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "joined_at": "2026-09-21T20:41:54.018Z",
+          "role": "member"
+        }
+      },
+      "created_at": "2026-09-21T20:41:54.018Z",
+      "name": null,
+      "locked_by": null,
+      "admin_permissions": {},
+      "type": "dm",
+      "description": "",
+      "locked_at": null,
+      "last_sender_id": "u_1789899726676_828027",
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1790023279149_cf0b1d"
+      ],
+      "is_locked": false,
+      "owner_id": "u_1789899726676_828027",
+      "visibility": "private",
+      "audit_log": [],
+      "locked_permissions": {
+        "edit_info": true,
+        "messaging": true,
+        "reactions": false,
+        "create_polls": true,
+        "pin_messages": true,
+        "add_members": true,
+        "media": true,
+        "voice_calls": true
+      },
+      "id": "c_1790023314018_a015a6",
+      "avatar_url": null,
+      "muted": false,
+      "banned_user_ids": [],
+      "last_message": "╔══════════════════╗\n║  DARK BOT\n╠══════════════════╣\n║ 👑 𝗢𝗪𝗡𝗘𝗥\n║ ┠ .ping\n║ ┠ .uptime\n║ ┠ .self\n║ ┠ .block <user>\n║ ┠ .unblock <user>\n║ ┠ .channeljid\n║ ┖ .getchanneljid <code>\n╠══════════════════╣\n║ 🔎 𝗨𝗧𝗜𝗟𝗜𝗧𝗬\n║ ┖ .chatjid\n╠══════════════════╣\n║ 🛡️ 𝗚𝗥𝗢𝗨𝗣 𝗠𝗔𝗡𝗔𝗚𝗘𝗠𝗘𝗡𝗧\n║ ┠ .promote <user>\n║ ┠ .demote <user>\n║ ┠ .kick <user>\n║ ┖ .groupinfo\n╠══════════════════╣\n║ 🛠️ 𝗧𝗢𝗢𝗟𝗦\n║ ┖ .owner\n╠══════════════════╣\n║  📲\n╚══════════════════╝",
+      "is_verified": false
+    },
+    "c_1790026091365_b0ac45": {
+      "slow_mode_seconds": 0,
+      "last_message": "Lol na once we go deploy",
+      "type": "dm",
+      "archived": false,
+      "audit_log": [],
+      "name": null,
+      "settings": {
+        "public": false,
+        "who_can_edit_info": "admin",
+        "who_can_add_members": "all"
+      },
+      "muted": false,
+      "id": "c_1790026091365_b0ac45",
+      "admin_permissions": {},
+      "is_locked": false,
+      "members": {
+        "u_1790024963114_10e414": {
+          "role": "member",
+          "joined_at": "2026-09-21T21:28:11.365Z"
+        },
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-21T21:28:11.365Z"
+        }
+      },
+      "invite_code": null,
+      "description": "",
+      "banned_user_ids": [],
+      "created_at": "2026-09-21T21:28:11.365Z",
+      "locked_by": null,
+      "locked_permissions": {
+        "create_polls": true,
+        "messaging": true,
+        "edit_info": true,
+        "pin_messages": true,
+        "add_members": true,
+        "voice_calls": true,
+        "reactions": false,
+        "media": true
+      },
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1790024963114_10e414"
+      ],
+      "locked_at": null,
+      "last_message_at": "2026-09-24T07:36:22.230Z",
+      "avatar_color": "#8E8E93",
+      "owner_id": "u_1789899726676_828027",
+      "last_sender_id": "u_1789899726676_828027",
+      "visibility": "private",
+      "is_verified": false,
+      "wallpaper": null,
+      "avatar_url": null,
+      "pinned": false
+    },
+    "c_1790026857022_0b7ed7": {
+      "last_message": null,
+      "avatar_url": null,
+      "wallpaper": null,
+      "visibility": "private",
+      "is_verified": false,
+      "last_sender_id": null,
+      "admin_permissions": {},
+      "owner_id": "u_1789899726676_828027",
+      "locked_at": null,
+      "last_message_at": null,
+      "members": {
+        "u_1790021091615_affb04": {
+          "joined_at": "2026-09-21T21:40:57.022Z",
+          "role": "member"
+        },
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-21T21:40:57.022Z"
+        }
+      },
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_1790021091615_affb04"
+      ],
+      "slow_mode_seconds": 0,
+      "locked_by": null,
+      "type": "dm",
+      "created_at": "2026-09-21T21:40:57.022Z",
+      "name": null,
+      "banned_user_ids": [],
+      "pinned": false,
+      "description": "",
+      "muted": false,
+      "invite_code": null,
+      "is_locked": false,
+      "settings": {
+        "who_can_add_members": "all",
+        "public": false,
+        "who_can_edit_info": "admin"
+      },
+      "avatar_color": "#8E8E93",
+      "id": "c_1790026857022_0b7ed7",
+      "archived": false,
+      "audit_log": [],
+      "locked_permissions": {
+        "edit_info": true,
+        "messaging": true,
+        "voice_calls": true,
+        "add_members": true,
+        "create_polls": true,
+        "reactions": false,
+        "media": true,
+        "pin_messages": true
+      }
+    },
+    "c_1790027069569_b0d46a": {
+      "description": "",
+      "owner_id": "u_1790024963114_10e414",
+      "locked_at": null,
+      "invite_code": null,
+      "last_message": "🐸",
+      "locked_by": null,
+      "type": "dm",
+      "created_at": "2026-09-21T21:44:29.569Z",
+      "banned_user_ids": [],
+      "name": null,
+      "wallpaper": null,
+      "locked_permissions": {
+        "voice_calls": true,
+        "reactions": false,
+        "add_members": true,
+        "messaging": true,
+        "edit_info": true,
+        "pin_messages": true,
+        "create_polls": true,
+        "media": true
+      },
+      "archived": false,
+      "admin_permissions": {},
+      "avatar_color": "#8E8E93",
+      "is_verified": false,
+      "audit_log": [],
+      "last_message_at": "2026-09-21T21:44:43.522Z",
+      "last_sender_id": "u_1790024963114_10e414",
+      "member_ids": [
+        "u_1790024963114_10e414",
+        "u_1789918963881_d8e938"
+      ],
+      "slow_mode_seconds": 0,
+      "members": {
+        "u_1789918963881_d8e938": {
+          "role": "member",
+          "joined_at": "2026-09-21T21:44:29.569Z"
+        },
+        "u_1790024963114_10e414": {
+          "joined_at": "2026-09-21T21:44:29.569Z",
+          "role": "member"
+        }
+      },
+      "avatar_url": null,
+      "pinned": false,
+      "visibility": "private",
+      "is_locked": false,
+      "settings": {
+        "who_can_add_members": "all",
+        "public": false,
+        "who_can_edit_info": "admin"
+      },
+      "id": "c_1790027069569_b0d46a",
+      "muted": false
+    },
+    "c_1790035395985_e530aa": {
+      "admin_permissions": {},
+      "locked_permissions": {
+        "pin_messages": true,
+        "create_polls": true,
+        "messaging": true,
+        "edit_info": true,
+        "add_members": true,
+        "voice_calls": true,
+        "media": true,
+        "reactions": false
+      },
+      "wallpaper": null,
+      "owner_id": "u_1790024963114_10e414",
+      "locked_by": null,
+      "name": "Mrai",
+      "slow_mode_seconds": 0,
+      "description": "",
+      "locked_at": null,
+      "type": "channel",
+      "avatar_color": "#8E8E93",
+      "invite_code": "MRAI_JOIN",
+      "last_sender_id": "u_1790024963114_10e414",
+      "created_at": "2026-09-22T00:03:15.985Z",
+      "last_message_at": "2026-09-22T00:05:10.531Z",
+      "member_ids": [
+        "u_1790024963114_10e414",
+        "u_1789899726676_828027"
+      ],
+      "banned_user_ids": [],
+      "muted": false,
+      "is_locked": false,
+      "id": "c_1790035395985_e530aa",
+      "archived": false,
+      "members": {
+        "u_1789899726676_828027": {
+          "last_read_at": "2026-09-25T21:09:17.171Z",
+          "role": "member",
+          "joined_at": "2026-09-25T21:08:15.577Z",
+          "unread_count": 0
+        },
+        "u_1790024963114_10e414": {
+          "role": "owner",
+          "joined_at": "2026-09-22T00:03:15.984Z"
+        }
+      },
+      "is_verified": true,
+      "settings": {
+        "who_can_add_members": "all",
+        "public": false,
+        "who_can_edit_info": "admin"
+      },
+      "last_message": "Hi?",
+      "visibility": "private",
+      "audit_log": [],
+      "pinned": true,
+      "avatar_url": "https://nova-tech-9ggm04qq6-beckyhan19-6136.vercel.app/api/storage/files/file_1790035484296_d9e3ecc2"
+    },
+    "dm_dark_pair_u_1789899726676_828027": {
+      "id": "dm_dark_pair_u_1789899726676_828027",
+      "type": "dm",
+      "name": null,
+      "avatar_color": "#8E8E93",
+      "avatar_url": null,
+      "owner_id": "u_dark_pair",
+      "is_verified": false,
+      "invite_code": null,
+      "member_ids": [
+        "u_1789899726676_828027",
+        "u_dark_pair"
+      ],
+      "members": {
+        "u_1789899726676_828027": {
+          "role": "member",
+          "joined_at": "2026-09-26T04:57:44.516Z"
+        },
+        "u_dark_pair": {
+          "role": "owner",
+          "joined_at": "2026-09-26T04:57:44.516Z"
+        }
+      },
+      "description": "",
+      "visibility": "private",
+      "is_locked": false,
+      "locked_by": null,
+      "locked_at": null,
+      "locked_permissions": {
+        "messaging": true,
+        "media": true,
+        "reactions": false,
+        "add_members": true,
+        "edit_info": true,
+        "pin_messages": true,
+        "create_polls": true,
+        "voice_calls": true
+      },
+      "admin_permissions": {},
+      "banned_user_ids": [],
+      "slow_mode_seconds": 0,
+      "settings": {
+        "public": false,
+        "who_can_edit_info": "admin",
+        "who_can_add_members": "all"
+      },
+      "audit_log": [],
+      "last_message": null,
+      "last_message_at": null,
+      "last_sender_id": null,
+      "pinned": false,
+      "archived": false,
+      "muted": false,
+      "wallpaper": null,
+      "created_at": "2026-09-26T04:57:44.517Z"
+    }
+  },
+  "messages": {},
+  "statuses": {},
+  "posts": {},
+  "comments": {},
+  "notifications": {},
+  "calls": {},
+  "storage_files": {}
+}

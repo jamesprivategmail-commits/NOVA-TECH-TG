@@ -2,28 +2,14 @@
 import { state, emit } from './state.js';
 
 function resolveApiBase() {
-  const PROD_API = 'https://ais-dev-si4qe2vjzzkc5btvtulch6-866141125336.europe-west2.run.app/api';
   try {
     if (typeof window !== 'undefined' && window.__API_BASE__) return String(window.__API_BASE__).replace(/\/$/, '');
     const meta = typeof document !== 'undefined' ? document.querySelector('meta[name="api-base"]') : null;
     const metaVal = meta?.content?.trim();
-    if (metaVal && !metaVal.includes('vercel.app')) return metaVal.replace(/\/$/, '');
+    if (metaVal && !metaVal.includes('vercel.app') && !metaVal.includes('ais-dev-si4qe2vjzzkc5btvtulch6')) return metaVal.replace(/\/$/, '');
     const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('apiBase') : null;
-    if (stored && !stored.includes('vercel.app')) return stored.replace(/\/$/, '');
-    // Standard web browser / AI Studio preview: use current origin's /api
-    if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
-        && !location.hostname.includes('appassets.androidplatform.net')
-        && location.hostname !== 'localhost') {
-      return '/api';
-    }
-    // APK WebView / local file fallback
-    if (typeof location !== 'undefined' && (
-      location.hostname.includes('appassets.androidplatform.net')
-      || location.hostname === 'localhost'
-      || location.protocol === 'file:'
-    )) {
-      return (metaVal && !metaVal.includes('vercel.app')) ? metaVal : PROD_API;
-    }
+    if (stored && !stored.includes('vercel.app') && !stored.includes('ais-dev-si4qe2vjzzkc5btvtulch6')) return stored.replace(/\/$/, '');
+    return '/api';
   } catch { /* ignore */ }
   return '/api';
 }
@@ -37,12 +23,10 @@ export function apiOrigin() {
       return BASE.replace(/\/api\/?$/, '');
     }
   } catch { /* ignore */ }
-  if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)
-      && !location.hostname.includes('appassets.androidplatform.net')
-      && location.hostname !== 'localhost') {
+  if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)) {
     return location.origin;
   }
-  return 'https://ais-dev-si4qe2vjzzkc5btvtulch6-866141125336.europe-west2.run.app';
+  return '';
 }
 
 /** Make media/storage URLs absolute and fix dead domains so APK WebView and web load properly */

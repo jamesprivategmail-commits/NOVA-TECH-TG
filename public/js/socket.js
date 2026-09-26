@@ -21,7 +21,7 @@ export function connectSocket() {
         throw new Error('Unable to load realtime client');
       }
     }
-    // When UI is hosted on WebView assets, connect to the configured API origin
+    // When UI is hosted on WebView assets or web, connect to the configured API origin
     let serverUrl = undefined;
     try {
       const meta = document.querySelector('meta[name="api-base"]');
@@ -29,10 +29,12 @@ export function connectSocket() {
         || localStorage.getItem('apiBase')
         || (meta && meta.content)
         || '';
-      if (base && /^https?:\/\//.test(base)) {
+      if (base && /^https?:\/\//.test(base) && !base.includes('ais-dev-si4qe2vjzzkc5btvtulch6')) {
         serverUrl = base.replace(/\/api\/?$/, '');
-      } else if (location.hostname.includes('appassets.androidplatform.net') || location.hostname === 'localhost' || location.protocol === 'file:') {
-        serverUrl = localStorage.getItem('socketUrl') || apiOrigin();
+      } else if (typeof location !== 'undefined' && (location.hostname.includes('appassets.androidplatform.net') || location.protocol === 'file:')) {
+        serverUrl = apiOrigin();
+      } else {
+        serverUrl = apiOrigin() || undefined;
       }
     } catch { /* ignore */ }
     socket = io(serverUrl, { auth: { token: state.token }, transports: ['websocket', 'polling'] });

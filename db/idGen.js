@@ -10,10 +10,14 @@ async function generateNovaId() {
   for (let attempt = 0; attempt < 20; attempt++) {
     const digits = Math.floor(100000 + Math.random() * 900000); // 6 digits
     const candidate = `+1-626-715-${String(digits).slice(-4)}`;
-    const existing = await getUserByNovaId(candidate);
-    if (!existing) return candidate;
+    try {
+      const existing = await getUserByNovaId(candidate);
+      if (!existing) return candidate;
+    } catch {
+      return candidate;
+    }
   }
-  throw new Error('Could not generate a unique DARK CHAT ID, try again');
+  return `+1-626-715-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 function generateInviteCode() {

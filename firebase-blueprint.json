@@ -142,6 +142,32 @@
         "endedAt": { "type": "string", "format": "date-time", "description": "Call end timestamp" }
       },
       "required": ["id", "initiatorId", "kind", "state", "startedAt"]
+    },
+    "StorageFile": {
+      "title": "StorageFile",
+      "description": "Media file metadata and small payload records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique file ID" },
+        "filename": { "type": "string", "description": "Original filename" },
+        "mimeType": { "type": "string", "description": "MIME type" },
+        "size": { "type": "number", "description": "Size in bytes" },
+        "userId": { "type": "string", "description": "Uploader user ID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Upload timestamp" }
+      },
+      "required": ["id", "filename", "mimeType", "size", "createdAt"]
+    },
+    "StorageChunk": {
+      "title": "StorageChunk",
+      "description": "Chunked storage binary segments for videos and large media",
+      "type": "object",
+      "properties": {
+        "fileId": { "type": "string", "description": "Parent file ID" },
+        "index": { "type": "number", "description": "Chunk index sequence" },
+        "totalChunks": { "type": "number", "description": "Total number of chunks" },
+        "data": { "type": "string", "description": "Base64 data segment" }
+      },
+      "required": ["fileId", "index", "totalChunks", "data"]
     }
   },
   "firestore": {

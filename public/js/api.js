@@ -200,8 +200,11 @@ export const api = {
   // calls
   iceServers: () => request('/calls/ice-servers'),
   callHistory: (conversationId) => request(`/calls/history/${encodeURIComponent(conversationId)}`),
+  activeCall: (conversationId) => request(`/calls/active/${encodeURIComponent(conversationId)}`),
   startCall: (conversationId, kind) => request('/calls', { method: 'POST', body: { conversationId, kind } }),
   updateCall: (id, stateName) => request(`/calls/${encodeURIComponent(id)}`, { method: 'PATCH', body: { state: stateName } }),
+  joinCall: (id) => request(`/calls/${encodeURIComponent(id)}/join`, { method: 'POST' }),
+  leaveCall: (id) => request(`/calls/${encodeURIComponent(id)}/leave`, { method: 'POST' }),
 
   // storage
   upload: (data, mimeType, filename) => request('/storage/upload', { method: 'POST', body: { data, mimeType, filename } })

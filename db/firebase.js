@@ -123,7 +123,7 @@ async function ensureInit() {
 async function syncRecentFromFirestore() {
   if (!firestoreDb) return;
   try {
-    const snap = await getDocs(query(collection(firestoreDb, 'users'), limit(50)));
+    const snap = await getDocs(query(collection(firestoreDb, 'users'), limit(300)));
     for (const d of snap.docs) {
       const u = d.data();
       if (u && u.id) {
@@ -141,13 +141,33 @@ async function syncRecentFromFirestore() {
   }
 
   try {
-    const cSnap = await getDocs(query(collection(firestoreDb, 'conversations'), limit(50)));
+    const cSnap = await getDocs(query(collection(firestoreDb, 'conversations'), limit(300)));
     for (const d of cSnap.docs) {
       const c = d.data();
       if (c && c.id) cacheStore.setConversation(c);
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, 'conversations');
+  }
+
+  try {
+    const pSnap = await getDocs(query(collection(firestoreDb, 'posts'), orderBy('created_at', 'desc'), limit(100)));
+    for (const d of pSnap.docs) {
+      const p = d.data();
+      if (p && p.id) cacheStore.addPost(p);
+    }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.LIST, 'posts');
+  }
+
+  try {
+    const sSnap = await getDocs(query(collection(firestoreDb, 'statuses'), orderBy('created_at', 'desc'), limit(100)));
+    for (const d of sSnap.docs) {
+      const s = d.data();
+      if (s && s.id) cacheStore.addStatus(s);
+    }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.LIST, 'statuses');
   }
 }
 
@@ -563,6 +583,23 @@ async function getAllChannels(search = '') {
 async function getConversationsForUser(userId) {
   await ensureDarkPairConversation(userId);
 
+  await ensureInit();
+  if (firestoreDb && userId) {
+    try {
+      const q = query(
+        collection(firestoreDb, 'conversations'),
+        where('member_ids', 'array-contains', String(userId))
+      );
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        const c = d.data();
+        if (c && c.id) cacheStore.setConversation(c);
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, 'conversations');
+    }
+  }
+
   let list = cacheStore.getAllConversations().filter(c =>
     (c.member_ids || []).includes(String(userId))
   );
@@ -810,27 +847,37 @@ async function createMessage(convId, msgData) {
 }
 
 async function getMessages(convId, { limitCount = 50, beforeTime = null, userId = null } = {}) {
-  let msgs = cacheStore.getMessages(convId);
-
-  if (msgs.length === 0 && convId) {
+  await ensureInit();
+  if (firestoreDb && convId) {
     try {
-      await ensureInit();
-      if (firestoreDb) {
-        const snap = await getDocs(query(
+      let q;
+      if (beforeTime) {
+        q = query(
+          collection(firestoreDb, 'conversations', String(convId), 'messages'),
+          where('created_at', '<', String(beforeTime)),
+          orderBy('created_at', 'desc'),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
           collection(firestoreDb, 'conversations', String(convId), 'messages'),
           orderBy('created_at', 'desc'),
           limit(limitCount)
-        ));
-        if (!snap.empty) {
-          for (const d of snap.docs) {
-            const data = d.data();
-            cacheStore.addMessage(convId, data);
-          }
-          msgs = cacheStore.getMessages(convId);
+        );
+      }
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        for (const d of snap.docs) {
+          const data = d.data();
+          if (data && data.id) cacheStore.addMessage(convId, data);
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, `conversations/${convId}/messages`);
+    }
   }
+
+  let msgs = cacheStore.getMessages(convId);
 
   if (userId) {
     msgs = msgs.filter(m => !(m.hidden_by || []).includes(String(userId)));
@@ -965,7 +1012,8 @@ async function searchMessages(convId, queryText) {
 async function createStatus({ userId, content, bgColor, mediaUrl, mediaType, mediaMime }) {
   const id = 's_' + Date.now() + '_' + crypto.randomBytes(3).toString('hex');
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  // Statuses persist permanently (no auto-deletion)
+  const expiresAt = '9999-12-31T23:59:59.999Z';
   const status = {
     id,
     user_id: String(userId),
@@ -993,33 +1041,50 @@ async function createStatus({ userId, content, bgColor, mediaUrl, mediaType, med
 }
 
 async function getActiveStatuses(viewerUserId) {
-  const now = Date.now();
+  await ensureInit();
+  if (firestoreDb) {
+    try {
+      const snap = await getDocs(query(
+        collection(firestoreDb, 'statuses'),
+        orderBy('created_at', 'desc'),
+        limit(100)
+      ));
+      if (!snap.empty) {
+        for (const d of snap.docs) {
+          const s = d.data();
+          if (s && s.id) cacheStore.addStatus(s);
+        }
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, 'statuses');
+    }
+  }
+
   const all = cacheStore.getStatuses();
   const active = [];
   for (const s of all) {
-    if (new Date(s.expires_at).getTime() > now) {
-      const author = await getUserById(s.user_id);
-      active.push({
-        id: s.id,
-        content: s.content,
-        bg_color: s.bg_color,
-        media_url: s.media_url,
-        media_type: s.media_type || null,
-        media_mime: s.media_mime || null,
-        created_at: s.created_at,
-        expires_at: s.expires_at,
-        user_id: s.user_id,
-        nova_id: author?.nova_id || '',
-        display_name: author?.display_name || 'User',
-        avatar_color: author?.avatar_color || '#0A84FF',
-        avatar_url: author?.avatar_url || null,
-        is_verified: author?.is_verified || false,
-        viewed: viewerUserId ? (s.viewers || []).includes(String(viewerUserId)) : false,
-        reactions: s.reactions || {},
-        reaction_count: Object.keys(s.reactions || {}).length,
-        my_reaction: viewerUserId ? (s.reactions || {})[String(viewerUserId)] || null : null
-      });
-    }
+    // Retain all statuses permanently (do not auto-expire after 24h)
+    const author = await getUserById(s.user_id);
+    active.push({
+      id: s.id,
+      content: s.content,
+      bg_color: s.bg_color,
+      media_url: s.media_url,
+      media_type: s.media_type || null,
+      media_mime: s.media_mime || null,
+      created_at: s.created_at,
+      expires_at: s.expires_at || null,
+      user_id: s.user_id,
+      nova_id: author?.nova_id || '',
+      display_name: author?.display_name || 'User',
+      avatar_color: author?.avatar_color || '#0A84FF',
+      avatar_url: author?.avatar_url || null,
+      is_verified: author?.is_verified || false,
+      viewed: viewerUserId ? (s.viewers || []).includes(String(viewerUserId)) : false,
+      reactions: s.reactions || {},
+      reaction_count: Object.keys(s.reactions || {}).length,
+      my_reaction: viewerUserId ? (s.reactions || {})[String(viewerUserId)] || null : null
+    });
   }
   active.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return active;
@@ -1032,6 +1097,14 @@ async function markStatusViewed(statusId, viewerUserId) {
   if (!viewers.includes(String(viewerUserId))) {
     viewers.push(String(viewerUserId));
     cacheStore.updateStatus(statusId, { viewers });
+    await ensureInit();
+    if (firestoreDb) {
+      updateDoc(doc(firestoreDb, 'statuses', String(statusId)), {
+        viewers: arrayUnion(String(viewerUserId))
+      }).catch(err => {
+        handleFirestoreError(err, OperationType.UPDATE, `statuses/${statusId}`);
+      });
+    }
   }
   return true;
 }
@@ -1040,6 +1113,12 @@ async function deleteStatus(statusId, userId) {
   const s = cacheStore.getStatusById(statusId);
   if (!s || s.user_id !== String(userId)) return false;
   cacheStore.deleteStatus(statusId);
+  await ensureInit();
+  if (firestoreDb) {
+    deleteDoc(doc(firestoreDb, 'statuses', String(statusId))).catch(err => {
+      handleFirestoreError(err, OperationType.DELETE, `statuses/${statusId}`);
+    });
+  }
   return true;
 }
 
@@ -1052,6 +1131,12 @@ async function reactToStatus(statusId, userId, emoji) {
   if (reactions[String(userId)] === clean) delete reactions[String(userId)];
   else reactions[String(userId)] = clean;
   cacheStore.updateStatus(statusId, { reactions });
+  await ensureInit();
+  if (firestoreDb) {
+    updateDoc(doc(firestoreDb, 'statuses', String(statusId)), { reactions }).catch(err => {
+      handleFirestoreError(err, OperationType.UPDATE, `statuses/${statusId}`);
+    });
+  }
   return {
     reactions,
     reaction_count: Object.keys(reactions).length,
@@ -1125,6 +1210,25 @@ async function createPost({ userId, caption, imageUrl, imageMime }) {
 }
 
 async function getPosts(currentUserId, limitCount = 50) {
+  await ensureInit();
+  if (firestoreDb) {
+    try {
+      const snap = await getDocs(query(
+        collection(firestoreDb, 'posts'),
+        orderBy('created_at', 'desc'),
+        limit(limitCount)
+      ));
+      if (!snap.empty) {
+        for (const d of snap.docs) {
+          const p = d.data();
+          if (p && p.id) cacheStore.addPost(p);
+        }
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, 'posts');
+    }
+  }
+
   const all = cacheStore.getPosts();
   const posts = [];
   for (const p of all) {
@@ -1156,6 +1260,12 @@ async function deletePost(postId, userId, allowAdmin = false) {
   if (!p) return false;
   if (!allowAdmin && p.user_id !== String(userId)) return false;
   cacheStore.deletePost(postId);
+  await ensureInit();
+  if (firestoreDb) {
+    deleteDoc(doc(firestoreDb, 'posts', String(postId))).catch(err => {
+      handleFirestoreError(err, OperationType.DELETE, `posts/${postId}`);
+    });
+  }
   return true;
 }
 
@@ -1172,6 +1282,12 @@ async function togglePostLike(postId, userId) {
     nextLikes = [...likes, uid];
   }
   cacheStore.updatePost(postId, { likes: nextLikes });
+  await ensureInit();
+  if (firestoreDb) {
+    updateDoc(doc(firestoreDb, 'posts', String(postId)), { likes: nextLikes }).catch(err => {
+      handleFirestoreError(err, OperationType.UPDATE, `posts/${postId}`);
+    });
+  }
   return !liked;
 }
 
@@ -1189,8 +1305,19 @@ async function addPostComment(postId, { userId, content }) {
   cacheStore.addComment(postId, comment);
 
   const post = cacheStore.getPostById(postId);
+  const newCommentCount = (post?.comment_count || 0) + 1;
   if (post) {
-    cacheStore.updatePost(postId, { comment_count: (post.comment_count || 0) + 1 });
+    cacheStore.updatePost(postId, { comment_count: newCommentCount });
+  }
+
+  await ensureInit();
+  if (firestoreDb) {
+    setDoc(doc(firestoreDb, 'posts', String(postId), 'comments', commentId), comment).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `posts/${postId}/comments/${commentId}`);
+    });
+    updateDoc(doc(firestoreDb, 'posts', String(postId)), { comment_count: newCommentCount }).catch(err => {
+      handleFirestoreError(err, OperationType.UPDATE, `posts/${postId}`);
+    });
   }
 
   const author = await getUserById(userId);
@@ -1204,9 +1331,31 @@ async function addPostComment(postId, { userId, content }) {
 }
 
 async function getPostComments(postId) {
+  await ensureInit();
+  if (firestoreDb) {
+    try {
+      const snap = await getDocs(query(
+        collection(firestoreDb, 'posts', String(postId), 'comments'),
+        orderBy('created_at', 'asc'),
+        limit(100)
+      ));
+      if (!snap.empty) {
+        for (const d of snap.docs) {
+          const c = d.data();
+          if (c && c.id) cacheStore.addComment(postId, c);
+        }
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, `posts/${postId}/comments`);
+    }
+  }
+
   const comments = cacheStore.getComments(postId);
   const result = [];
+  const seenIds = new Set();
   for (const c of comments) {
+    if (seenIds.has(c.id)) continue;
+    seenIds.add(c.id);
     const author = await getUserById(c.user_id);
     result.push({
       id: c.id,
@@ -1277,35 +1426,204 @@ async function markNotificationsRead(userId, notifId = null) {
 }
 
 // ---------------- CALL SESSIONS ----------------
-async function createCallSession({ id, conversationId, initiatorId, targetUserId, kind }) {
+async function createCallSession({ id, conversationId, initiatorId, targetUserId, kind, isGroup = false, participants = [] }) {
   const callId = id || crypto.randomUUID();
+  const now = new Date().toISOString();
   const call = {
     id: callId,
     conversation_id: String(conversationId),
     initiator_id: String(initiatorId),
     target_user_id: targetUserId ? String(targetUserId) : null,
     kind,
+    is_group: Boolean(isGroup),
+    participants: Array.isArray(participants) && participants.length ? participants : [{ userId: String(initiatorId), joinedAt: now }],
     state: 'ringing',
-    started_at: new Date().toISOString(),
+    started_at: now,
     ended_at: null
   };
   cacheStore.addCallSession(call);
+  await ensureInit();
+  if (firestoreDb) {
+    setDoc(doc(firestoreDb, 'call_sessions', callId), call).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `call_sessions/${callId}`);
+    });
+  }
   return call;
 }
 
 async function getCallSession(callId) {
-  return cacheStore.getCallSession(callId);
+  let call = cacheStore.getCallSession(callId);
+  if (call) return call;
+  await ensureInit();
+  if (firestoreDb) {
+    try {
+      const snap = await getDoc(doc(firestoreDb, 'call_sessions', String(callId)));
+      if (snap.exists()) {
+        call = snap.data();
+        cacheStore.addCallSession(call);
+        return call;
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `call_sessions/${callId}`);
+    }
+  }
+  return null;
 }
 
-async function updateCallSessionState(callId, state) {
-  const updates = { state };
+async function updateCallSessionState(callId, state, extraUpdates = {}) {
+  const updates = { state, ...extraUpdates };
   if (['declined', 'ended', 'missed', 'busy'].includes(state)) {
     updates.ended_at = new Date().toISOString();
   }
-  return cacheStore.updateCallSession(callId, updates);
+  const updated = cacheStore.updateCallSession(callId, updates);
+  await ensureInit();
+  if (firestoreDb) {
+    updateDoc(doc(firestoreDb, 'call_sessions', String(callId)), updates).catch(err => {
+      handleFirestoreError(err, OperationType.UPDATE, `call_sessions/${callId}`);
+    });
+  }
+
+  // If the call reached a terminal state, log a message in the conversation
+  if (['declined', 'ended', 'missed', 'busy'].includes(state) && updated && !updated.logged_to_chat) {
+    updated.logged_to_chat = true;
+    cacheStore.updateCallSession(callId, { logged_to_chat: true });
+
+    let durationText = '';
+    if (state === 'ended' && updated.started_at && updated.ended_at) {
+      const ms = Math.max(0, new Date(updated.ended_at).getTime() - new Date(updated.started_at).getTime());
+      const totalSec = Math.floor(ms / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      durationText = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    }
+
+    const isVideo = updated.kind === 'video';
+    const isGroup = updated.is_group;
+    let label = '';
+    if (state === 'missed') {
+      label = isVideo ? '🎥 Missed video call' : '📞 Missed voice call';
+    } else if (state === 'declined') {
+      label = isVideo ? '🎥 Declined video call' : '📞 Declined voice call';
+    } else if (state === 'busy') {
+      label = isVideo ? '🎥 Busy video call' : '📞 Busy voice call';
+    } else {
+      const mode = isVideo ? 'Video call' : 'Voice call';
+      const dur = durationText ? ` · ${durationText}` : '';
+      label = isGroup ? `📞 Group ${mode.toLowerCase()} ended${dur}` : `📞 ${mode}${dur}`;
+    }
+
+    try {
+      await createMessage(updated.conversation_id, {
+        senderId: updated.initiator_id,
+        content: label,
+        mediaType: 'call'
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  return updated;
+}
+
+async function joinCallParticipant(callId, participant) {
+  const call = await getCallSession(callId);
+  if (!call) return null;
+  const participants = Array.isArray(call.participants) ? [...call.participants] : [];
+  const idx = participants.findIndex(p => String(p.userId) === String(participant.userId));
+  if (idx >= 0) {
+    participants[idx] = { ...participants[idx], ...participant };
+  } else {
+    participants.push(participant);
+  }
+  return updateCallSessionState(callId, 'ongoing', { participants });
+}
+
+async function leaveCallParticipant(callId, userId) {
+  const call = await getCallSession(callId);
+  if (!call) return null;
+  const participants = (Array.isArray(call.participants) ? call.participants : []).filter(
+    p => String(p.userId) !== String(userId)
+  );
+  if (participants.length === 0) {
+    return updateCallSessionState(callId, 'ended', { participants: [] });
+  } else {
+    return updateCallSessionState(callId, call.state || 'ongoing', { participants });
+  }
+}
+
+async function getActiveCallForConversation(conversationId) {
+  const history = cacheStore.getCallHistory(conversationId);
+  const active = history.find(c =>
+    ['ringing', 'accepted', 'ongoing', 'reconnecting'].includes(c.state) && !c.ended_at
+  );
+  if (active) return active;
+  await ensureInit();
+  if (firestoreDb) {
+    try {
+      const q = query(
+        collection(firestoreDb, 'call_sessions'),
+        where('conversation_id', '==', String(conversationId)),
+        limit(5)
+      );
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        const c = d.data();
+        if (['ringing', 'accepted', 'ongoing', 'reconnecting'].includes(c.state) && !c.ended_at) {
+          cacheStore.addCallSession(c);
+          return c;
+        }
+      }
+    } catch {}
+  }
+  return null;
+}
+
+async function getActiveGroupCall(conversationId) {
+  const history = cacheStore.getCallHistory(conversationId);
+  const active = history.find(c =>
+    c.is_group && ['ringing', 'accepted', 'ongoing'].includes(c.state) && !c.ended_at
+  );
+  if (active) return active;
+  await ensureInit();
+  if (firestoreDb) {
+    try {
+      const q = query(
+        collection(firestoreDb, 'call_sessions'),
+        where('conversation_id', '==', String(conversationId)),
+        where('is_group', '==', true),
+        limit(5)
+      );
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        const c = d.data();
+        if (['ringing', 'accepted', 'ongoing'].includes(c.state) && !c.ended_at) {
+          cacheStore.addCallSession(c);
+          return c;
+        }
+      }
+    } catch {}
+  }
+  return null;
 }
 
 async function getCallHistory(conversationId) {
+  await ensureInit();
+  if (firestoreDb && conversationId) {
+    try {
+      const q = query(
+        collection(firestoreDb, 'call_sessions'),
+        where('conversation_id', '==', String(conversationId)),
+        orderBy('started_at', 'desc'),
+        limit(30)
+      );
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        const c = d.data();
+        if (c && c.id) cacheStore.addCallSession(c);
+      }
+    } catch {}
+  }
   const calls = cacheStore.getCallHistory(conversationId);
   calls.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
   return calls.slice(0, 50);
@@ -1374,5 +1692,9 @@ module.exports = {
   createCallSession,
   getCallSession,
   updateCallSessionState,
+  joinCallParticipant,
+  leaveCallParticipant,
+  getActiveCallForConversation,
+  getActiveGroupCall,
   getCallHistory
 };

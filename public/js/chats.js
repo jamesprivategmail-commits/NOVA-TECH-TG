@@ -53,6 +53,15 @@ export function initChats() {
   on('conversations:changed', () => { renderChats(); updateFilterChips(); updateChatsNavDot(); });
   on('unread:changed', () => { updateFilterChips(); updateChatsNavDot(); });
   on('settings:changed', () => { renderChats(); updateFilterChips(); updateChatsNavDot(); });
+  on('call:group:active-updated', (payload) => {
+    state.activeCalls = state.activeCalls || {};
+    state.activeCalls[payload.conversationId] = payload;
+    renderChats();
+  });
+  on('call:group:ended', (payload) => {
+    if (state.activeCalls) delete state.activeCalls[payload.conversationId];
+    renderChats();
+  });
   on('presence', ({ userId, online }) => {
     state.presence[userId] = online;
     updatePresenceDots();
@@ -185,6 +194,9 @@ function conversationRow(conv) {
   const pin = conv.pinned ? `<span class="pin-flag">${icon('pin')}</span>` : '';
   const archived = conv.archived ? `<span class="pill">Archived</span>` : '';
   const online = conv.type === 'dm' && conv.other_user && state.presence[conv.other_user.id];
+  const liveCall = state.activeCalls && state.activeCalls[conv.id] && state.activeCalls[conv.id].active
+    ? `<span class="pill" style="background:var(--green);color:#04220e;font-weight:700;">📞 Call (${state.activeCalls[conv.id].count || 1})</span>`
+    : '';
   return `<button class="chat-row${unreadCount > 0 ? ' is-unread' : ''}" data-conv="${escapeHtml(conv.id)}">
     <span class="avatar-wrap">
       ${avatar(user)}
@@ -200,7 +212,7 @@ function conversationRow(conv) {
         <span class="chat-preview">${previewHtml(conv)}</span>
         ${unreadCount > 0 && pref('showUnreadBadges', true) ? `<span class="unread" aria-label="${unreadCount} unread">${unreadCount > 99 ? '99+' : unreadCount}</span>` : ''}
       </span>
-      ${badge || archived ? `<span class="chat-top">${badge}${archived}</span>` : ''}
+      ${liveCall || badge || archived ? `<span class="chat-top">${liveCall}${badge}${archived}</span>` : ''}
     </span>
   </button>`;
 }

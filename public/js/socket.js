@@ -53,6 +53,13 @@ export function connectSocket() {
     socket.on('call:incoming', (payload) => emit('call:incoming', payload));
     socket.on('call:signal', (payload) => emit('call:signal', payload));
     socket.on('call:state', (payload) => emit('call:state', payload));
+    socket.on('call:group:incoming', (payload) => emit('call:group:incoming', payload));
+    socket.on('call:group:user-joined', (payload) => emit('call:group:user-joined', payload));
+    socket.on('call:group:user-left', (payload) => emit('call:group:user-left', payload));
+    socket.on('call:group:signal', (payload) => emit('call:group:signal', payload));
+    socket.on('call:group:media-state', (payload) => emit('call:group:media-state', payload));
+    socket.on('call:group:ended', (payload) => emit('call:group:ended', payload));
+    socket.on('call:group:active-updated', (payload) => emit('call:group:active-updated', payload));
 
     return socket;
   })();
@@ -104,4 +111,33 @@ export function signalCall(targetUserId, callId, signal) {
 
 export function stateCall(targetUserId, callId, stateName) {
   if (socket) socket.emit('call:state', { targetUserId, callId, state: stateName });
+}
+
+export function startGroupCall(conversationId, call) {
+  if (socket) socket.emit('call:group:start', { conversationId, call });
+}
+
+export function joinGroupCall({ conversationId, callId, kind, mediaState }) {
+  return new Promise((resolve) => {
+    if (!socket) return resolve({ error: 'Not connected' });
+    socket.emit('call:group:join', { conversationId, callId, kind, mediaState }, (ack) => {
+      resolve(ack || {});
+    });
+  });
+}
+
+export function signalGroupCall({ callId, targetUserId, signal }) {
+  if (socket) socket.emit('call:group:signal', { callId, targetUserId, signal });
+}
+
+export function mediaStateGroupCall({ callId, muted, cameraOff }) {
+  if (socket) socket.emit('call:group:media-state', { callId, muted, cameraOff });
+}
+
+export function leaveGroupCall({ callId, conversationId }) {
+  if (socket) socket.emit('call:group:leave', { callId, conversationId });
+}
+
+export function endGroupCall({ callId, conversationId }) {
+  if (socket) socket.emit('call:group:end', { callId, conversationId });
 }

@@ -298,6 +298,17 @@
 
     <div class="pinned-bar hidden" id="pinned-bar"></div>
 
+    <div class="group-call-banner hidden" id="group-call-banner">
+      <div class="group-call-banner-info">
+        <span class="group-call-banner-icon" id="group-call-banner-icon"><svg class="icon"><use href="#i-phone"></use></svg></span>
+        <div class="group-call-banner-text">
+          <span class="group-call-banner-title" id="group-call-banner-title">Ongoing Group Call</span>
+          <span class="group-call-banner-sub" id="group-call-banner-sub">Tap to join</span>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm group-call-join-btn" id="group-call-banner-join" type="button">Join</button>
+    </div>
+
     <div class="messages scroll" id="messages" aria-live="polite"></div>
 
     <div class="typing-indicator hidden" id="typing-indicator"></div>
@@ -390,7 +401,13 @@
   <!-- CALL -->
   <section class="screen call-screen" id="screen-call" data-screen="call" aria-label="Call" hidden>
     <div class="call-top">
-      <span class="call-peer-name truncate" id="call-peer-name"></span>
+      <button class="call-top-btn" id="call-minimize" title="Minimize call" aria-label="Minimize call">
+        <svg class="icon"><use href="#i-chevron-down"></use></svg>
+      </button>
+      <div class="call-top-center">
+        <span class="call-peer-name truncate" id="call-peer-name"></span>
+        <span class="call-participants-count hidden" id="call-participants-count"></span>
+      </div>
       <span class="call-mode" id="call-mode">VOICE</span>
     </div>
     <div class="call-stage" id="call-stage">
@@ -405,18 +422,36 @@
         <div class="call-name" id="call-name"></div>
         <div class="call-state" id="call-state">Ringing...</div>
       </div>
+      <!-- Group call responsive video grid -->
+      <div class="call-group-grid hidden" id="call-group-grid"></div>
     </div>
     <div class="call-controls" id="call-controls">
-      <button class="call-btn" id="call-mute" aria-label="Mute microphone"><svg class="icon"><use href="#i-mic"></use></svg></button>
-      <button class="call-btn" id="call-speaker" aria-label="Turn speaker on" aria-pressed="false"><svg class="icon"><use href="#i-volume-off"></use></svg></button>
-      <button class="call-btn" id="call-camera" aria-label="Toggle camera"><svg class="icon"><use href="#i-video"></use></svg></button>
-      <button class="call-btn call-btn-danger" id="call-end" aria-label="End call"><svg class="icon"><use href="#i-phone-off"></use></svg></button>
+      <button class="call-btn" id="call-mute" aria-label="Mute microphone" title="Mute microphone"><svg class="icon"><use href="#i-mic"></use></svg></button>
+      <button class="call-btn" id="call-speaker" aria-label="Turn speaker on" title="Audio speaker" aria-pressed="false"><svg class="icon"><use href="#i-volume-off"></use></svg></button>
+      <button class="call-btn" id="call-camera" aria-label="Toggle camera" title="Toggle camera"><svg class="icon"><use href="#i-video"></use></svg></button>
+      <button class="call-btn hidden" id="call-flip" aria-label="Switch camera" title="Switch camera"><svg class="icon"><use href="#i-camera-switch"></use></svg></button>
+      <button class="call-btn call-btn-danger" id="call-end" aria-label="End call" title="End call"><svg class="icon"><use href="#i-phone-off"></use></svg></button>
     </div>
     <div class="call-incoming" id="call-incoming" hidden>
       <button class="call-btn call-btn-accept" id="call-accept" aria-label="Accept call"><svg class="icon"><use href="#i-phone"></use></svg></button>
       <button class="call-btn call-btn-danger" id="call-decline" aria-label="Decline call"><svg class="icon"><use href="#i-phone-off"></use></svg></button>
     </div>
   </section>
+
+  <!-- FLOATING MINI CALL BAR -->
+  <div class="call-mini-bar hidden" id="call-mini-bar" role="region" aria-label="Active call">
+    <div class="call-mini-bar-content" id="call-mini-expand">
+      <div class="call-mini-dot"></div>
+      <div class="call-mini-info">
+        <span class="call-mini-name truncate" id="call-mini-name">Call</span>
+        <span class="call-mini-time" id="call-mini-time">00:00</span>
+      </div>
+    </div>
+    <div class="call-mini-actions">
+      <button class="call-mini-btn" id="call-mini-mute" aria-label="Mute microphone" title="Mute"><svg class="icon"><use href="#i-mic"></use></svg></button>
+      <button class="call-mini-btn call-mini-danger" id="call-mini-end" aria-label="End call" title="End call"><svg class="icon"><use href="#i-phone-off"></use></svg></button>
+    </div>
+  </div>
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav" aria-label="Primary">

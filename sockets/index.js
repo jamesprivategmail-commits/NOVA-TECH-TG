@@ -10,7 +10,11 @@ const {
   getDarkPairReply,
   uploadToStorage,
   markConversationRead,
-  createNotification
+  createNotification,
+  getCallSession,
+  updateCallSessionState,
+  joinCallParticipant,
+  leaveCallParticipant
 } = require('../db/firebase');
 const { roleFor, hasPermission } = require('../db/conversationPermissions');
 
@@ -18,6 +22,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'darkchat-firebase-jwt-secret-2026'
 
 function initSockets(io) {
   const onlineSockets = new Map();
+  // Active group call rooms: callId -> { conversationId, callId, kind, participants: Map<userId, participantData> }
+  const activeCallRooms = new Map();
+  // User -> Set of callIds they are currently in
+  const userCallRooms = new Map();
 
   // Auth middleware for socket connections
   io.use(async (socket, next) => {
@@ -49,16 +57,254 @@ function initSockets(io) {
     onlineSockets.set(userId, (onlineSockets.get(userId) || 0) + 1);
     io.emit('presence', { userId, online: true, connections: onlineSockets.get(userId) });
 
-    socket.on('call:invite', ({ targetUserId, call }) => {
-      if (targetUserId) io.to(`user:${targetUserId}`).emit('call:incoming', { call, fromUserId: userId });
+    // ==========================================
+    // 1-TO-1 CALL SIGNALING & EVENTS
+    // ==========================================
+    socket.on('call:invite', async ({ targetUserId, call }) => {
+      if (!targetUserId || !call) return;
+      io.to(`user:${targetUserId}`).emit('call:incoming', { call, fromUserId: userId });
+
+      // In-app notification for incoming call
+      try {
+        const callerInfo = await getUserById(userId);
+        const notification = await createNotification({
+          userId: targetUserId,
+          actorId: userId,
+          type: 'call',
+          payload: {
+            callId: call.id,
+            kind: call.kind || 'voice',
+            conversationId: call.conversation_id
+          }
+        });
+        io.to(`user:${targetUserId}`).emit('notification:new', {
+          ...notification,
+          actor_name: callerInfo?.display_name || 'Someone'
+        });
+      } catch (err) {
+        // ignore notification error
+      }
     });
 
     socket.on('call:signal', ({ targetUserId, callId, signal }) => {
-      if (targetUserId && callId && signal) io.to(`user:${targetUserId}`).emit('call:signal', { callId, signal, fromUserId: userId });
+      if (targetUserId && callId && signal) {
+        io.to(`user:${targetUserId}`).emit('call:signal', { callId, signal, fromUserId: userId });
+      }
     });
 
-    socket.on('call:state', ({ targetUserId, callId, state }) => {
-      if (targetUserId && callId && state) io.to(`user:${targetUserId}`).emit('call:state', { callId, state, fromUserId: userId });
+    socket.on('call:state', async ({ targetUserId, callId, state }) => {
+      if (!callId || !state) return;
+      if (targetUserId) {
+        io.to(`user:${targetUserId}`).emit('call:state', { callId, state, fromUserId: userId });
+      }
+      try {
+        await updateCallSessionState(callId, state);
+      } catch (err) {
+        console.error('Update call session state error:', err);
+      }
+    });
+
+    // ==========================================
+    // GROUP CALL SIGNALING & ROOM MANAGEMENT
+    // ==========================================
+    socket.on('call:group:start', async ({ conversationId, call }) => {
+      if (!conversationId || !call) return;
+      try {
+        const conv = await getConversationById(conversationId);
+        if (!conv) return;
+
+        // Join room
+        socket.join(`call:room:${call.id}`);
+        if (!userCallRooms.has(userId)) userCallRooms.set(userId, new Set());
+        userCallRooms.get(userId).add(call.id);
+
+        const callerInfo = await getUserById(userId);
+        const participant = {
+          userId,
+          displayName: callerInfo?.display_name || 'Participant',
+          avatarUrl: callerInfo?.avatar_url || null,
+          avatarColor: callerInfo?.avatar_color || '#0A84FF',
+          muted: false,
+          cameraOff: call.kind !== 'video',
+          joinedAt: new Date().toISOString()
+        };
+
+        if (!activeCallRooms.has(call.id)) {
+          const pMap = new Map();
+          pMap.set(userId, participant);
+          activeCallRooms.set(call.id, {
+            conversationId,
+            callId: call.id,
+            kind: call.kind,
+            participants: pMap
+          });
+        }
+
+        // Broadcast incoming group call to all members of conversation
+        const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(userId));
+        for (const memberId of recipients) {
+          io.to(`user:${memberId}`).emit('call:group:incoming', {
+            call,
+            fromUserId: userId,
+            conversationId,
+            caller: participant
+          });
+        }
+
+        // Notify conversation room about active group call
+        io.to(`conv:${conversationId}`).emit('call:group:active-updated', {
+          callId: call.id,
+          conversationId,
+          active: true,
+          count: 1,
+          kind: call.kind,
+          participants: [participant]
+        });
+      } catch (err) {
+        console.error('call:group:start error:', err);
+      }
+    });
+
+    socket.on('call:group:join', async ({ conversationId, callId, kind, mediaState }, ack) => {
+      if (!callId) return ack?.({ error: 'Missing callId' });
+      try {
+        socket.join(`call:room:${callId}`);
+        if (!userCallRooms.has(userId)) userCallRooms.set(userId, new Set());
+        userCallRooms.get(userId).add(callId);
+
+        const userInfo = await getUserById(userId);
+        const participant = {
+          userId,
+          displayName: userInfo?.display_name || 'Participant',
+          avatarUrl: userInfo?.avatar_url || null,
+          avatarColor: userInfo?.avatar_color || '#0A84FF',
+          muted: Boolean(mediaState?.muted),
+          cameraOff: mediaState?.cameraOff !== undefined ? Boolean(mediaState.cameraOff) : (kind !== 'video'),
+          joinedAt: new Date().toISOString()
+        };
+
+        let room = activeCallRooms.get(callId);
+        if (!room) {
+          room = {
+            conversationId: conversationId || null,
+            callId,
+            kind: kind || 'video',
+            participants: new Map()
+          };
+          activeCallRooms.set(callId, room);
+        }
+        room.participants.set(userId, participant);
+
+        // Update database
+        await joinCallParticipant(callId, participant).catch(() => {});
+
+        // Broadcast to existing room members that new user joined
+        socket.to(`call:room:${callId}`).emit('call:group:user-joined', {
+          callId,
+          user: participant
+        });
+
+        // Broadcast updated participant count to conversation
+        const targetConvId = conversationId || room.conversationId;
+        if (targetConvId) {
+          io.to(`conv:${targetConvId}`).emit('call:group:active-updated', {
+            callId,
+            conversationId: targetConvId,
+            active: true,
+            count: room.participants.size,
+            kind: room.kind,
+            participants: Array.from(room.participants.values())
+          });
+        }
+
+        const otherParticipants = Array.from(room.participants.values()).filter((p) => p.userId !== userId);
+        ack?.({
+          ok: true,
+          callId,
+          participants: otherParticipants
+        });
+      } catch (err) {
+        console.error('call:group:join error:', err);
+        ack?.({ error: err.message || 'Failed to join group call' });
+      }
+    });
+
+    socket.on('call:group:signal', ({ callId, targetUserId, signal }) => {
+      if (!callId || !targetUserId || !signal) return;
+      io.to(`user:${targetUserId}`).emit('call:group:signal', {
+        callId,
+        fromUserId: userId,
+        signal
+      });
+    });
+
+    socket.on('call:group:media-state', ({ callId, muted, cameraOff }) => {
+      if (!callId) return;
+      const room = activeCallRooms.get(callId);
+      if (room && room.participants.has(userId)) {
+        const p = room.participants.get(userId);
+        if (muted !== undefined) p.muted = Boolean(muted);
+        if (cameraOff !== undefined) p.cameraOff = Boolean(cameraOff);
+      }
+      socket.to(`call:room:${callId}`).emit('call:group:media-state', {
+        callId,
+        userId,
+        muted,
+        cameraOff
+      });
+    });
+
+    socket.on('call:group:leave', async ({ callId, conversationId }) => {
+      if (!callId) return;
+      try {
+        socket.leave(`call:room:${callId}`);
+        if (userCallRooms.has(userId)) userCallRooms.get(userId).delete(callId);
+
+        const room = activeCallRooms.get(callId);
+        if (room) {
+          room.participants.delete(userId);
+          socket.to(`call:room:${callId}`).emit('call:group:user-left', { callId, userId });
+
+          const targetConvId = conversationId || room.conversationId;
+          if (room.participants.size === 0) {
+            activeCallRooms.delete(callId);
+            await updateCallSessionState(callId, 'ended').catch(() => {});
+            if (targetConvId) {
+              io.to(`conv:${targetConvId}`).emit('call:group:ended', { callId, conversationId: targetConvId });
+            }
+          } else {
+            await leaveCallParticipant(callId, userId).catch(() => {});
+            if (targetConvId) {
+              io.to(`conv:${targetConvId}`).emit('call:group:active-updated', {
+                callId,
+                conversationId: targetConvId,
+                active: true,
+                count: room.participants.size,
+                kind: room.kind,
+                participants: Array.from(room.participants.values())
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('call:group:leave error:', err);
+      }
+    });
+
+    socket.on('call:group:end', async ({ callId, conversationId }) => {
+      if (!callId) return;
+      try {
+        const room = activeCallRooms.get(callId);
+        const targetConvId = conversationId || room?.conversationId;
+        activeCallRooms.delete(callId);
+        await updateCallSessionState(callId, 'ended').catch(() => {});
+        io.to(`call:room:${callId}`).emit('call:group:ended', { callId, conversationId: targetConvId });
+        if (targetConvId) {
+          io.to(`conv:${targetConvId}`).emit('call:group:ended', { callId, conversationId: targetConvId });
+        }
+      } catch (err) {
+        console.error('call:group:end error:', err);
+      }
     });
 
     // content: text message. media: { type: 'image'|'voice', data: base64, mime, duration } optional
@@ -255,6 +501,39 @@ function initSockets(io) {
     });
 
     socket.on('disconnect', async () => {
+      // Clean up any call rooms the disconnecting user was in
+      if (userCallRooms.has(userId)) {
+        const callIds = Array.from(userCallRooms.get(userId));
+        userCallRooms.delete(userId);
+        for (const callId of callIds) {
+          const room = activeCallRooms.get(callId);
+          if (room) {
+            room.participants.delete(userId);
+            io.to(`call:room:${callId}`).emit('call:group:user-left', { callId, userId });
+            const targetConvId = room.conversationId;
+            if (room.participants.size === 0) {
+              activeCallRooms.delete(callId);
+              updateCallSessionState(callId, 'ended').catch(() => {});
+              if (targetConvId) {
+                io.to(`conv:${targetConvId}`).emit('call:group:ended', { callId, conversationId: targetConvId });
+              }
+            } else {
+              leaveCallParticipant(callId, userId).catch(() => {});
+              if (targetConvId) {
+                io.to(`conv:${targetConvId}`).emit('call:group:active-updated', {
+                  callId,
+                  conversationId: targetConvId,
+                  active: true,
+                  count: room.participants.size,
+                  kind: room.kind,
+                  participants: Array.from(room.participants.values())
+                });
+              }
+            }
+          }
+        }
+      }
+
       try {
         await updateUser(userId, { last_seen: new Date().toISOString() });
       } catch (e) {

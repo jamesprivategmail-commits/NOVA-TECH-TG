@@ -246,13 +246,36 @@ export function initChat() {
     attachPreview: $('#attachment-preview'),
     attachPreviewInner: $('#attachment-preview-inner'),
     attachProgress: $('#attachment-progress'),
-    attachCancel: $('#attachment-cancel')
+    attachCancel: $('#attachment-cancel'),
+    groupCallBanner: $('#group-call-banner'),
+    groupCallBannerTitle: $('#group-call-banner-title'),
+    groupCallBannerSub: $('#group-call-banner-sub'),
+    groupCallBannerIcon: $('#group-call-banner-icon'),
+    groupCallBannerJoin: $('#group-call-banner-join')
   };
 
   els.back?.addEventListener('click', closeConversation);
   els.userBtn?.addEventListener('click', openConversationInfo);
   els.callBtn?.addEventListener('click', () => startCall('voice'));
   els.videoBtn?.addEventListener('click', () => startCall('video'));
+  els.groupCallBannerJoin?.addEventListener('click', () => {
+    const conv = state.activeConv;
+    if (!conv) return;
+    emit('call:start', { conversation: conv, kind: 'video', isGroup: true, joinOnly: true });
+  });
+
+  on('call:group:active-updated', (payload) => {
+    if (state.activeConv?.id === payload.conversationId) {
+      showActiveCallBanner(payload);
+    }
+  });
+
+  on('call:group:ended', (payload) => {
+    if (state.activeConv?.id === payload.conversationId) {
+      hideActiveCallBanner();
+    }
+  });
+
   els.searchBtn?.addEventListener('click', toggleSearch);
   els.searchClose?.addEventListener('click', () => toggleSearch(false));
   els.moreBtn?.addEventListener('click', openChatMenu);
@@ -395,6 +418,7 @@ export async function openConversation(conv) {
   renderHeader();
   els.darkPairCodeBar?.classList.toggle('hidden', conv.other_user?.id !== 'u_dark_pair');
   updateBlockedChatState(conv);
+  checkActiveCallBanner(conv);
   markRead(conv.id);
 
   // Instant UI: If messages already exist in memory for this chat, render them immediately
@@ -492,6 +516,7 @@ export function closeConversation() {
   clearInterval(messagePollTimer);
   messagePollTimer = null;
   state.activeConv = null;
+  hideActiveCallBanner();
   els.screen.hidden = true;
   document.querySelectorAll('.screen-list').forEach((s) => s.classList.remove('chat-open'));
   clearTyping();
@@ -785,11 +810,9 @@ function messageHtml(msg, index, list) {
   const cls = ['message'];
   if (own) cls.push('own');
   if (grouped) cls.push('grouped');
-  const reactBtn = deleted ? '' : `<button type="button" class="bubble-react-trigger" data-quick-react="${escapeHtml(msg.id)}" title="React" aria-label="React"><svg class="icon"><use href="#i-smile"></use></svg></button>`;
   return `<div class="${cls.join(' ')}" data-msg="${escapeHtml(msg.id)}">
     <div class="${bubbleClass.join(' ')}" data-bubble="${escapeHtml(msg.id)}">
       ${inner}
-      ${reactBtn}
     </div>
     ${deleted ? '' : reactionsHtml(msg)}
     ${metaHtml(msg)}
@@ -1980,6 +2003,8 @@ function openChatMenu() {
   const role = conv.role || conv.members?.[state.me?.id]?.role;
   const canManage = ['owner', 'admin'].includes(role);
   const options = [];
+  options.push(`<button class="option" data-act="call-voice">${icon('phone')}<span class="option-copy">Voice call</span></button>`);
+  options.push(`<button class="option" data-act="call-video">${icon('video')}<span class="option-copy">Video call</span></button>`);
   if (isGroup || isChannel) options.push(`<button class="option" data-act="members">${icon('users')}<span class="option-copy">${isChannel ? 'Channel info' : 'Group members'}<small>${(conv.member_ids || []).length} members</small></span></button>`);
   if (isGroup && canManage) options.push(`<button class="option" data-act="add">${icon('user-plus')}<span class="option-copy">Add member</span></button>`);
   if (isGroup && canManage) options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename group</span></button>`);
@@ -2010,6 +2035,8 @@ function openChatMenu() {
 async function handleChatAction(act, conv, role) {
   const canManage = ['owner', 'admin'].includes(role);
   try {
+    if (act === 'call-voice') return startCall('voice');
+    if (act === 'call-video') return startCall('video');
     if (act === 'wallpaper') return openWallpaperPicker({ conv });
     if (act === 'search') return toggleSearch(true);
     if (act === 'members') return openConversationInfo();
@@ -2296,9 +2323,52 @@ async function openConversationInfo() {
 function startCall(kind) {
   const conv = state.activeConv;
   if (!conv) return;
-  if (!conv.other_user && conv.type !== 'dm') {
-    toast('Calls are supported in direct messages');
+  const isGroup = conv.type === 'group' || conv.type === 'channel' || (conv.member_ids || []).length > 2;
+  emit('call:start', { conversation: conv, kind, isGroup });
+}
+
+async function checkActiveCallBanner(conv) {
+  if (!conv || !els.groupCallBanner) return;
+  const isGroup = conv.type === 'group' || conv.type === 'channel' || (conv.member_ids || []).length > 2;
+  if (!isGroup) {
+    hideActiveCallBanner();
     return;
   }
-  emit('call:start', { conversation: conv, kind });
+  try {
+    const res = await api.activeCall(conv.id);
+    if (res.call && ['ringing', 'accepted', 'ongoing'].includes(res.call.state) && !res.call.ended_at) {
+      showActiveCallBanner({
+        callId: res.call.id,
+        conversationId: conv.id,
+        kind: res.call.kind || 'video',
+        count: Array.isArray(res.call.participants) ? res.call.participants.length : 1
+      });
+    } else {
+      hideActiveCallBanner();
+    }
+  } catch {
+    hideActiveCallBanner();
+  }
+}
+
+function showActiveCallBanner(payload) {
+  if (!els.groupCallBanner) return;
+  const kind = payload.kind === 'voice' ? 'Voice' : 'Video';
+  const count = payload.count || 1;
+  if (els.groupCallBannerTitle) {
+    els.groupCallBannerTitle.textContent = `Ongoing Group ${kind} Call`;
+  }
+  if (els.groupCallBannerSub) {
+    els.groupCallBannerSub.textContent = `${count} participant${count > 1 ? 's' : ''} · Tap to join`;
+  }
+  if (els.groupCallBannerIcon) {
+    els.groupCallBannerIcon.innerHTML = icon(payload.kind === 'voice' ? 'phone' : 'video');
+  }
+  els.groupCallBanner.classList.remove('hidden');
+}
+
+function hideActiveCallBanner() {
+  if (els.groupCallBanner) {
+    els.groupCallBanner.classList.add('hidden');
+  }
 }

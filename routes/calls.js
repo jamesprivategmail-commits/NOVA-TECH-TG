@@ -4,8 +4,13 @@ const {
   createCallSession,
   getCallSession,
   updateCallSessionState,
+  joinCallParticipant,
+  leaveCallParticipant,
+  getActiveCallForConversation,
+  getActiveGroupCall,
   getCallHistory,
-  getConversationById
+  getConversationById,
+  getUserById
 } = require('../db/firebase');
 const { requireAuth } = require('../middleware/auth');
 
@@ -29,6 +34,23 @@ router.get('/ice-servers', async (_req, res) => {
     });
   }
   res.json({ iceServers });
+});
+
+// GET /api/calls/active/:conversationId
+router.get('/active/:conversationId', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.conversationId);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (!(conv.member_ids || []).includes(req.user.id) && conv.type !== 'channel') {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
+
+    const call = await getActiveCallForConversation(req.params.conversationId);
+    res.json({ call: call || null });
+  } catch (err) {
+    console.error('Active call error:', err);
+    res.status(500).json({ error: 'Failed to get active call' });
+  }
 });
 
 // GET /api/calls/history/:conversationId
@@ -62,13 +84,43 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
 
-    const targetUserId = (conv.member_ids || []).find(id => String(id) !== String(req.user.id)) || null;
+    const isGroup = conv.type === 'group' || conv.type === 'channel' || (conv.member_ids || []).length > 2;
+
+    // If it's a group conversation and an active group call already exists, join that one
+    if (isGroup) {
+      const activeCall = await getActiveGroupCall(conversationId);
+      if (activeCall) {
+        const caller = await getUserById(req.user.id);
+        const updated = await joinCallParticipant(activeCall.id, {
+          userId: req.user.id,
+          displayName: caller?.display_name || req.user.display_name || 'Participant',
+          avatarUrl: caller?.avatar_url || null,
+          avatarColor: caller?.avatar_color || '#0A84FF',
+          joinedAt: new Date().toISOString()
+        });
+        return res.status(200).json({ call: updated || activeCall, joinedExisting: true });
+      }
+    }
+
+    const targetUserId = !isGroup
+      ? (conv.member_ids || []).find(id => String(id) !== String(req.user.id)) || null
+      : null;
+
+    const caller = await getUserById(req.user.id);
     const call = await createCallSession({
       id: crypto.randomUUID(),
       conversationId,
       initiatorId: req.user.id,
       targetUserId,
-      kind
+      kind,
+      isGroup,
+      participants: [{
+        userId: req.user.id,
+        displayName: caller?.display_name || req.user.display_name || 'Host',
+        avatarUrl: caller?.avatar_url || null,
+        avatarColor: caller?.avatar_color || '#0A84FF',
+        joinedAt: new Date().toISOString()
+      }]
     });
 
     res.status(201).json({ call });
@@ -78,17 +130,55 @@ router.post('/', async (req, res) => {
   }
 });
 
+// POST /api/calls/:id/join
+router.post('/:id/join', async (req, res) => {
+  try {
+    const call = await getCallSession(req.params.id);
+    if (!call) return res.status(404).json({ error: 'Call not found' });
+    const conv = await getConversationById(call.conversation_id);
+    if (!conv || (!(conv.member_ids || []).includes(req.user.id) && conv.type !== 'channel')) {
+      return res.status(403).json({ error: 'Not authorized for this call' });
+    }
+
+    const caller = await getUserById(req.user.id);
+    const updated = await joinCallParticipant(call.id, {
+      userId: req.user.id,
+      displayName: caller?.display_name || req.user.display_name || 'Participant',
+      avatarUrl: caller?.avatar_url || null,
+      avatarColor: caller?.avatar_color || '#0A84FF',
+      joinedAt: new Date().toISOString()
+    });
+    res.json({ call: updated });
+  } catch (err) {
+    console.error('Join call error:', err);
+    res.status(500).json({ error: 'Failed to join call' });
+  }
+});
+
+// POST /api/calls/:id/leave
+router.post('/:id/leave', async (req, res) => {
+  try {
+    const call = await getCallSession(req.params.id);
+    if (!call) return res.status(404).json({ error: 'Call not found' });
+    const updated = await leaveCallParticipant(call.id, req.user.id);
+    res.json({ call: updated });
+  } catch (err) {
+    console.error('Leave call error:', err);
+    res.status(500).json({ error: 'Failed to leave call' });
+  }
+});
+
 // PATCH /api/calls/:id { state }
 router.patch('/:id', async (req, res) => {
   try {
     const call = await getCallSession(req.params.id);
     if (!call) return res.status(404).json({ error: 'Call not found' });
     const conv = await getConversationById(call.conversation_id);
-    if (!conv || !(conv.member_ids || []).includes(req.user.id)) {
+    if (!conv || (!(conv.member_ids || []).includes(req.user.id) && conv.type !== 'channel')) {
       return res.status(403).json({ error: 'Not a member of this call' });
     }
 
-    const allowed = ['ringing', 'accepted', 'declined', 'ended', 'missed', 'busy', 'reconnecting'];
+    const allowed = ['ringing', 'accepted', 'declined', 'ended', 'missed', 'busy', 'reconnecting', 'ongoing'];
     if (!allowed.includes(req.body.state)) {
       return res.status(400).json({ error: 'Invalid call state' });
     }

@@ -322,9 +322,15 @@ module.exports = {
 
   // Comments
   addComment(postId, comment) {
+    if (!comment || !comment.id) return;
     const pid = String(postId);
     if (!store.comments[pid]) store.comments[pid] = [];
-    store.comments[pid].push(comment);
+    const idx = store.comments[pid].findIndex(c => c.id === comment.id);
+    if (idx !== -1) {
+      store.comments[pid][idx] = { ...store.comments[pid][idx], ...comment };
+    } else {
+      store.comments[pid].push(comment);
+    }
     scheduleSave();
   },
 

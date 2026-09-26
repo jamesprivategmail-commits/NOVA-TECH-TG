@@ -75,7 +75,7 @@ function renderStatus() {
     els.list.innerHTML = emptyState({
       iconName: 'camera-plus',
       title: 'No status updates',
-      subtitle: 'Statuses from you and your contacts appear here for 24 hours.',
+      subtitle: 'Statuses from you and your contacts appear here.',
       actionLabel: 'Add status',
       actionId: 'empty-add-status'
     });

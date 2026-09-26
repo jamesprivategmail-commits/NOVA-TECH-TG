@@ -438,7 +438,12 @@ router.get('/:id/messages', async (req, res) => {
   try {
     const conv = await getConversationById(req.params.id);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+    const uid = String(req.user.id);
+    const isMember = (conv.member_ids || []).map(String).includes(uid) ||
+                     (conv.members && conv.members[uid]) ||
+                     String(conv.owner_id) === uid ||
+                     conv.type === 'notes';
+    if (conv.type !== 'channel' && !isMember) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
 
@@ -460,7 +465,12 @@ router.post('/:id/messages', async (req, res) => {
   try {
     const conv = await getConversationById(req.params.id);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    if (conv.type !== 'channel' && !(conv.member_ids || []).includes(req.user.id)) {
+    const uid = String(req.user.id);
+    const isMember = (conv.member_ids || []).map(String).includes(uid) ||
+                     (conv.members && conv.members[uid]) ||
+                     String(conv.owner_id) === uid ||
+                     conv.type === 'notes';
+    if (conv.type !== 'channel' && !isMember) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
     if (conv.type === 'dm') {
@@ -503,9 +513,10 @@ router.post('/:id/messages', async (req, res) => {
       mediaType = media.type;
     }
 
-    const startedAt = process.hrtime.bigint();
+    const clientMsgId = req.body?.clientMessageId;
+    const permanentId = clientMsgId && !String(clientMsgId).startsWith('temp_') ? String(clientMsgId) : undefined;
     const message = await createMessage(req.params.id, {
-      id: req.body?.clientMessageId || undefined,
+      id: permanentId,
       senderId: req.user.id,
       content: content ? content.slice(0, 4000) : null,
       mediaType: mediaType || (media ? media.type : null),
@@ -698,12 +709,18 @@ router.post('/:id/messages/:messageId/reactions', async (req, res) => {
     const uid = String(req.user.id);
     const isMember = (conv.member_ids || []).map(String).includes(uid) ||
                      (conv.members && conv.members[uid]) ||
-                     String(conv.owner_id) === uid;
+                     String(conv.owner_id) === uid ||
+                     conv.type === 'notes';
     // Channels allow all authenticated participants to react; DMs/groups/private chats verify membership
     if (conv.type !== 'channel' && !isMember) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
-    const msg = await getMessageById(req.params.id, req.params.messageId);
+    const messageId = decodeURIComponent(String(req.params.messageId || '')).trim();
+    let msg = await getMessageById(req.params.id, messageId);
+    if (!msg) {
+      const cacheStore = require('../db/cacheStore');
+      msg = cacheStore.getMessageById(req.params.id, messageId);
+    }
     if (!msg) return res.status(404).json({ error: 'Message not found' });
 
     const reaction = String(req.body.reaction || '').trim().slice(0, 32);

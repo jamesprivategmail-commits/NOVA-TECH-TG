@@ -119,8 +119,9 @@ function initSockets(io) {
           }
         }
 
+        const permanentId = clientMessageId && !String(clientMessageId).startsWith('temp_') ? String(clientMessageId) : undefined;
         const msg = await createMessage(conversationId, {
-          id: clientMessageId || undefined,
+          id: permanentId,
           senderId: userId,
           content: hasText ? content.trim().slice(0, 4000) : null,
           mediaType: hasMedia ? media.type : null,

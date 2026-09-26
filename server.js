@@ -22,6 +22,14 @@ if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = 'darkchat-firebase-jwt-secret-2026';
 }
 
+// Prevent unhandled errors from terminating Node.js process
+process.on('uncaughtException', (err) => {
+  console.error('Unhandled Exception intercepted:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection intercepted at:', promise, 'reason:', reason);
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {

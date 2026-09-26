@@ -170,6 +170,10 @@ module.exports = {
     return list.slice(0, limitCount);
   },
 
+  getUserCount() {
+    return Object.values(store.users).filter(u => !u?.is_banned).length;
+  },
+
   // Conversations
   getConversationById(id) {
     if (!id) return null;

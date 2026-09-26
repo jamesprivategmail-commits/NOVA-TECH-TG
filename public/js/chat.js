@@ -415,7 +415,11 @@ export async function openConversation(conv) {
     ]);
 
     const remoteMessages = res.messages || [];
-    state.messages[conv.id] = remoteMessages;
+    const currentList = state.messages[conv.id] || [];
+    const mergedMap = new Map();
+    for (const m of currentList) mergedMap.set(String(m.id), m);
+    for (const m of remoteMessages) mergedMap.set(String(m.id), { ...(mergedMap.get(String(m.id)) || {}), ...m, _status: 'sent' });
+    state.messages[conv.id] = Array.from(mergedMap.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     const calls = callHistoryRes.calls || [];
     if (calls.length) {
@@ -891,14 +895,19 @@ function startMessagePolling(conversationId) {
     try {
       const res = await api.messages(conversationId);
       const remote = res.messages || [];
-      const remoteIds = new Set(remote.map((m) => m.id));
+      if (!Array.isArray(remote)) return;
       const local = state.messages[conversationId] || [];
-      const keepAfter = Date.now() - 5 * 60 * 1000;
-      const unsynced = local.filter((m) => !remoteIds.has(m.id) && new Date(m.created_at).getTime() >= keepAfter);
-      const previousKey = local.map((m) => `${m.id}:${m.read_at || ''}`).join('|');
-      state.messages[conversationId] = [...remote, ...unsynced]
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      const nextKey = state.messages[conversationId].map((m) => `${m.id}:${m.read_at || ''}`).join('|');
+      const previousKey = local.map((m) => `${m.id}:${m.read_at || ''}:${(m.reactions || []).length}`).join('|');
+      
+      const mergedMap = new Map();
+      for (const m of local) mergedMap.set(String(m.id), m);
+      for (const m of remote) {
+        const existing = mergedMap.get(String(m.id)) || {};
+        mergedMap.set(String(m.id), { ...existing, ...m, _status: 'sent' });
+      }
+      const merged = Array.from(mergedMap.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      state.messages[conversationId] = merged;
+      const nextKey = merged.map((m) => `${m.id}:${m.read_at || ''}:${(m.reactions || []).length}`).join('|');
       if (previousKey !== nextKey) {
         renderMessages(false);
         if (document.visibilityState === 'visible') {
@@ -1430,8 +1439,21 @@ async function toggleReaction(messageId, reaction) {
   const conv = state.activeConv;
   if (!conv || !messageId || !reaction) return;
   const list = state.messages[conv.id] || [];
-  const msg = list.find((m) => String(m.id) === String(messageId));
-  if (!msg || String(msg.id).startsWith('temp_')) return;
+  let msg = list.find((m) => String(m.id) === String(messageId) || String(m.clientMessageId) === String(messageId));
+  if (!msg) return;
+
+  if (String(msg.id).startsWith('temp_')) {
+    await new Promise((r) => setTimeout(r, 500));
+    const refreshed = list.find((m) => String(m.clientMessageId) === String(messageId) || (!String(m.id).startsWith('temp_') && m.content === msg.content));
+    if (refreshed && !String(refreshed.id).startsWith('temp_')) {
+      msg = refreshed;
+    } else {
+      toast('Sending message, please react in a moment');
+      return;
+    }
+  }
+
+  const targetId = msg.id;
   // optimistic
   const previousReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
   const reactions = [...previousReactions];
@@ -1445,7 +1467,7 @@ async function toggleReaction(messageId, reaction) {
   msg.reactions = reactions;
   renderMessages(false);
   try {
-    const res = await api.react(conv.id, messageId, reaction);
+    const res = await api.react(conv.id, targetId, reaction);
     if (Array.isArray(res.entries)) {
       msg.reactions = res.entries;
     } else if (Array.isArray(res.reactions)) {

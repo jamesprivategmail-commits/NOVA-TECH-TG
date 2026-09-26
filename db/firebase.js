@@ -337,8 +337,7 @@ async function getAllUsers(search = '', limitCount = 100) {
 }
 
 async function getUserCount() {
-  const users = cacheStore.getAllUsers();
-  return users.filter(u => !u.is_banned).length;
+  return cacheStore.getUserCount();
 }
 
 function getDarkPairMenu() {
@@ -729,7 +728,9 @@ async function getConversationMembers(convId) {
 
 // ---------------- MESSAGES ----------------
 async function createMessage(convId, msgData) {
-  const id = msgData.id || 'm_' + Date.now() + '_' + crypto.randomBytes(3).toString('hex');
+  const id = (msgData.id && !String(msgData.id).startsWith('temp_'))
+    ? String(msgData.id)
+    : ('m_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex'));
   const now = new Date().toISOString();
   const message = {
     id,
@@ -810,6 +811,26 @@ async function createMessage(convId, msgData) {
 
 async function getMessages(convId, { limitCount = 50, beforeTime = null, userId = null } = {}) {
   let msgs = cacheStore.getMessages(convId);
+
+  if (msgs.length === 0 && convId) {
+    try {
+      await ensureInit();
+      if (firestoreDb) {
+        const snap = await getDocs(query(
+          collection(firestoreDb, 'conversations', String(convId), 'messages'),
+          orderBy('created_at', 'desc'),
+          limit(limitCount)
+        ));
+        if (!snap.empty) {
+          for (const d of snap.docs) {
+            const data = d.data();
+            cacheStore.addMessage(convId, data);
+          }
+          msgs = cacheStore.getMessages(convId);
+        }
+      }
+    } catch (err) {}
+  }
 
   if (userId) {
     msgs = msgs.filter(m => !(m.hidden_by || []).includes(String(userId)));

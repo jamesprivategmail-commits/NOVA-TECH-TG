@@ -90,7 +90,7 @@ async function request(path, { method = 'GET', body, auth = true, timeout = 1200
 
       if (!res.ok) {
         const message = (data && data.error) || `Request failed (${res.status})`;
-        if (res.status === 401 && auth && state.token) emit('auth:expired');
+        if (res.status === 401 && auth && state.token && path.includes('/auth/me')) emit('auth:expired');
         throw new ApiError(message, res.status, data);
       }
       return data;

@@ -335,6 +335,31 @@ export function initChat() {
   els.messages?.addEventListener('scroll', onMessagesScroll);
   els.messages?.addEventListener('click', onMessagesClick);
 
+  els.input?.addEventListener('focus', () => {
+    requestAnimationFrame(() => {
+      scrollToEnd();
+      setTimeout(scrollToEnd, 100);
+      setTimeout(scrollToEnd, 250);
+    });
+  });
+
+  on('keyboard:open', () => {
+    if (state.activeConv && !els.screen?.hidden) {
+      requestAnimationFrame(() => {
+        scrollToEnd();
+        setTimeout(scrollToEnd, 100);
+      });
+    }
+  });
+
+  on('keyboard:close', () => {
+    if (state.activeConv && !els.screen?.hidden) {
+      requestAnimationFrame(() => {
+        scrollToEnd();
+      });
+    }
+  });
+
   on('message:new', onIncomingMessage);
   on('messages:read', onMessagesRead);
   on('typing', onTyping);
@@ -401,7 +426,7 @@ export async function openConversation(conv) {
       $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
     }
   }
-  setTimeout(() => els.input?.focus(), 80);
+  setTimeout(() => els.input?.focus({ preventScroll: true }), 80);
 }
 
 function updateBlockedChatState(conv) {

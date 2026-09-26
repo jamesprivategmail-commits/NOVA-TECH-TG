@@ -22,6 +22,9 @@
   --header-h: 60px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
+  --visual-viewport-height: 100dvh;
+  --visual-viewport-width: 100vw;
+  --keyboard-height: 0px;
   --font: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -39,16 +42,24 @@ body.font-small { font-size: 13.5px; }
 body.font-large { font-size: 16.5px; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; }
-body {
+html, body {
+  width: 100%;
+  height: 100%;
   margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior-y: none;
 }
 h1, h2, h3, p { margin: 0; }
 button, input, textarea, select { font: inherit; color: inherit; }
@@ -172,10 +183,18 @@ img, video { max-width: 100%; display: block; }
    AUTH
    ============================================================ */
 .auth-screen {
-  min-height: 100dvh;
+  height: 100dvh;
+  height: var(--visual-viewport-height, 100dvh);
+  max-height: var(--visual-viewport-height, 100dvh);
   display: flex; align-items: center; justify-content: center;
-  padding: calc(24px + var(--safe-t)) 20px calc(24px + var(--safe-b));
+  padding: calc(20px + var(--safe-t)) 20px calc(20px + var(--safe-b));
   position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body.keyboard-open .auth-screen {
+  padding-top: calc(10px + var(--safe-t));
+  padding-bottom: 12px;
 }
 .auth-bg {
   position: fixed; inset: 0; z-index: 0;
@@ -228,7 +247,11 @@ img, video { max-width: 100%; display: block; }
    APP SHELL
    ============================================================ */
 .app {
-  height: 100dvh;
+  height: 100%;
+  height: var(--visual-viewport-height, 100dvh);
+  max-height: var(--visual-viewport-height, 100dvh);
+  width: 100%;
+  position: relative;
   display: flex; flex-direction: column;
   overflow: hidden;
   background: var(--bg);
@@ -496,10 +519,18 @@ input, textarea { font-size: 16px; }
 .pinned-bar .pin-title { color: var(--red); font-weight: 600; font-size: 12px; }
 
 .messages {
-  flex: 1; min-height: 0;
+  flex: 1 1 auto; min-height: 0;
   padding: 14px 12px 8px;
   display: flex; flex-direction: column; gap: 3px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   overflow-anchor: none;
+}
+body.keyboard-open .messages {
+  padding-top: 10px;
+  padding-bottom: 6px;
 }
 .day {
   align-self: center; margin: 12px 0 6px;
@@ -938,8 +969,9 @@ input, textarea { font-size: 16px; }
 .message.own .bubble { background: #3a9bfc; border-radius: 20px; color: #fff; }
 .meta { color: #7a7a7a; padding-top: 4px; }
 .message.own .meta { color: #8a8a8a; }
-.composer { background: linear-gradient(180deg, rgba(10,10,11,0), #0a0a0b 42%); border-color: transparent; border-radius: 22px; margin: 10px 12px calc(20px + var(--safe-b)); padding: 9px 8px 9px 16px; }
+.composer { background: linear-gradient(180deg, rgba(10,10,11,0), #0a0a0b 42%); border-color: transparent; border-radius: 22px; margin: 6px 12px calc(14px + var(--safe-b)); padding: 9px 8px 9px 16px; transition: margin-bottom 0.15s ease-out; }
 .composer:focus-within { background: linear-gradient(180deg, rgba(10,10,11,0), #0a0a0b 42%); }
+body.keyboard-open .composer { margin-top: 4px; margin-bottom: 6px !important; }
 .composer-input { min-height: 28px; padding: 0 0 4px; font-size: 15px; }
 .composer-icon-btn { color: #8b8b92; }
 .composer-input-row { background: #161619; border-color: transparent; }
@@ -949,6 +981,7 @@ input, textarea { font-size: 16px; }
 
 @media (max-width: 430px) {
   .composer { width: calc(100% - 16px); margin-left: 8px; margin-right: 8px; padding-left: 6px; padding-right: 6px; }
+  body.keyboard-open .composer { margin-bottom: 6px !important; }
   .composer-bar-row { gap: 5px; }
   .composer-left-controls, .composer-right-controls { gap: 3px; }
   .composer-left-controls .composer-icon-btn { width: 36px; height: 36px; }
@@ -1005,19 +1038,33 @@ input, textarea { font-size: 16px; }
    OVERLAY / SHEET
    ============================================================ */
 .overlay {
-  position: fixed; inset: 0; z-index: 80;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  height: 100dvh;
+  height: var(--visual-viewport-height, 100dvh);
+  max-height: var(--visual-viewport-height, 100dvh);
+  z-index: 80;
   background: rgba(0, 0, 0, .6);
   display: flex; align-items: flex-end; justify-content: center;
+  overflow: hidden;
   animation: fade .18s ease;
 }
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
 .sheet {
   width: 100%; max-width: 480px;
-  max-height: 88dvh;
+  max-height: calc(var(--visual-viewport-height, 100dvh) - 16px);
   background: var(--surface);
   border-radius: 24px 24px 0 0;
   padding: 8px 0 calc(14px + var(--safe-b));
   animation: slideUp .22s cubic-bezier(.2, .8, .2, 1);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body.keyboard-open .sheet {
+  padding-bottom: 12px;
 }
 @keyframes slideUp { from { transform: translateY(24px); opacity: .6 } to { transform: none; opacity: 1 } }
 .sheet .handle { width: 40px; height: 4px; border-radius: 999px; background: var(--surface3); margin: 6px auto 8px; }
@@ -1251,11 +1298,39 @@ input, textarea { font-size: 16px; }
 
 /* App content must clear the mobile bottom nav */
 @media (max-width: 899px) {
-  .app { padding-bottom: 0; }
+  .app {
+    padding-bottom: 0;
+    height: 100dvh;
+    height: var(--visual-viewport-height, 100dvh);
+    max-height: var(--visual-viewport-height, 100dvh);
+  }
   .screen-list { padding-bottom: calc(var(--nav-h) + var(--safe-b)); }
   .screen-list.chat-open { display: none; }
-  .chat-screen { position: fixed; inset: 0; z-index: 55; padding-bottom: 0; }
+  .chat-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    width: 100%;
+    height: 100dvh;
+    height: var(--visual-viewport-height, 100dvh);
+    max-height: var(--visual-viewport-height, 100dvh);
+    z-index: 55;
+    padding-bottom: 0;
+    overflow: hidden;
+    transform: translateZ(0);
+  }
   .chat-screen.hidden { display: none !important; }
+
+  /* When keyboard is open outside chat (e.g. search in Chats or Discover tab),
+     hide the bottom nav so it doesn't jump into the middle of the screen */
+  body.keyboard-open .bottom-nav {
+    display: none !important;
+  }
+  body.keyboard-open .screen-list {
+    padding-bottom: 0;
+  }
 }
 
 

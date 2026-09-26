@@ -15,6 +15,7 @@ import { initSettings, loadProfileSettings } from './settings.js';
 import { initAdmin, openAdminPanel } from './admin.js';
 import { initNotifications, refreshUnread } from './notifications.js';
 import { initCalls } from './calls.js';
+import { initViewport } from './viewport.js';
 
 const SCREENS = {
   chats: '#screen-chats',
@@ -195,6 +196,7 @@ function wireConnectivity() {
 }
 
 async function boot() {
+  initViewport();
   wireChrome();
   wireEvents();
   initAuth();

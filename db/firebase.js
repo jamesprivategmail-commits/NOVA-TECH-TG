@@ -839,7 +839,35 @@ async function getMessages(convId, { limitCount = 50, beforeTime = null, userId 
 }
 
 async function getMessageById(convId, messageId) {
-  return cacheStore.getMessageById(convId, messageId);
+  if (!messageId) return null;
+  let msg = cacheStore.getMessageById(convId, messageId);
+  if (msg) return msg;
+  await ensureInit();
+  if (firestoreDb && convId) {
+    try {
+      const snap = await getDoc(doc(firestoreDb, 'conversations', String(convId), 'messages', String(messageId)));
+      if (snap.exists()) {
+        const data = snap.data();
+        cacheStore.addMessage(convId, data);
+        return data;
+      }
+    } catch (err) {
+      try {
+        const q = query(
+          collection(firestoreDb, 'conversations', String(convId), 'messages'),
+          where('id', '==', String(messageId)),
+          limit(1)
+        );
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          const data = qSnap.docs[0].data();
+          cacheStore.addMessage(convId, data);
+          return data;
+        }
+      } catch (e2) {}
+    }
+  }
+  return null;
 }
 
 async function updateMessage(convId, messageId, updates) {

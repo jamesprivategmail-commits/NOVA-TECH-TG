@@ -1458,3 +1458,230 @@ body.keyboard-open .sheet {
   opacity: 1 !important;
   visibility: visible !important;
 }
+
+/* ============================================================
+   REACTIONS & REACTION TRIGGER
+   ============================================================ */
+.bubble {
+  position: relative;
+}
+.bubble-react-trigger {
+  position: absolute;
+  top: 50%;
+  right: -32px;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(30, 30, 32, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #a0a0a0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.message:hover .bubble-react-trigger,
+.bubble-react-trigger:focus,
+.bubble:hover .bubble-react-trigger {
+  opacity: 1;
+  pointer-events: auto;
+}
+.message.own .bubble-react-trigger {
+  right: auto;
+  left: -32px;
+}
+.bubble-react-trigger:hover {
+  color: #fff;
+  background: #38383a;
+  transform: translateY(-50%) scale(1.12);
+}
+.bubble-react-trigger .icon {
+  width: 14px;
+  height: 14px;
+}
+@media (hover: none), (max-width: 768px) {
+  .bubble-react-trigger {
+    opacity: 0.65;
+    pointer-events: auto;
+    right: -28px;
+    width: 24px;
+    height: 24px;
+  }
+  .message.own .bubble-react-trigger {
+    left: -28px;
+  }
+}
+.reaction {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.reaction:hover {
+  transform: scale(1.05);
+}
+.reaction.mine {
+  border-color: var(--blue, #3da9ff);
+  background: rgba(61, 169, 255, 0.18);
+  font-weight: 600;
+}
+.message.own .reaction.mine {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================================
+   CHAT WALLPAPER & WALLPAPER PICKER
+   ============================================================ */
+.chat-screen {
+  position: relative;
+}
+.chat-wallpaper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background 0.25s ease, opacity 0.25s ease;
+}
+.chat-wallpaper.has-wallpaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  pointer-events: none;
+}
+.chat-header,
+.chat-searchbar,
+.pinned-bar,
+.messages,
+.typing-indicator,
+.reply-preview,
+.attachment-preview,
+.blocked-chat-notice,
+.composer,
+.dark-pair-code-bar {
+  position: relative;
+  z-index: 1;
+}
+
+.wallpaper-picker-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.wallpaper-preview-box {
+  position: relative;
+  width: 100%;
+  height: 130px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.wallpaper-preview-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+}
+.wallpaper-preview-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  pointer-events: none;
+  z-index: 0;
+}
+.wallpaper-preview-bubble {
+  position: relative;
+  z-index: 1;
+  max-width: 75%;
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.35;
+  background: #262626;
+  color: #f0f0f0;
+}
+.wallpaper-preview-bubble.own {
+  align-self: flex-end;
+  background: var(--blue, #3da9ff);
+  color: #fff;
+}
+.wallpaper-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.wallpaper-thumb {
+  position: relative;
+  height: 58px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 4px;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+}
+.wallpaper-thumb:hover {
+  transform: translateY(-2px);
+}
+.wallpaper-thumb.selected {
+  border-color: var(--blue, #3da9ff);
+  box-shadow: 0 0 0 2px rgba(61, 169, 255, 0.4);
+}
+.wallpaper-thumb .wp-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--blue, #3da9ff);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wallpaper-thumb .wp-check .icon {
+  width: 10px;
+  height: 10px;
+}
+

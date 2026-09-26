@@ -15,7 +15,7 @@ async function updateProfileSettings(userId, updates = {}) {
     // Calls
     'allowVoiceCalls', 'allowVideoCalls', 'callNotifications',
     // Appearance
-    'theme', 'accentColor', 'fontSize', 'chatWallpaper',
+    'theme', 'accentColor', 'fontSize', 'chatWallpaper', 'chatWallpapers',
     // Security & Chat Lock
     'twoFactorEnabled', 'twoFactorPin', 'recoveryCodes', 'chatPasscode',
     // Account Type

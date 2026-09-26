@@ -230,13 +230,31 @@ module.exports = {
   },
 
   getMessageById(convId, msgId) {
-    const msgs = store.messages[String(convId)] || [];
-    return msgs.find(m => m.id === String(msgId)) || null;
+    if (!msgId) return null;
+    const cid = String(convId);
+    const targetId = String(msgId).trim();
+    const msgs = store.messages[cid] || [];
+    let msg = msgs.find(m => String(m.id).trim() === targetId);
+    if (msg) return msg;
+    for (const list of Object.values(store.messages)) {
+      msg = list.find(m => String(m.id).trim() === targetId);
+      if (msg) return msg;
+    }
+    return null;
   },
 
   updateMessage(convId, msgId, updates) {
-    const msgs = store.messages[String(convId)] || [];
-    const msg = msgs.find(m => m.id === String(msgId));
+    if (!msgId) return null;
+    const cid = String(convId);
+    const targetId = String(msgId).trim();
+    let msgs = store.messages[cid] || [];
+    let msg = msgs.find(m => String(m.id).trim() === targetId);
+    if (!msg) {
+      for (const list of Object.values(store.messages)) {
+        msg = list.find(m => String(m.id).trim() === targetId);
+        if (msg) break;
+      }
+    }
     if (!msg) return null;
     Object.assign(msg, updates);
     scheduleSave();

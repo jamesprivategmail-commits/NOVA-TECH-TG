@@ -1,6 +1,7 @@
 // chat.js - conversation screen: history, realtime, sending, media, actions
 import { api, mediaSrc, apiBase, ApiError } from './api.js';
 import { pref } from './settings.js';
+import { applyActiveWallpaper, openWallpaperPicker } from './wallpaper.js';
 import { openStickerPicker, saveSentStickerToPack } from './stickers.js';
 import { state, emit, on, markRead, bumpUnread } from './state.js';
 import { joinConversation, sendMessage as socketSend, sendTyping, markConversationRead } from './socket.js';
@@ -361,15 +362,30 @@ export function initChat() {
   });
 
   on('message:new', onIncomingMessage);
+  on('message:reaction', onMessageReaction);
   on('messages:read', onMessagesRead);
   on('typing', onTyping);
   on('presence', onPresence);
+  on('wallpaper:changed', () => applyActiveWallpaper(state.activeConv));
+}
+
+function onMessageReaction(payload) {
+  if (!payload) return;
+  const { conversationId, messageId, reactions, entries } = payload;
+  const conv = state.activeConv;
+  if (!conv || String(conv.id) !== String(conversationId)) return;
+  const list = state.messages[conv.id] || [];
+  const msg = list.find((m) => String(m.id) === String(messageId));
+  if (!msg) return;
+  msg.reactions = Array.isArray(entries) ? entries : (Array.isArray(reactions) ? reactions : []);
+  renderMessages(false);
 }
 
 // ---------------- open / close ----------------
 export async function openConversation(conv) {
   if (!conv) return;
   state.activeConv = conv;
+  applyActiveWallpaper(conv);
   replyTo = null;
   clearAttachment(false);
   clearReply();
@@ -715,15 +731,17 @@ function replyQuoteHtml(msg) {
 function reactionsHtml(msg) {
   const reactions = Array.isArray(msg.reactions) ? msg.reactions : [];
   const counts = new Map();
+  const myId = String(state.me?.id || '');
   for (const r of reactions) {
+    if (!r || !r.reaction) continue;
     const key = r.reaction;
     if (!counts.has(key)) counts.set(key, { count: 0, mine: false });
     const entry = counts.get(key);
     entry.count += 1;
-    if (r.user_id === state.me?.id) entry.mine = true;
+    if (String(r.user_id) === myId) entry.mine = true;
   }
   const chips = [...counts.entries()].map(([emoji, info]) =>
-    `<button type="button" class="reaction ${info.mine ? 'mine' : ''}" data-react="${escapeHtml(emoji)}" data-react-msg="${escapeHtml(msg.id)}">${escapeHtml(emoji)} ${info.count}</button>`
+    `<button type="button" class="reaction ${info.mine ? 'mine' : ''}" data-react="${escapeHtml(emoji)}" data-react-msg="${escapeHtml(msg.id)}" title="${escapeHtml(emoji)} ${info.count}">${escapeHtml(emoji)} ${info.count}</button>`
   ).join('');
   return chips ? `<div class="reactions">${chips}</div>` : '';
 }
@@ -763,8 +781,12 @@ function messageHtml(msg, index, list) {
   const cls = ['message'];
   if (own) cls.push('own');
   if (grouped) cls.push('grouped');
+  const reactBtn = deleted ? '' : `<button type="button" class="bubble-react-trigger" data-quick-react="${escapeHtml(msg.id)}" title="React" aria-label="React"><svg class="icon"><use href="#i-smile"></use></svg></button>`;
   return `<div class="${cls.join(' ')}" data-msg="${escapeHtml(msg.id)}">
-    <div class="${bubbleClass.join(' ')}" data-bubble="${escapeHtml(msg.id)}">${inner}</div>
+    <div class="${bubbleClass.join(' ')}" data-bubble="${escapeHtml(msg.id)}">
+      ${inner}
+      ${reactBtn}
+    </div>
     ${deleted ? '' : reactionsHtml(msg)}
     ${metaHtml(msg)}
   </div>`;
@@ -1301,8 +1323,17 @@ function onMessagesClick(event) {
     }
     return;
   }
+  const quickReact = event.target.closest('[data-quick-react]');
+  if (quickReact) {
+    event.stopPropagation();
+    const id = quickReact.getAttribute('data-quick-react');
+    const msg = (state.messages[state.activeConv?.id] || []).find((m) => String(m.id) === String(id));
+    if (msg) openMessageActions(msg);
+    return;
+  }
   const reaction = event.target.closest('[data-react]');
   if (reaction) {
+    event.stopPropagation();
     toggleReaction(reaction.getAttribute('data-react-msg'), reaction.getAttribute('data-react'));
     return;
   }
@@ -1314,7 +1345,7 @@ function onMessagesClick(event) {
   const bubble = event.target.closest('[data-bubble]');
   if (bubble) {
     const id = bubble.getAttribute('data-bubble');
-    const msg = (state.messages[state.activeConv?.id] || []).find((m) => m.id === id);
+    const msg = (state.messages[state.activeConv?.id] || []).find((m) => String(m.id) === String(id));
     if (msg) openMessageActions(msg);
   }
 }
@@ -1328,13 +1359,14 @@ function openLightbox(url) {
 }
 
 function openMessageActions(msg) {
-  const own = msg.sender_id === state.me?.id;
+  const own = String(msg.sender_id) === String(state.me?.id);
   const deleted = msg.deleted_for_everyone;
   const reactionRow = QUICK_REACTIONS.map((emoji) =>
     `<button class="icon-btn" data-quick="${escapeHtml(emoji)}" aria-label="React ${escapeHtml(emoji)}" style="font-size:22px">${escapeHtml(emoji)}</button>`
-  ).join('');
+  ).join('') + `<button class="icon-btn" data-more-emoji="${escapeHtml(msg.id)}" aria-label="More emoji reactions" title="More reactions" style="font-size:18px">➕</button>`;
   const options = [];
   if (!deleted) {
+    options.push(`<button class="option" data-act="react">${icon('smile')}<span class="option-copy">Add reaction...</span></button>`);
     options.push(`<button class="option" data-act="reply">${icon('reply')}<span class="option-copy">Reply</span></button>`);
     if (msg.content) options.push(`<button class="option" data-act="copy">${icon('file')}<span class="option-copy">Copy text</span></button>`);
     options.push(`<button class="option" data-act="save">${icon('bookmark')}<span class="option-copy">${msg.saved_by_me ? 'Remove from saved' : 'Save message'}</span></button>`);
@@ -1351,10 +1383,29 @@ function openMessageActions(msg) {
         closeSheet();
         await toggleReaction(msg.id, btn.dataset.quick);
       }));
+      sheet.querySelector('[data-more-emoji]')?.addEventListener('click', async () => {
+        closeSheet();
+        const emoji = await promptSheet({
+          title: 'React with emoji',
+          label: 'Type any emoji (e.g. 👍, ❤️, 🔥, 🎉, 💯)',
+          value: '✨',
+          confirmText: 'React'
+        });
+        if (emoji && emoji.trim()) await toggleReaction(msg.id, emoji.trim());
+      });
       sheet.querySelectorAll('[data-act]').forEach((btn) => btn.addEventListener('click', async () => {
         const act = btn.dataset.act;
         closeSheet();
-        if (act === 'reply') startReply(msg);
+        if (act === 'react') {
+          const emoji = await promptSheet({
+            title: 'React with emoji',
+            label: 'Type any emoji (e.g. 👍, ❤️, 🔥, 🎉, 💯)',
+            value: '✨',
+            confirmText: 'React'
+          });
+          if (emoji && emoji.trim()) await toggleReaction(msg.id, emoji.trim());
+        }
+        else if (act === 'reply') startReply(msg);
         else if (act === 'copy') {
           try { await navigator.clipboard.writeText(msg.content || ''); toast('Copied', 'success'); } catch { toast('Copy failed'); }
         } else if (act === 'save') await toggleSave(msg);
@@ -1377,23 +1428,32 @@ function startReply(msg) {
 
 async function toggleReaction(messageId, reaction) {
   const conv = state.activeConv;
-  if (!conv) return;
+  if (!conv || !messageId || !reaction) return;
   const list = state.messages[conv.id] || [];
-  const msg = list.find((m) => m.id === messageId);
+  const msg = list.find((m) => String(m.id) === String(messageId));
   if (!msg || String(msg.id).startsWith('temp_')) return;
   // optimistic
   const previousReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
   const reactions = [...previousReactions];
-  const idx = reactions.findIndex((r) => String(r.user_id) === String(state.me?.id) && r.reaction === reaction);
-  if (idx > -1) reactions.splice(idx, 1);
-  else reactions.push({ user_id: state.me?.id, reaction });
+  const myId = String(state.me?.id || '');
+  const idx = reactions.findIndex((r) => String(r.user_id) === myId && r.reaction === reaction);
+  if (idx > -1) {
+    reactions.splice(idx, 1);
+  } else {
+    reactions.push({ user_id: myId, reaction });
+  }
   msg.reactions = reactions;
   renderMessages(false);
   try {
     const res = await api.react(conv.id, messageId, reaction);
-    if (Array.isArray(res.entries)) msg.reactions = res.entries;
+    if (Array.isArray(res.entries)) {
+      msg.reactions = res.entries;
+    } else if (Array.isArray(res.reactions)) {
+      msg.reactions = reactions;
+    }
     renderMessages(false);
   } catch (err) {
+    console.error('Reaction error:', err);
     msg.reactions = previousReactions;
     renderMessages(false);
     toast(err.message || 'Reaction failed');
@@ -1903,6 +1963,7 @@ function openChatMenu() {
   if (isGroup && canManage) options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename group</span></button>`);
   if (isChannel && role === 'owner') options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename channel</span></button>`);
   if (isChannel && conv.invite_code) options.push(`<button class="option" data-act="invite">${icon('link')}<span class="option-copy">Invite code<small>${escapeHtml(conv.invite_code)}</small></span></button>`);
+  options.push(`<button class="option" data-act="wallpaper">${icon('image')}<span class="option-copy">Chat wallpaper<small>Customize background for this chat or all</small></span></button>`);
   options.push(`<button class="option" data-act="search">${icon('search')}<span class="option-copy">Search in conversation</span></button>`);
   options.push(`<button class="option" data-act="mute">${icon('bell')}<span class="option-copy">${conv.muted ? 'Unmute' : 'Mute'} notifications</span></button>`);
   options.push(`<button class="option" data-act="pin">${icon('pin')}<span class="option-copy">${conv.pinned ? 'Unpin' : 'Pin'} conversation</span></button>`);
@@ -1927,6 +1988,7 @@ function openChatMenu() {
 async function handleChatAction(act, conv, role) {
   const canManage = ['owner', 'admin'].includes(role);
   try {
+    if (act === 'wallpaper') return openWallpaperPicker({ conv });
     if (act === 'search') return toggleSearch(true);
     if (act === 'members') return openConversationInfo();
     if (act === 'add') return addMemberFlow(conv);
@@ -2054,11 +2116,13 @@ async function openConversationInfo() {
       footer: `<div class="sheet-pad stack">
         <button class="btn btn-primary btn-block" id="info-call">${icon('phone')} Voice call</button>
         <button class="btn btn-ghost btn-block" id="info-video">${icon('video')} Video call</button>
+        <button class="btn btn-ghost btn-block" id="info-wallpaper">${icon('image')} Chat wallpaper</button>
         <button class="btn btn-danger btn-block" id="info-block">${icon('lock')} Block user</button>
       </div>`,
       onMount(sheet) {
         sheet.querySelector('#info-call').addEventListener('click', () => { closeSheet(); startCall('voice'); });
         sheet.querySelector('#info-video').addEventListener('click', () => { closeSheet(); startCall('video'); });
+        sheet.querySelector('#info-wallpaper')?.addEventListener('click', () => { closeSheet(); openWallpaperPicker({ conv }); });
         sheet.querySelector('#info-block').addEventListener('click', async () => {
           closeSheet();
           const ok = await confirmSheet({ title: 'Block user', message: `Block ${u.display_name || 'this user'}?`, confirmText: 'Block', danger: true });
@@ -2105,9 +2169,11 @@ async function openConversationInfo() {
         ${conv.type === 'channel' && String(conv.owner_id) === String(state.me?.id) ? `<button class="btn btn-ghost btn-block" id="rename-channel">${icon('edit')} Rename channel</button>` : ''}
         ${['group', 'channel'].includes(conv.type) && canManage ? `<button class="btn btn-ghost btn-block" id="toggle-conversation-lock">${icon(conv.is_locked ? 'unlock' : 'lock')} ${conv.is_locked ? (conv.type === 'channel' ? 'Resume channel' : 'Unlock group') : (conv.type === 'channel' ? 'Pause channel' : 'Lock group')}</button>` : ''}
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
+        <button class="btn btn-ghost btn-block" id="group-chat-wallpaper">${icon('image')} Chat wallpaper</button>
         ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
       </div>`,
       onMount(sheet) {
+        sheet.querySelector('#group-chat-wallpaper')?.addEventListener('click', () => { closeSheet(); openWallpaperPicker({ conv }); });
         sheet.querySelectorAll('[data-transfer-owner]').forEach((button) => button.addEventListener('click', async () => {
           const member = members.find((item) => String(item.id) === String(button.dataset.transferOwner));
           const ok = await confirmSheet({ title: 'Transfer ownership', message: `Make ${member?.display_name || 'this member'} the new owner? You will become an admin.`, confirmText: 'Transfer', danger: true });

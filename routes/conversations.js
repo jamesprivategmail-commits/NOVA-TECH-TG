@@ -399,7 +399,7 @@ router.put('/:id', async (req, res) => {
       updates.slow_mode_seconds = Math.max(0, Math.min(86400, Number(slowModeSeconds) || 0));
     }
     for (const [key, value] of Object.entries({ pinned, archived, muted, wallpaper })) {
-      if (value !== undefined) updates[key] = key === 'wallpaper' ? String(value).slice(0, 200) : Boolean(value);
+      if (value !== undefined) updates[key] = key === 'wallpaper' ? (value ? String(value) : null) : Boolean(value);
     }
     if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nothing to update' });
     const updated = await updateConversation(convId, updates);
@@ -695,14 +695,16 @@ router.post('/:id/messages/:messageId/reactions', async (req, res) => {
   try {
     const conv = await getConversationById(req.params.id);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    if (!(conv.member_ids || []).map(String).includes(String(req.user.id))) {
+    const uid = String(req.user.id);
+    const isMember = (conv.member_ids || []).map(String).includes(uid) ||
+                     (conv.members && conv.members[uid]) ||
+                     String(conv.owner_id) === uid;
+    // Channels allow all authenticated participants to react; DMs/groups/private chats verify membership
+    if (conv.type !== 'channel' && !isMember) {
       return res.status(403).json({ error: 'Not a member of this conversation' });
     }
     const msg = await getMessageById(req.params.id, req.params.messageId);
     if (!msg) return res.status(404).json({ error: 'Message not found' });
-    if (msg.conversation_id && String(msg.conversation_id) !== String(req.params.id)) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
 
     const reaction = String(req.body.reaction || '').trim().slice(0, 32);
     if (!reaction) return res.status(400).json({ error: 'Reaction is required' });
@@ -711,7 +713,7 @@ router.post('/:id/messages/:messageId/reactions', async (req, res) => {
     let reactions = (Array.isArray(msg.reactions) ? msg.reactions : [])
       .filter((r) => r && r.reaction)
       .map((r) => ({ user_id: String(r.user_id), reaction: String(r.reaction).slice(0, 32) }));
-    const existingIndex = reactions.findIndex(r => r.user_id === userId && r.reaction === reaction);
+    const existingIndex = reactions.findIndex(r => String(r.user_id) === userId && r.reaction === reaction);
     if (existingIndex > -1) {
       reactions.splice(existingIndex, 1);
     } else {
@@ -726,7 +728,27 @@ router.post('/:id/messages/:messageId/reactions', async (req, res) => {
       countMap[r.reaction] = (countMap[r.reaction] || 0) + 1;
     }
     const result = Object.entries(countMap).map(([k, v]) => ({ reaction: k, count: v }));
-    res.json({ reactions: result, entries: reactions, my_reactions: reactions.filter((r) => r.user_id === userId).map((r) => r.reaction) });
+
+    const io = req.app.get('io');
+    if (io) {
+      const payload = {
+        conversationId: String(req.params.id),
+        messageId: String(req.params.messageId),
+        reactions,
+        entries: reactions,
+        aggregates: result
+      };
+      io.to(`conv:${req.params.id}`).emit('message:reaction', payload);
+      for (const mid of (conv.member_ids || [])) {
+        io.to(`user:${mid}`).emit('message:reaction', payload);
+      }
+    }
+
+    res.json({
+      reactions: result,
+      entries: reactions,
+      my_reactions: reactions.filter((r) => String(r.user_id) === userId).map((r) => r.reaction)
+    });
   } catch (err) {
     console.error('Reactions error:', err);
     res.status(500).json({ error: 'Failed to update reaction' });

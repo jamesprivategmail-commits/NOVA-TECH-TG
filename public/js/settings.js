@@ -1,6 +1,7 @@
 // settings.js - privacy & notification settings, blocked users, logout
 import { api, ApiError } from './api.js';
 import { state, emit } from './state.js';
+import { openWallpaperPicker } from './wallpaper.js';
 import {
   $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy
 } from './ui.js';
@@ -138,6 +139,11 @@ export function settingsGroupHtml() {
         <option value="large" ${currentFont === 'large' ? 'selected' : ''}>Large</option>
       </select>
     </div>
+    <button class="setting" data-settings-action="wallpaper">
+      <span class="setting-icon">${icon('image')}</span>
+      <span class="setting-copy">Chat wallpaper<small>Customize chat background for all chats</small></span>
+      <span class="chevron">${icon('chevron-right')}</span>
+    </button>
   `;
 
   return `
@@ -291,6 +297,7 @@ export function openSettingsSheet() {
 }
 
 async function handleAction(action) {
+  if (action === 'wallpaper') { closeSheet(); openWallpaperPicker({ conv: null }); return; }
   if (action === 'edit') { closeSheet(); emit('profile:edit'); return; }
   if (action === 'admin') { closeSheet(); emit('admin:open'); return; }
   if (action === 'logout') {

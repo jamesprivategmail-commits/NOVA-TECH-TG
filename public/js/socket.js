@@ -44,6 +44,8 @@ export function connectSocket() {
     socket.on('connect_error', (err) => { state.socketReady = false; emit('socket:state', { connected: false, error: err?.message }); });
 
     socket.on('message:new', (msg) => emit('message:new', msg));
+    socket.on('message:reaction', (payload) => emit('message:reaction', payload));
+    socket.on('message:updated', (payload) => emit('message:updated', payload));
     socket.on('notification:new', (notification) => emit('notification:new', notification));
     socket.on('messages:read', (payload) => emit('messages:read', payload));
     socket.on('typing', (payload) => emit('typing', payload));

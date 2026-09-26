@@ -35,6 +35,7 @@ function publicUser(u) {
     bio: u.bio,
     isVerified: !!u.is_verified,
     isAdmin: isAdminNovaId(u.nova_id),
+    twoFactorEnabled: !!u.two_factor_enabled,
     createdAt: u.created_at,
     lastSeen: u.last_seen
   };
@@ -80,6 +81,16 @@ router.post('/login', async (req, res) => {
 
     if (user.is_banned) {
       return res.status(403).json({ error: user.ban_reason ? `Account banned: ${user.ban_reason}` : 'Your account has been banned.' });
+    }
+
+    // 2-step verification: if enabled, return a temp token for PIN verification
+    if (user.two_factor_enabled && user.two_factor_pin_hash) {
+      const tempToken = jwt.sign(
+        { id: user.id, novaId: user.nova_id, temp: true },
+        JWT_SECRET,
+        { expiresIn: '5m' }
+      );
+      return res.json({ requiresTwoFactor: true, tempToken });
     }
 
     const updated = await updateUser(user.id, { last_seen: new Date().toISOString() });
@@ -149,6 +160,161 @@ router.get('/lookup/:novaId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Lookup error:', err);
     res.status(500).json({ error: 'Lookup failed' });
+  }
+});
+
+// POST /api/auth/2fa/verify { tempToken, pin }
+router.post('/2fa/verify', async (req, res) => {
+  try {
+    const { tempToken, pin } = req.body;
+    if (!tempToken || !pin) return res.status(400).json({ error: 'Token and PIN are required' });
+    if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: 'PIN must be 6 digits' });
+
+    let payload;
+    try {
+      payload = jwt.verify(tempToken, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Session expired, please log in again' });
+    }
+    if (!payload.temp) return res.status(401).json({ error: 'Invalid token' });
+
+    const user = await getUserById(payload.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.is_banned) return res.status(403).json({ error: 'Account banned' });
+
+    const { verifyTwoFactorPin } = require('../db/firebase');
+    const ok = await verifyTwoFactorPin(user.id, pin);
+    if (!ok) return res.status(401).json({ error: 'Wrong PIN' });
+
+    const updated = await updateUser(user.id, { last_seen: new Date().toISOString() });
+    const token = sign(updated || user);
+    res.json({ token, user: publicUser(updated || user) });
+  } catch (err) {
+    console.error('2FA verify error:', err);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// POST /api/auth/2fa/setup { pin }
+router.post('/2fa/setup', requireAuth, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin || !/^\d{6}$/.test(pin)) return res.status(400).json({ error: 'PIN must be exactly 6 digits' });
+
+    const { setTwoFactorPin } = require('../db/firebase');
+    await setTwoFactorPin(req.user.id, pin);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('2FA setup error:', err);
+    res.status(500).json({ error: 'Failed to set up 2-step verification' });
+  }
+});
+
+// POST /api/auth/2fa/disable { pin }
+router.post('/2fa/disable', requireAuth, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) return res.status(400).json({ error: 'PIN is required to disable' });
+
+    const { disableTwoFactor } = require('../db/firebase');
+    const ok = await disableTwoFactor(req.user.id, pin);
+    if (!ok) return res.status(401).json({ error: 'Wrong PIN' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('2FA disable error:', err);
+    res.status(500).json({ error: 'Failed to disable 2-step verification' });
+  }
+});
+
+// POST /api/auth/change-password { currentPassword, newPassword }
+router.post('/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords are required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+
+    const { changeUserPassword } = require('../db/firebase');
+    await changeUserPassword(req.user.id, currentPassword, newPassword);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Failed to change password' });
+  }
+});
+
+// DELETE /api/auth/me - delete account
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'Password is required to delete account' });
+
+    const user = await getUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Wrong password' });
+
+    const { deleteUserAccount } = require('../db/firebase');
+    await deleteUserAccount(req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// GET /api/auth/settings
+router.get('/settings', requireAuth, async (req, res) => {
+  try {
+    const { getUserSettings } = require('../db/firebase');
+    const settings = await getUserSettings(req.user.id);
+    res.json({ settings });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load settings' });
+  }
+});
+
+// PUT /api/auth/settings { online, receipts, notifications }
+router.put('/settings', requireAuth, async (req, res) => {
+  try {
+    const { online, receipts, notifications } = req.body;
+    const settings = {};
+    if (online !== undefined) settings.online = Boolean(online);
+    if (receipts !== undefined) settings.receipts = Boolean(receipts);
+    if (notifications !== undefined) settings.notifications = Boolean(notifications);
+
+    const { saveUserSettings } = require('../db/firebase');
+    await saveUserSettings(req.user.id, settings);
+    res.json({ ok: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+// POST /api/auth/block/:novaId
+router.post('/block/:novaId', requireAuth, async (req, res) => {
+  try {
+    const target = await getUserByNovaId(req.params.novaId.trim().toUpperCase());
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.id === req.user.id) return res.status(400).json({ error: 'Cannot block yourself' });
+
+    const { blockUser } = require('../db/firebase');
+    await blockUser(req.user.id, target.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to block user' });
+  }
+});
+
+// DELETE /api/auth/block/:novaId
+router.delete('/block/:novaId', requireAuth, async (req, res) => {
+  try {
+    const target = await getUserByNovaId(req.params.novaId.trim().toUpperCase());
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    const { unblockUser } = require('../db/firebase');
+    await unblockUser(req.user.id, target.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unblock user' });
   }
 });
 

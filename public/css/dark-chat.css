@@ -119,3 +119,85 @@ body { background: radial-gradient(circle at 10% 0%, rgba(255,49,49,.08), transp
 @media (min-width: 721px) {
   .mobile-nav { display:none !important; }
 }
+
+/* ---------- Profile page (view other users) ---------- */
+.profile-page {
+  position: fixed; inset: 0; z-index: 150; background: #050505; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center;
+}
+.profile-page .profile-back {
+  position: absolute; top: 12px; left: 16px; z-index: 5;
+  border: none; background: rgba(20,20,20,.6); color: #fff; font-size: 22px;
+  width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.profile-hero {
+  width: 100%; display: flex; flex-direction: column; align-items: center;
+  padding: 64px 20px 20px; gap: 8px;
+  background: linear-gradient(180deg, rgba(255,49,49,.08), transparent);
+}
+.profile-hero .avatar { width: 96px; height: 96px; font-size: 36px; border-radius: 50%; }
+.profile-hero .name { font-size: 22px; font-weight: 700; color: #fff; }
+.profile-hero .novaid { font-size: 14px; color: #ff6767; }
+.profile-body { width: 100%; max-width: 420px; padding: 0 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+.profile-info-card {
+  background: rgba(255,255,255,.045); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+}
+.profile-info-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 6px; }
+.profile-info-card .value { font-size: 15px; color: #ddd; }
+.profile-action-btn {
+  width: 100%; padding: 13px; border: 1px solid var(--border); border-radius: 14px;
+  background: rgba(255,255,255,.045); color: #ff6767; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.profile-action-btn:hover { background: rgba(255,49,49,.08); }
+
+/* ---------- Unread badge ---------- */
+.conv-unread-badge {
+  min-width: 20px; height: 20px; border-radius: 10px; background: #ff3131; color: #fff;
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  padding: 0 6px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255,49,49,.4);
+}
+.conv-item.has-unread .preview { color: #ddd; font-weight: 600; }
+.conv-item.has-unread .name { color: #fff; }
+
+/* ---------- Read receipt ticks ---------- */
+.msg-tick { display: inline-flex; gap: 1px; margin-left: 4px; vertical-align: bottom; }
+.msg-tick span { font-size: 12px; line-height: 1; }
+.msg-tick .sent { color: #888; }
+.msg-tick .delivered { color: #888; }
+.msg-tick .read { color: #4fc3f7; }
+
+/* ---------- Online indicator ---------- */
+.online-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: #30D158; border: 2px solid #080808;
+  position: absolute; bottom: 2px; right: 2px; box-shadow: 0 0 6px rgba(48,209,88,.5);
+}
+.conv-avatar-wrap { position: relative; flex-shrink: 0; }
+
+/* ---------- Load more ---------- */
+.load-more-btn {
+  text-align: center; padding: 10px; color: #ff6767; font-size: 13px; font-weight: 600;
+  background: none; border: none; cursor: pointer;
+}
+
+/* ---------- Delete post ---------- */
+.post-delete-btn {
+  background: none; border: none; color: #FF453A; font-size: 12px; padding: 4px 8px; cursor: pointer;
+  margin-left: auto;
+}
+
+/* ---------- Invite link box ---------- */
+.invite-link-box { display: flex; gap: 8px; }
+.invite-link-box input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,.055); color: #fff; font-size: 13px; }
+.invite-link-box button { padding: 10px 14px; border-radius: 10px; border: none; background: rgba(255,49,49,.15); color: #fff; font-size: 13px; font-weight: 600; }
+
+/* ---------- Btn ghost ---------- */
+.btn-ghost { width: 100%; margin-top: 12px; padding: 11px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.04); color: #ddd; font-size: 14px; }
+.btn-ghost:hover { background: rgba(255,255,255,.07); }
+
+/* ---------- Post image preview ---------- */
+.post-image-preview { max-width: 100%; max-height: 200px; border-radius: 10px; margin-top: 8px; display: none; }
+.post-toolbar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.post-toolbar .btn-primary { width: auto; padding: 8px 18px; font-size: 13px; }
+
+/* ---------- Auth screen logo img already styled ---------- */
+.auth-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; }

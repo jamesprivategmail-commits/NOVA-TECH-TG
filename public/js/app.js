@@ -109,14 +109,40 @@ $('#signup-form').addEventListener('submit', async (e) => {
   }
 });
 
+let pendingTwoFactor = null;
+
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   hideAuthError();
   const novaId = $('#login-novaid').value.trim();
   const password = $('#login-password').value;
   try {
-    const { token, user } = await api('/auth/login', { method: 'POST', body: { novaId, password } });
-    login(token, user);
+    const result = await api('/auth/login', { method: 'POST', body: { novaId, password } });
+    if (result.requiresTwoFactor) {
+      pendingTwoFactor = result.tempToken;
+      $('#login-form').classList.add('hidden');
+      $('#toggle-to-login').classList.add('hidden');
+      $('#twofactor-form').classList.remove('hidden');
+      $('#twofactor-pin').focus();
+      return;
+    }
+    login(result.token, result.user);
+  } catch (err) {
+    showAuthError(err.message);
+  }
+});
+
+$('#twofactor-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideAuthError();
+  const pin = $('#twofactor-pin').value.trim();
+  if (!pendingTwoFactor) return;
+  try {
+    const result = await api('/auth/2fa/verify', { method: 'POST', body: { tempToken: pendingTwoFactor, pin } });
+    pendingTwoFactor = null;
+    $('#twofactor-form').classList.add('hidden');
+    $('#twofactor-pin').value = '';
+    login(result.token, result.user);
   } catch (err) {
     showAuthError(err.message);
   }
@@ -146,11 +172,28 @@ function openProfileSettings() {
   const avatar = $('#profile-edit-avatar');
   avatar.textContent = initials(user.displayName);
   avatar.style.background = user.avatarColor || '#ff3131';
-  if (user.avatarUrl) avatar.style.backgroundImage = `url(${user.avatarUrl})`, avatar.style.backgroundSize = 'cover';
-  const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
-  $('#setting-online').checked = settings.online !== false;
-  $('#setting-receipts').checked = settings.receipts !== false;
-  $('#setting-notifications').checked = settings.notifications !== false;
+  if (user.avatarUrl) { avatar.style.backgroundImage = `url(${user.avatarUrl})`; avatar.style.backgroundSize = 'cover'; avatar.textContent = ''; }
+  // Load settings from backend
+  api('/auth/settings').then(({ settings }) => {
+    $('#setting-online').checked = settings.online !== false;
+    $('#setting-receipts').checked = settings.receipts !== false;
+    $('#setting-notifications').checked = settings.notifications !== false;
+  }).catch(() => {
+    const ls = JSON.parse(localStorage.getItem('nova_settings') || '{}');
+    $('#setting-online').checked = ls.online !== false;
+    $('#setting-receipts').checked = ls.receipts !== false;
+    $('#setting-notifications').checked = ls.notifications !== false;
+  });
+  // 2FA state
+  const twoFaEnabled = !!user.twoFactorEnabled;
+  $('#setting-2fa').checked = twoFaEnabled;
+  $('#twofactor-setup-box').classList.toggle('hidden', twoFaEnabled);
+  $('#twofactor-disable-box').classList.toggle('hidden', !twoFaEnabled);
+  // Clear input fields
+  $('#twofactor-setup-pin').value = '';
+  $('#twofactor-disable-pin').value = '';
+  $('#change-pw-current').value = '';
+  $('#change-pw-new').value = '';
   $('#profile-modal').classList.remove('hidden');
   $('#profile-modal').setAttribute('aria-hidden', 'false');
 }
@@ -196,10 +239,81 @@ function initProfileSettings() {
     }
   });
   ['online', 'receipts', 'notifications'].forEach(key => $(`#setting-${key}`)?.addEventListener('change', () => {
-    const settings = JSON.parse(localStorage.getItem('nova_settings') || '{}');
-    settings[key] = $(`#setting-${key}`).checked;
-    localStorage.setItem('nova_settings', JSON.stringify(settings));
+    const val = $(`#setting-${key}`).checked;
+    const ls = JSON.parse(localStorage.getItem('nova_settings') || '{}');
+    ls[key] = val;
+    localStorage.setItem('nova_settings', JSON.stringify(ls));
+    api('/auth/settings', { method: 'PUT', body: { [key]: val } }).catch(() => {});
   }));
+
+  // 2FA checkbox toggle
+  $('#setting-2fa')?.addEventListener('change', () => {
+    const enabled = $('#setting-2fa').checked;
+    $('#twofactor-setup-box').classList.toggle('hidden', enabled);
+    $('#twofactor-disable-box').classList.toggle('hidden', !enabled);
+    if (!enabled) {
+      // Unchecking without disabling via PIN — revert checkbox
+      $('#setting-2fa').checked = true;
+      $('#twofactor-disable-box').classList.remove('hidden');
+      alert('Enter your current PIN below to disable 2-step verification.');
+    }
+  });
+
+  // 2FA setup
+  $('#twofactor-setup-btn')?.addEventListener('click', async () => {
+    const pin = $('#twofactor-setup-pin').value.trim();
+    if (!/^\d{6}$/.test(pin)) return alert('PIN must be exactly 6 digits');
+    try {
+      await api('/auth/2fa/setup', { method: 'POST', body: { pin } });
+      state.me.twoFactorEnabled = true;
+      localStorage.setItem('nova_me', JSON.stringify(state.me));
+      $('#twofactor-setup-box').classList.add('hidden');
+      $('#twofactor-disable-box').classList.remove('hidden');
+      $('#twofactor-setup-pin').value = '';
+      alert('2-step verification enabled! You\'ll need this PIN to log in.');
+    } catch (err) { alert(err.message); }
+  });
+
+  // 2FA disable
+  $('#twofactor-disable-btn')?.addEventListener('click', async () => {
+    const pin = $('#twofactor-disable-pin').value.trim();
+    if (!/^\d{6}$/.test(pin)) return alert('Enter your 6-digit PIN');
+    try {
+      await api('/auth/2fa/disable', { method: 'POST', body: { pin } });
+      state.me.twoFactorEnabled = false;
+      localStorage.setItem('nova_me', JSON.stringify(state.me));
+      $('#setting-2fa').checked = false;
+      $('#twofactor-disable-box').classList.add('hidden');
+      $('#twofactor-setup-box').classList.remove('hidden');
+      $('#twofactor-disable-pin').value = '';
+      alert('2-step verification disabled.');
+    } catch (err) { alert(err.message); }
+  });
+
+  // Change password
+  $('#change-pw-btn')?.addEventListener('click', async () => {
+    const current = $('#change-pw-current').value;
+    const next = $('#change-pw-new').value;
+    if (!current || !next) return alert('Fill in both fields');
+    if (next.length < 6) return alert('New password must be at least 6 characters');
+    try {
+      await api('/auth/change-password', { method: 'POST', body: { currentPassword: current, newPassword: next } });
+      $('#change-pw-current').value = '';
+      $('#change-pw-new').value = '';
+      alert('Password changed successfully!');
+    } catch (err) { alert(err.message); }
+  });
+
+  // Delete account
+  $('#delete-account-btn')?.addEventListener('click', async () => {
+    const password = prompt('Enter your password to permanently delete your account:');
+    if (!password) return;
+    if (!confirm('This will permanently delete your account and all data. This cannot be undone. Continue?')) return;
+    try {
+      await api('/auth/me', { method: 'DELETE', body: { password } });
+      logout();
+    } catch (err) { alert(err.message); }
+  });
 }
 
 function updateCurrentUserAvatar() {
@@ -265,6 +379,14 @@ function selectTab(tab) {
 async function boot() {
   authScreen.classList.add('hidden');
   appScreen.classList.remove('hidden');
+  // Fetch fresh user data (includes 2FA status, settings)
+  try {
+    const me = await api('/auth/me');
+    if (me?.user) {
+      state.me = me.user;
+      localStorage.setItem('nova_me', JSON.stringify(state.me));
+    }
+  } catch (e) { /* use cached data */ }
   updateCurrentUserAvatar();
   $('#me-avatar').title = `${state.me.displayName} (${state.me.novaId}) — open profile settings`;
 
@@ -289,6 +411,12 @@ async function boot() {
 function connectSocket() {
   state.socket = io({ auth: { token: state.token } });
 
+  let convReloadTimer = null;
+  function debouncedReloadConversations() {
+    clearTimeout(convReloadTimer);
+    convReloadTimer = setTimeout(() => loadConversations(), 1000);
+  }
+
   state.socket.on('message:new', (msg) => {
     if (!state.messages[msg.conversation_id]) state.messages[msg.conversation_id] = [];
     // Avoid duplicates
@@ -298,7 +426,7 @@ function connectSocket() {
     if (String(state.activeConvId) === String(msg.conversation_id)) {
       renderMessages(msg.conversation_id);
     }
-    loadConversations(); // refresh previews/order
+    debouncedReloadConversations();
   });
 
   state.socket.on('typing', ({ conversationId, userId, isTyping }) => {
@@ -324,6 +452,28 @@ function connectSocket() {
     if (state.activeConv?.type !== 'dm') return;
     if (String(state.activeConv.other_user?.id) === String(userId)) {
       $('#chat-subtitle').textContent = online ? 'online' : 'last seen recently';
+    }
+    renderConvList();
+  });
+
+  state.socket.on('conversation:read', ({ conversationId, userId }) => {
+    // Other user read our messages — update tick marks
+    if (String(conversationId) === String(state.activeConvId)) {
+      const msgs = state.messages[conversationId] || [];
+      for (const m of msgs) {
+        if (String(m.sender_id) === String(state.me.id)) {
+          m.read_by_other = true;
+        }
+      }
+      renderMessages(conversationId);
+    }
+  });
+
+  state.socket.on('connect', () => {
+    // Rejoin active conversation room on reconnect
+    if (state.activeConvId) {
+      state.socket.emit('conversation:join', { conversationId: state.activeConvId });
+      state.socket.emit('conversation:read', { conversationId: state.activeConvId });
     }
   });
 }
@@ -370,13 +520,21 @@ function renderConvList() {
       : (c.type === 'channel' ? 'No posts yet' : 'Say hi 👋');
     const badge = c.type === 'group' ? '<span class="conv-badge group">Group</span>'
       : c.type === 'channel' ? '<span class="conv-badge channel">Channel</span>' : '';
+    const isOnline = c.type === 'dm' && c.other_user?.id && state.presence[String(c.other_user.id)];
+    const unreadBadge = c.has_unread ? '<span class="conv-unread-badge">!</span>' : '';
     return `
-      <div class="conv-item ${String(c.id) === String(state.activeConvId) ? 'active' : ''}" data-id="${c.id}">
-        <div class="avatar" style="background:${c.avatar_color || '#8E8E93'}">${initials(c.name || '?')}</div>
+      <div class="conv-item ${String(c.id) === String(state.activeConvId) ? 'active' : ''} ${c.has_unread ? 'has-unread' : ''}" data-id="${c.id}">
+        <div class="conv-avatar-wrap">
+          <div class="avatar" style="background:${c.avatar_color || '#8E8E93'}">${initials(c.name || '?')}</div>
+          ${isOnline ? '<div class="online-dot"></div>' : ''}
+        </div>
         <div class="conv-info">
           <div class="top-row">
             <span class="name">${escapeHtml(c.name || 'Unnamed')} ${badge}</span>
-            <span class="time">${c.last_message_at ? timeAgo(c.last_message_at) : ''}</span>
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span class="time">${c.last_message_at ? timeAgo(c.last_message_at) : ''}</span>
+              ${unreadBadge}
+            </span>
           </div>
           <div class="preview">${preview}</div>
         </div>
@@ -407,6 +565,21 @@ async function openConversation(id) {
   $('#chat-manage-btn').classList.toggle('hidden', !conv || conv.type === 'dm');
 
   state.socket.emit('conversation:join', { conversationId: id });
+  state.socket.emit('conversation:read', { conversationId: id });
+
+  // Mark conversation as read in local state
+  const convForUnread = state.conversations.find(c => String(c.id) === String(id));
+  if (convForUnread) convForUnread.has_unread = false;
+
+  // Make chat header tappable to view other user's profile (DMs only)
+  const headerInfo = $('#chat-header-info');
+  if (headerInfo) headerInfo.onclick = () => {
+    if (conv?.type === 'dm' && conv?.other_user) viewProfile(conv.other_user);
+  };
+  const chatAvatar = $('#chat-avatar');
+  if (chatAvatar) chatAvatar.onclick = () => {
+    if (conv?.type === 'dm' && conv?.other_user) viewProfile(conv.other_user);
+  };
 
   if (!state.messages[id]) {
     try {
@@ -425,6 +598,11 @@ async function openConversation(id) {
 
 $('#chat-back').addEventListener('click', () => {
   appScreen.classList.remove('chat-open');
+  $('#chat-active').classList.add('hidden');
+  $('#chat-empty').classList.remove('hidden');
+  state.activeConvId = null;
+  state.activeConv = null;
+  renderConvList();
 });
 
 function renderMessages(convId) {
@@ -462,7 +640,7 @@ function renderMessages(convId) {
           ${reply ? `<button class="reply-preview" data-jump-to="${reply.id}"><strong>Replying to ${escapeHtml(reply.display_name || 'message')}</strong><span>${escapeHtml(reply.content || 'Attachment')}</span></button>` : ''}
           <div class="message-body">${body}</div>
           ${reactions ? `<div class="message-reactions">${reactions}</div>` : ''}
-          <div class="message-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${m.edited_at ? ' · edited' : ''}</div>
+          <div class="message-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${m.edited_at ? ' · edited' : ''}${mine ? `<span class="msg-tick">${m.read_by_other ? '<span class="read">✓✓</span>' : '<span class="sent">✓✓</span>'}</span>` : ''}</div>
         </div>
         <div class="message-actions">
           <button data-action="reply" data-id="${m.id}">↩</button>
@@ -591,6 +769,7 @@ function initChatHeaderActions() {
 
 // ---------------- COMPOSER & MEDIA (FIREBASE STORAGE) ----------------
 const composerInput = $('#composer-input');
+$('#send-btn').disabled = true;
 
 composerInput.addEventListener('input', () => {
   composerInput.style.height = 'auto';
@@ -836,6 +1015,19 @@ function hideManageError() { $('#manage-group-error').classList.add('hidden'); }
 
 $('#chat-manage-btn').addEventListener('click', openManageGroup);
 $('#close-manage-group').addEventListener('click', () => $('#manage-group-modal').classList.add('hidden'));
+$('#manage-copy-link-btn')?.addEventListener('click', () => {
+  const link = $('#manage-invite-link').value;
+  if (!link) return;
+  navigator.clipboard?.writeText(link).then(() => {
+    $('#manage-copy-link-btn').textContent = 'Copied!';
+    setTimeout(() => { $('#manage-copy-link-btn').textContent = 'Copy'; }, 1500);
+  }).catch(() => {
+    $('#manage-invite-link').select();
+    document.execCommand('copy');
+    $('#manage-copy-link-btn').textContent = 'Copied!';
+    setTimeout(() => { $('#manage-copy-link-btn').textContent = 'Copy'; }, 1500);
+  });
+});
 
 async function openManageGroup() {
   hideManageError();
@@ -849,6 +1041,8 @@ async function openManageGroup() {
   $('#manage-add-group').classList.toggle('hidden', conv.type !== 'group');
   $('#manage-delete-btn').classList.toggle('hidden', !isOwner);
   $('#manage-leave-btn').classList.toggle('hidden', isOwner);
+  $('#manage-invite-link-group').classList.toggle('hidden', conv.type === 'dm');
+  $('#manage-invite-link').value = conv.invite_code ? `dark.chat/${conv.invite_code}` : '';
 
   await renderManageMembers();
   $('#manage-group-modal').classList.remove('hidden');
@@ -946,25 +1140,59 @@ $('#profile-modal')?.addEventListener('click', (e) => {
 });
 
 async function viewProfile(member) {
-  const card = $('#profile-card');
-  if (!card) return;
-  card.innerHTML = `<div style="text-align:center;padding:16px;">Loading...</div>`;
-  $('#profile-modal')?.classList.remove('hidden');
+  const page = $('#profile-page');
+  if (!page) return;
+  page.classList.remove('hidden');
+  const avatar = $('#profile-avatar');
+  const nameEl = $('#profile-name');
+  const novaIdEl = $('#profile-novaid');
+  const body = $('#profile-body');
+  avatar.textContent = initials(member.display_name || member.displayName || '?');
+  avatar.style.background = member.avatar_color || member.avatarColor || '#8E8E93';
+  if (member.avatar_url || member.avatarUrl) {
+    avatar.style.backgroundImage = `url(${member.avatar_url || member.avatarUrl})`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.textContent = '';
+  }
+  nameEl.textContent = 'Loading...';
+  novaIdEl.textContent = '';
+  body.innerHTML = '';
+
   try {
-    const { user } = await api(`/auth/lookup/${encodeURIComponent(member.nova_id)}`);
-    card.innerHTML = `
-      <button class="modal-close" id="profile-close-btn">Close</button>
-      <div style="text-align:center; padding:24px 16px;">
-        <div class="avatar" style="background:${user.avatarColor}; width:72px; height:72px; font-size:28px; margin:0 auto 12px;">${initials(user.displayName)}</div>
-        <div style="font-weight:700; font-size:18px;">${escapeHtml(user.displayName)} ${user.isVerified ? '✓' : ''}</div>
-        <div style="color:var(--text-secondary); margin-bottom:12px;">${escapeHtml(user.novaId)}</div>
-        ${user.bio ? `<div style="padding:12px; background:rgba(255,255,255,0.05); border-radius:10px;">${escapeHtml(user.bio)}</div>` : ''}
-      </div>`;
-    $('#profile-close-btn').addEventListener('click', () => $('#profile-modal').classList.add('hidden'));
+    const { user } = await api(`/auth/lookup/${encodeURIComponent(member.nova_id || member.novaId)}`);
+    nameEl.textContent = user.displayName + (user.isVerified ? ' ✓' : '');
+    novaIdEl.textContent = user.novaId;
+    const isMe = String(user.id) === String(state.me.id);
+    body.innerHTML = `
+      ${user.bio ? `<div class="profile-info-card"><div class="label">About</div><div class="value">${escapeHtml(user.bio)}</div></div>` : ''}
+      <div class="profile-info-card"><div class="label">DARK CHAT ID</div><div class="value">${escapeHtml(user.novaId)}</div></div>
+      ${!isMe ? `<button class="profile-action-btn" id="profile-block-btn">Block ${escapeHtml(user.displayName)}</button>` : ''}
+      ${!isMe ? `<button class="profile-action-btn" id="profile-message-btn" style="color:#4fc3f7;">Message ${escapeHtml(user.displayName)}</button>` : ''}`;
+    if (!isMe) {
+      $('#profile-block-btn')?.addEventListener('click', async () => {
+        if (!confirm(`Block ${user.displayName}? They won't be able to message you.`)) return;
+        try {
+          await api(`/auth/block/${encodeURIComponent(user.novaId)}`, { method: 'POST' });
+          $('#profile-block-btn').textContent = 'Blocked ✓';
+          $('#profile-block-btn').disabled = true;
+        } catch (err) { alert(err.message); }
+      });
+      $('#profile-message-btn')?.addEventListener('click', async () => {
+        page.classList.add('hidden');
+        try {
+          const { conversationId } = await api('/conversations/dm', { method: 'POST', body: { novaId: user.novaId } });
+          await loadConversations();
+          openConversation(conversationId);
+        } catch (err) { alert(err.message); }
+      });
+    }
   } catch (err) {
-    card.innerHTML = `<div style="text-align:center;padding:16px;">Couldn't load profile.</div>`;
+    nameEl.textContent = 'Couldn\'t load profile';
+    body.innerHTML = `<div class="profile-info-card"><div class="value">Failed to load profile details.</div></div>`;
   }
 }
+
+$('#profile-back-btn')?.addEventListener('click', () => $('#profile-page').classList.add('hidden'));
 
 // ---------------- STATUS ----------------
 const STATUS_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#FF375F'];
@@ -1170,10 +1398,11 @@ async function loadPosts() {
     <div class="post-card" data-id="${p.id}">
       <div class="post-header">
         <div class="avatar sm" style="background:${p.avatar_color}">${initials(p.display_name)}</div>
-        <div>
+        <div style="flex:1;">
           <div style="font-weight:600;">${escapeHtml(p.display_name)} ${p.is_verified ? '✓' : ''}</div>
           <div style="font-size:12px;color:var(--text-secondary);">${timeAgo(p.created_at)} ago</div>
         </div>
+        ${String(p.user_id) === String(state.me.id) ? `<button class="post-delete-btn" data-delete-post="${p.id}">Delete</button>` : ''}
       </div>
       ${p.caption ? `<div class="post-caption">${escapeHtml(p.caption)}</div>` : ''}
       ${imageSrc ? `<img src="${imageSrc}" style="width:100%; border-radius:10px; margin:8px 0; max-height:400px; object-fit:cover;" alt="Post image">` : ''}
@@ -1197,6 +1426,15 @@ async function loadPosts() {
     const countSpan = btn.querySelector('span');
     let count = parseInt(countSpan.textContent, 10) || 0;
     countSpan.textContent = res.liked ? count + 1 : Math.max(0, count - 1);
+  }));
+
+  // Wire delete post buttons
+  $$('.post-delete-btn').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('Delete this post?')) return;
+    try {
+      await api(`/posts/${btn.dataset.deletePost}`, { method: 'DELETE' });
+      loadPosts();
+    } catch (err) { alert(err.message); }
   }));
 
   wirePostComments();
@@ -1341,23 +1579,8 @@ function showCallBar(label, end) {
 }
 
 function initCallControls() {
-  const header = $('#chat-header');
-  if (!header || $('#voice-call-btn')) return;
-  const voice = document.createElement('button');
-  voice.id = 'voice-call-btn';
-  voice.className = 'back-btn';
-  voice.textContent = '☎';
-  voice.title = 'Voice call';
-  const video = document.createElement('button');
-  video.id = 'video-call-btn';
-  video.className = 'back-btn';
-  video.textContent = '▣';
-  video.title = 'Video call';
-  header.append(voice, video);
-
-  voice.onclick = () => startCall('voice');
-  video.onclick = () => startCall('video');
-
+  // Call buttons already exist in HTML (#chat-call-btn, #chat-video-btn) and are wired in initChatHeaderActions.
+  // This function only handles incoming call socket events.
   state.socket.on('call:incoming', ({ call, fromUserId }) => {
     if (!confirm(`${call.kind} call incoming. Accept?`)) {
       return state.socket.emit('call:state', { targetUserId: fromUserId, callId: call.id, state: 'declined' });

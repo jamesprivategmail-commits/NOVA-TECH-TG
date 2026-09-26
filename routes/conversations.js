@@ -451,4 +451,21 @@ router.post('/:id/messages/:messageId/pin', async (req, res) => {
   }
 });
 
+// POST /api/conversations/:id/read - mark conversation as read
+router.post('/:id/read', async (req, res) => {
+  try {
+    const conv = await getConversationById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (!(conv.member_ids || []).includes(req.user.id)) {
+      return res.status(403).json({ error: 'Not a member of this conversation' });
+    }
+    const { markConversationRead } = require('../db/firebase');
+    await markConversationRead(req.params.id, req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark read error:', err);
+    res.status(500).json({ error: 'Failed to mark read' });
+  }
+});
+
 module.exports = router;

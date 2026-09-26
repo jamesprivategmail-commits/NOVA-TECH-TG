@@ -200,6 +200,10 @@ async function createUser(userData) {
     is_verified: !!userData.isVerified || !!userData.is_verified,
     is_banned: !!userData.isBanned || !!userData.is_banned,
     ban_reason: userData.banReason || userData.ban_reason || null,
+    blocked_users: [],
+    settings: { online: true, receipts: true, notifications: true },
+    two_factor_pin_hash: null,
+    two_factor_enabled: false,
     created_at: userData.createdAt || now,
     last_seen: userData.lastSeen || now
   };
@@ -347,6 +351,14 @@ async function getConversationsForUser(userId) {
         }
       }
     }
+  }
+
+  // Add unread indicator based on last_read_at vs last_message_at
+  for (const conv of list) {
+    const lastReadAt = conv.last_read_at?.[userId];
+    conv.has_unread = conv.last_message_at &&
+      String(conv.last_sender_id) !== String(userId) &&
+      (!lastReadAt || new Date(conv.last_message_at) > new Date(lastReadAt));
   }
 
   // Sort newest message first
@@ -527,6 +539,20 @@ async function getMessages(convId, { limitCount = 50, beforeTime = null, userId 
     // Map media_url to media_data if media_data is empty
     if (!m.media_data && m.media_url) {
       m.media_data = m.media_url;
+    }
+  }
+
+  // Add read receipt status for DM messages
+  const conv = await getConversationById(convId);
+  const lastReadAt = conv?.last_read_at || {};
+  for (const m of msgs) {
+    const mine = String(m.sender_id) === String(userId);
+    if (mine && conv?.type === 'dm') {
+      const otherId = (conv.member_ids || []).find(id => String(id) !== String(userId));
+      const otherLastRead = otherId ? lastReadAt[String(otherId)] : null;
+      m.read_by_other = otherLastRead ? new Date(otherLastRead) >= new Date(m.created_at) : false;
+    } else {
+      m.read_by_other = false;
     }
   }
 
@@ -885,6 +911,108 @@ async function getCallHistory(conversationId) {
   return calls.slice(0, 50);
 }
 
+// ---------------- TWO-FACTOR AUTH ----------------
+async function setTwoFactorPin(userId, pin) {
+  await ensureInit();
+  const bcrypt = require('bcryptjs');
+  const hash = await bcrypt.hash(String(pin), 10);
+  await updateDoc(doc(firestoreDb, 'users', String(userId)), {
+    two_factor_pin_hash: hash,
+    two_factor_enabled: true
+  });
+  userCache.delete(String(userId));
+  return true;
+}
+
+async function disableTwoFactor(userId, pin) {
+  await ensureInit();
+  const user = await getUserById(userId);
+  if (!user?.two_factor_pin_hash) return true;
+  const bcrypt = require('bcryptjs');
+  const ok = await bcrypt.compare(String(pin), user.two_factor_pin_hash);
+  if (!ok) return false;
+  await updateDoc(doc(firestoreDb, 'users', String(userId)), {
+    two_factor_pin_hash: null,
+    two_factor_enabled: false
+  });
+  userCache.delete(String(userId));
+  return true;
+}
+
+async function verifyTwoFactorPin(userId, pin) {
+  await ensureInit();
+  const user = await getUserById(userId);
+  if (!user?.two_factor_pin_hash) return true;
+  const bcrypt = require('bcryptjs');
+  return bcrypt.compare(String(pin), user.two_factor_pin_hash);
+}
+
+// ---------------- ACCOUNT MANAGEMENT ----------------
+async function changeUserPassword(userId, currentPassword, newPassword) {
+  await ensureInit();
+  const user = await getUserById(userId);
+  if (!user) throw new Error('User not found');
+  const bcrypt = require('bcryptjs');
+  const ok = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!ok) throw new Error('Current password is incorrect');
+  const hash = await bcrypt.hash(newPassword, 10);
+  await updateDoc(doc(firestoreDb, 'users', String(userId)), { password_hash: hash });
+  userCache.delete(String(userId));
+  return true;
+}
+
+async function deleteUserAccount(userId) {
+  await ensureInit();
+  await deleteDoc(doc(firestoreDb, 'users', String(userId)));
+  userCache.delete(String(userId));
+  return true;
+}
+
+// ---------------- BLOCK / UNBLOCK ----------------
+async function blockUser(userId, targetId) {
+  await ensureInit();
+  await updateDoc(doc(firestoreDb, 'users', String(userId)), {
+    blocked_users: arrayUnion(String(targetId))
+  });
+  return true;
+}
+
+async function unblockUser(userId, targetId) {
+  await ensureInit();
+  await updateDoc(doc(firestoreDb, 'users', String(userId)), {
+    blocked_users: arrayRemove(String(targetId))
+  });
+  return true;
+}
+
+// ---------------- SETTINGS ----------------
+async function saveUserSettings(userId, settings) {
+  await ensureInit();
+  const user = await getUserById(userId);
+  const current = user?.settings || {};
+  const merged = { ...current, ...settings };
+  await updateDoc(doc(firestoreDb, 'users', String(userId)), { settings: merged });
+  userCache.delete(String(userId));
+  return merged;
+}
+
+async function getUserSettings(userId) {
+  await ensureInit();
+  const user = await getUserById(userId);
+  return user?.settings || { online: true, receipts: true, notifications: true };
+}
+
+// ---------------- READ RECEIPTS ----------------
+async function markConversationRead(convId, userId) {
+  await ensureInit();
+  const conv = await getConversationById(convId);
+  if (!conv) return false;
+  const lastRead = conv.last_read_at || {};
+  lastRead[String(userId)] = new Date().toISOString();
+  await updateDoc(doc(firestoreDb, 'conversations', String(convId)), { last_read_at: lastRead });
+  return true;
+}
+
 module.exports = {
   ensureInit,
   // Storage
@@ -898,6 +1026,21 @@ module.exports = {
   updateUser,
   getAllUsers,
   deleteUser,
+  // 2FA
+  setTwoFactorPin,
+  disableTwoFactor,
+  verifyTwoFactorPin,
+  // Account
+  changeUserPassword,
+  deleteUserAccount,
+  // Block
+  blockUser,
+  unblockUser,
+  // Settings
+  saveUserSettings,
+  getUserSettings,
+  // Read receipts
+  markConversationRead,
   // Conversations
   createConversation,
   getConversationById,

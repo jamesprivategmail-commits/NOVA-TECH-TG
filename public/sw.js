@@ -1,8 +1,11 @@
-const CACHE_NAME = 'nova-chat-v1';
+const CACHE_NAME = 'darkchat-v2';
 const urlsToCache = [
   '/',
   '/css/style.css',
-  '/js/app.js'
+  '/css/dark-chat.css',
+  '/js/app.js',
+  '/manifest.json',
+  '/assets/logo.jpg'
 ];
 
 self.addEventListener('install', (e) => {

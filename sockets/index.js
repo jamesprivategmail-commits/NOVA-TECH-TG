@@ -137,6 +137,16 @@ function initSockets(io) {
       socket.to(`conv:${conversationId}`).emit('typing', { conversationId, userId, isTyping });
     });
 
+    socket.on('conversation:read', async ({ conversationId }) => {
+      try {
+        const { markConversationRead } = require('../db/firebase');
+        await markConversationRead(conversationId, userId);
+        socket.to(`conv:${conversationId}`).emit('conversation:read', { conversationId, userId });
+      } catch (e) {
+        console.error('Mark read socket error:', e);
+      }
+    });
+
     socket.on('conversation:join', async ({ conversationId }) => {
       const conv = await getConversationById(conversationId);
       if (conv && ((conv.member_ids || []).includes(userId) || conv.type === 'channel')) {

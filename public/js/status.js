@@ -27,22 +27,30 @@ export function initStatus() {
   };
   els.newBtn?.addEventListener('click', openNewStatusSheet);
   on('status:changed', () => renderStatus());
-  on('conversations:changed', () => { renderChannels(); loadChannelDiscovery(); });
-  on('tab:show', (name) => { if (name === 'status') loadChannelDiscovery(); });
+  on('conversations:changed', () => { renderChannels(); });
+  on('tab:show', (name) => {
+    if (name === 'status') {
+      loadStatuses();
+      loadChannelDiscovery();
+    }
+  });
   renderStatus();
   renderChannels();
-  loadChannelDiscovery();
 }
 
 export async function loadStatuses() {
-  els.list.innerHTML = skeletonList(5);
+  if (els.list && (!state.statuses || !state.statuses.length)) {
+    els.list.innerHTML = skeletonList(5);
+  }
   try {
     const res = await api.statusFeed();
     state.statuses = res.statuses || [];
     renderStatus();
   } catch (err) {
-    els.list.innerHTML = errorState({ title: 'Could not load status updates', subtitle: err.message, retryId: 'retry-status' });
-    $('#retry-status')?.addEventListener('click', loadStatuses);
+    if (!state.statuses || !state.statuses.length) {
+      els.list.innerHTML = errorState({ title: 'Could not load status updates', subtitle: err.message, retryId: 'retry-status' });
+      $('#retry-status')?.addEventListener('click', loadStatuses);
+    }
   }
 }
 

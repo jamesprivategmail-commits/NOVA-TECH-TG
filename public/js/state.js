@@ -2,6 +2,8 @@
 const TOKEN_KEY = 'darkchat_token';
 const READ_KEY = 'darkchat_read_at';
 const UNREAD_KEY = 'darkchat_unread';
+const ME_KEY = 'darkchat_cached_me';
+const CONVS_KEY = 'darkchat_cached_convs';
 
 function readJson(key, fallback) {
   try {
@@ -18,8 +20,8 @@ function writeJson(key, value) {
 
 export const state = {
   token: null,
-  me: null,
-  conversations: [],
+  me: readJson(ME_KEY, null),
+  conversations: readJson(CONVS_KEY, []),
   activeConv: null,
   messages: {},          // conversationId -> array (oldest -> newest)
   hasMore: {},           // conversationId -> boolean (more history before first message)
@@ -38,6 +40,20 @@ export const state = {
   online: navigator.onLine !== false
 };
 
+export function saveCachedMe(me) {
+  state.me = me;
+  if (me) writeJson(ME_KEY, me);
+  else {
+    try { localStorage.removeItem(ME_KEY); } catch {}
+  }
+}
+
+export function saveCachedConversations(convs) {
+  if (Array.isArray(convs)) {
+    writeJson(CONVS_KEY, convs.slice(0, 50));
+  }
+}
+
 export function loadToken() {
   try { state.token = localStorage.getItem(TOKEN_KEY); } catch { state.token = null; }
   return state.token;
@@ -53,6 +69,8 @@ export function saveToken(token) {
 
 export function clearSession() {
   saveToken(null);
+  saveCachedMe(null);
+  saveCachedConversations([]);
   state.me = null;
   state.conversations = [];
   state.activeConv = null;

@@ -59,7 +59,7 @@ export function avatar(user, { size = '', cls = '', id = '' } = {}) {
   const classes = ['avatar', size ? `avatar-${size}` : '', cls].filter(Boolean).join(' ');
   const idAttr = id ? ` id="${escapeHtml(id)}"` : '';
   if (url) {
-    return `<span class="${classes}"${idAttr} style="background:${escapeHtml(color)}"><img src="${escapeHtml(url)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+    return `<span class="${classes}"${idAttr} style="background:${escapeHtml(color)}"><img src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></span>`;
   }
   return `<span class="${classes}"${idAttr} style="background:${escapeHtml(color)}">${escapeHtml(initials(name))}</span>`;
 }

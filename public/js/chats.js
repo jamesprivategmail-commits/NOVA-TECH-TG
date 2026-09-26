@@ -1,13 +1,14 @@
 // chats.js - conversation list screen
 import { api, ApiError } from './api.js';
 import { pref } from './settings.js';
-import { state, emit, on, isUnread, totalUnreadCount, syncAllUnread } from './state.js';
+import { state, emit, on, isUnread, totalUnreadCount, syncAllUnread, saveCachedConversations } from './state.js';
 import {
   $, avatar, icon, escapeHtml, timeAgo, conversationTitle, conversationAvatarUser, conversationIsVerified, verifyBadge,
   emptyState, errorState, skeletonList, toast, openSheet, closeSheet, setBusy
 } from './ui.js';
 
 let els = {};
+let searchDebounceTimer = null;
 
 async function openNotesToSelf() {
   if (!state.me?.novaId) return toast('Sign in first');
@@ -15,6 +16,7 @@ async function openNotesToSelf() {
     const res = await api.createDm(state.me.novaId);
     const refreshed = await api.conversations();
     state.conversations = refreshed.conversations || [];
+    saveCachedConversations(state.conversations);
     emit('conversations:changed');
     const conv = state.conversations.find((c) => c.id === res.conversationId);
     if (conv) emit('chat:open', conv);
@@ -34,7 +36,10 @@ export function initChats() {
     adminBtn: $('#admin-btn')
   };
 
-  els.search?.addEventListener('input', () => renderChats());
+  els.search?.addEventListener('input', () => {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => renderChats(), 120);
+  });
   els.filters?.addEventListener('click', (e) => {
     const chip = e.target.closest('.chip');
     if (!chip) return;
@@ -46,12 +51,14 @@ export function initChats() {
   els.meAvatar?.addEventListener('click', () => emit('tab:show', 'profile'));
 
   on('conversations:changed', () => { renderChats(); updateFilterChips(); updateChatsNavDot(); });
-  on('unread:changed', () => { renderChats(); updateFilterChips(); updateChatsNavDot(); });
+  on('unread:changed', () => { updateFilterChips(); updateChatsNavDot(); });
   on('settings:changed', () => { renderChats(); updateFilterChips(); updateChatsNavDot(); });
   on('presence', ({ userId, online }) => {
     state.presence[userId] = online;
     updatePresenceDots();
   });
+
+  // Render immediately if we have cached conversations
   renderChats();
   updateFilterChips();
   updateChatsNavDot();
@@ -104,9 +111,7 @@ export function setConversations(list) {
     }
   }
   syncAllUnread(state.unread);
-  renderChats();
-  updateFilterChips();
-  updateChatsNavDot();
+  saveCachedConversations(state.conversations);
   emit('conversations:changed');
 }
 
@@ -237,7 +242,9 @@ export function renderChats() {
 }
 
 export function showChatsLoading() {
-  if (els.list) els.list.innerHTML = skeletonList(7);
+  if (els.list && (!state.conversations || !state.conversations.length)) {
+    els.list.innerHTML = skeletonList(7);
+  }
 }
 
 export function showChatsError(message) {

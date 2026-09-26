@@ -355,13 +355,29 @@ export async function openConversation(conv) {
   els.darkPairCodeBar?.classList.toggle('hidden', conv.other_user?.id !== 'u_dark_pair');
   updateBlockedChatState(conv);
   markRead(conv.id);
-  els.messages.innerHTML = `<div style="padding:20px">${emptyState({ iconName: 'message', title: 'Loading messages', subtitle: '' })}</div>`;
+
+  // Instant UI: If messages already exist in memory for this chat, render them immediately
+  const cachedMessages = state.messages[conv.id];
+  if (Array.isArray(cachedMessages) && cachedMessages.length > 0) {
+    renderMessages(true);
+  } else {
+    els.messages.innerHTML = `<div style="padding:20px">${emptyState({ iconName: 'message', title: 'Loading messages', subtitle: '' })}</div>`;
+  }
+
   joinConversation(conv.id);
+
   try {
-    const res = await api.messages(conv.id);
-    state.messages[conv.id] = res.messages || [];
-    try {
-      const calls = (await api.callHistory(conv.id)).calls || [];
+    // Parallelize message and call history requests
+    const [res, callHistoryRes] = await Promise.all([
+      api.messages(conv.id),
+      api.callHistory(conv.id).catch(() => ({ calls: [] }))
+    ]);
+
+    const remoteMessages = res.messages || [];
+    state.messages[conv.id] = remoteMessages;
+
+    const calls = callHistoryRes.calls || [];
+    if (calls.length) {
       const callLogs = calls.map((call) => ({
         id: `call_${call.id}`,
         conversation_id: conv.id,
@@ -372,14 +388,18 @@ export async function openConversation(conv) {
       }));
       const existing = new Set(state.messages[conv.id].map((message) => message.id));
       state.messages[conv.id].push(...callLogs.filter((message) => !existing.has(message.id)));
-    } catch { /* call history is supplementary to the message timeline */ }
+      state.messages[conv.id].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+
     markConversationRead(conv.id);
-    state.hasMore[conv.id] = (res.messages || []).length >= 50;
+    state.hasMore[conv.id] = remoteMessages.length >= 50;
     renderMessages(true);
     startMessagePolling(conv.id);
   } catch (err) {
-    els.messages.innerHTML = errorState({ title: 'Could not load messages', subtitle: err.message, retryId: 'retry-messages' });
-    $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
+    if (!state.messages[conv.id] || !state.messages[conv.id].length) {
+      els.messages.innerHTML = errorState({ title: 'Could not load messages', subtitle: err.message, retryId: 'retry-messages' });
+      $('#retry-messages')?.addEventListener('click', () => openConversation(conv));
+    }
   }
   setTimeout(() => els.input?.focus(), 80);
 }
@@ -843,7 +863,8 @@ function startMessagePolling(conversationId) {
       // Retry quietly on the next tick while Socket.IO remains the primary path.
     }
   };
-  messagePollTimer = setInterval(poll, 2000);
+  // Gentle fallback sync: Socket.IO handles instant updates; this verifies consistency without hammering the network.
+  messagePollTimer = setInterval(poll, state.socketReady ? 20000 : 8000);
 }
 
 function onMessagesScroll() {

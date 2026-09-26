@@ -156,9 +156,6 @@ function initSockets(io) {
         };
 
         io.to(`conv:${conversationId}`).emit('message:new', payload);
-        for (const mid of (conv.member_ids || [])) {
-          io.to(`user:${mid}`).emit('message:new', payload);
-        }
         const isDarkPairConversation = (conv.member_ids || []).includes('u_dark_pair') || String(conversationId).startsWith('dm_dark_pair_');
         const commandText = hasText ? content.trim().toLowerCase() : '';
         let assistantPayload = null;
@@ -194,9 +191,6 @@ function initSockets(io) {
             is_verified: senderInfo?.is_verified || false
           };
           io.to(`conv:${conversationId}`).emit('message:new', assistantPayload);
-          for (const mid of (conv.member_ids || [])) {
-            io.to(`user:${mid}`).emit('message:new', assistantPayload);
-          }
         }
         const recipients = (conv.member_ids || []).filter((id) => String(id) !== String(userId));
         void Promise.allSettled(recipients.map(async (recipientId) => {

@@ -61,36 +61,54 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, auth = true } = {}) {
+async function request(path, { method = 'GET', body, auth = true, timeout = 12000, retries = 1 } = {}) {
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth && state.token) headers.Authorization = `Bearer ${state.token}`;
 
-  let res;
-  try {
-    res = await fetch(BASE + path, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined
-    });
-  } catch (err) {
-    throw new ApiError('Network error - check your connection', 0, null);
+  let lastError = null;
+  const attempts = method === 'GET' ? retries + 1 : 1;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const res = await fetch(BASE + path, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      let data = null;
+      const text = await res.text();
+      if (text) {
+        try { data = JSON.parse(text); } catch { data = null; }
+      }
+
+      if (!res.ok) {
+        const message = (data && data.error) || `Request failed (${res.status})`;
+        if (res.status === 401 && auth && state.token) emit('auth:expired');
+        throw new ApiError(message, res.status, data);
+      }
+      return data;
+    } catch (err) {
+      clearTimeout(timer);
+      if (err instanceof ApiError) throw err;
+      if (err.name === 'AbortError') {
+        lastError = new ApiError('Request timed out - check your connection', 0, null);
+      } else {
+        lastError = new ApiError(err.message || 'Network error - check your connection', 0, null);
+      }
+      if (attempt < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
   }
 
-  let data = null;
-  const text = await res.text();
-  if (text) {
-    try { data = JSON.parse(text); } catch { data = null; }
-  }
-
-  if (!res.ok) {
-    const message = (data && data.error) || `Request failed (${res.status})`;
-    // Only treat a 401 as an expired session when a token was actually sent.
-    // Anonymous startup calls and failed logins must never wipe the session.
-    if (res.status === 401 && auth && state.token) emit('auth:expired');
-    throw new ApiError(message, res.status, data);
-  }
-  return data;
+  throw lastError;
 }
 
 export const api = {

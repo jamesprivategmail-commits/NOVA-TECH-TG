@@ -13,7 +13,6 @@ export function initPosts() {
   els = { list: $('#posts-list') };
   els.list.innerHTML = composeHtml() + '<div id="posts-feed"></div>';
   wireComposer();
-  loadPosts();
 }
 
 function composeHtml() {
@@ -80,14 +79,18 @@ async function onPost(e) {
 export async function loadPosts() {
   const feed = $('#posts-feed');
   if (!feed) return;
-  feed.innerHTML = skeletonList(4);
+  if (!state.posts || !state.posts.length) {
+    feed.innerHTML = skeletonList(4);
+  }
   try {
     const res = await api.posts();
     state.posts = res.posts || [];
     renderPosts();
   } catch (err) {
-    feed.innerHTML = errorState({ title: 'Could not load updates', subtitle: err.message, retryId: 'retry-posts' });
-    $('#retry-posts')?.addEventListener('click', loadPosts);
+    if (!state.posts || !state.posts.length) {
+      feed.innerHTML = errorState({ title: 'Could not load updates', subtitle: err.message, retryId: 'retry-posts' });
+      $('#retry-posts')?.addEventListener('click', loadPosts);
+    }
   }
 }
 

@@ -74,7 +74,7 @@ export function sendMessage({ conversationId, content, media, replyToId, statusR
   return new Promise((resolve) => {
     if (!socket) return resolve({ error: 'Not connected' });
     let settled = false;
-    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 5000);
+    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 15000);
     socket.emit('message:send', { conversationId, content, media, replyToId, statusReply, clientMessageId }, (ack) => {
       if (settled) return;
       settled = true;

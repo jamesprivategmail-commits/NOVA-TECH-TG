@@ -1,6 +1,6 @@
 // app.js - boot + router
 import { api } from './api.js';
-import { state, loadToken, on, emit } from './state.js';
+import { state, loadToken, on, emit, saveCachedMe } from './state.js';
 import { $, toast, closeSheet } from './ui.js';
 import { connectSocket, disconnectSocket, sendMessage } from './socket.js';
 
@@ -25,6 +25,7 @@ const SCREENS = {
 };
 
 let currentTab = 'chats';
+const loadedTabs = new Set(['chats']);
 
 const isDesktop = () => window.matchMedia('(min-width: 900px)').matches;
 
@@ -40,10 +41,13 @@ export function showTab(name) {
   });
   document.querySelectorAll('.bottom-nav .nav').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === name));
   emit('tab:show', name);
+
+  // Lazy-load data only on tab view
   if (name === 'status') loadStatuses();
   if (name === 'posts') loadPosts();
   if (name === 'discover') loadDiscover();
   if (name === 'profile') renderProfile();
+  loadedTabs.add(name);
 }
 
 function showChatPlaceholder() {
@@ -84,18 +88,18 @@ async function onSignedIn() {
   renderMeHeader();
   showTab('chats');
   updateLayout();
-  await Promise.allSettled([
+
+  // Connect socket immediately without waiting for other APIs
+  connectSocket().catch(() => {
+    // Non-fatal, retried automatically
+  });
+
+  // Fast background sync of chats, unread badges, and profile settings
+  Promise.allSettled([
     loadConversations(),
-    loadStatuses(),
-    loadPosts(),
     loadProfileSettings(),
     refreshUnread()
   ]);
-  try {
-    await connectSocket();
-  } catch {
-    toast('Realtime connection unavailable');
-  }
 }
 
 function wireChrome() {
@@ -195,8 +199,6 @@ async function boot() {
   wireEvents();
   initAuth();
 
-  // Load the session BEFORE wiring up modules that fetch, so nothing ever
-  // fires an authenticated request without a token attached.
   const token = loadToken();
   if (!token) {
     showAuth();
@@ -214,12 +216,25 @@ async function boot() {
   initNotifications();
   initCalls();
 
+  // If we already have a cached profile, display UI IMMEDIATELY (0ms boot)
+  if (state.me) {
+    hideAuth();
+    renderMeHeader();
+    showTab('chats');
+    updateLayout();
+    connectSocket().catch(() => {});
+  }
+
+  // Validate / refresh profile and conversations in background
   try {
     const res = await api.me();
     state.me = res.user;
+    saveCachedMe(res.user);
     await onSignedIn();
-  } catch {
-    showAuth();
+  } catch (err) {
+    if (!state.me) {
+      showAuth();
+    }
   }
 }
 

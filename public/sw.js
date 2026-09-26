@@ -1,11 +1,11 @@
 // sw.js - DARK CHAT service worker
 // Strategy: never cache API or realtime traffic; network-first for navigations
 // and app code (so a new build always wins), cache-first only for immutable assets.
-const VERSION = 'dark-chat-v3';
+const VERSION = 'dark-chat-v4';
 const PRECACHE = [
   '/',
   '/index.html',
-  '/css/app.css?v=2',
+  '/css/app.css?v=3',
   '/js/app.js',
   '/manifest.json',
   '/assets/logo.jpg'

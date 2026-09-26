@@ -337,11 +337,15 @@ $('#conversation-search-input')?.addEventListener('input', (e) => {
 
 // ---------------- CONVERSATIONS ----------------
 async function loadConversations() {
-  const { conversations } = await api('/conversations');
-  state.conversations = conversations || [];
-  renderConvList();
-  if (state.activeConvId) {
-    state.activeConv = state.conversations.find(c => String(c.id) === String(state.activeConvId)) || state.activeConv;
+  try {
+    const { conversations } = await api('/conversations');
+    state.conversations = conversations || [];
+    renderConvList();
+    if (state.activeConvId) {
+      state.activeConv = state.conversations.find(c => String(c.id) === String(state.activeConvId)) || state.activeConv;
+    }
+  } catch (err) {
+    $('#conv-list').innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><div class="title">Couldn't load chats</div><div class="subtitle">${escapeHtml(err.message)}</div></div>`;
   }
 }
 
@@ -405,8 +409,14 @@ async function openConversation(id) {
   state.socket.emit('conversation:join', { conversationId: id });
 
   if (!state.messages[id]) {
-    const { messages } = await api(`/conversations/${id}/messages`);
-    state.messages[id] = messages;
+    try {
+      const { messages } = await api(`/conversations/${id}/messages`);
+      state.messages[id] = messages;
+    } catch (err) {
+      state.messages[id] = [];
+      $('#messages-area').innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><div class="title">Couldn't load messages</div><div class="subtitle">${escapeHtml(err.message)}</div></div>`;
+      return;
+    }
   }
   composerInput.value = localStorage.getItem(`nova_draft_${id}`) || '';
   composerInput.dispatchEvent(new Event('input'));
@@ -997,8 +1007,14 @@ function showStatusError(msg) {
 $('#close-new-status').addEventListener('click', () => $('#new-status-modal').classList.add('hidden'));
 
 async function loadStatuses() {
-  const { statuses } = await api('/status/feed');
   const list = $('#status-list');
+  let statuses;
+  try {
+    ({ statuses } = await api('/status/feed'));
+  } catch (err) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><div class="title">Couldn't load statuses</div><div class="subtitle">${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
   const mine = (statuses || []).filter(s => String(s.user_id) === String(state.me.id));
   const others = (statuses || []).filter(s => String(s.user_id) !== String(state.me.id));
   state.myStatuses = mine;
@@ -1136,8 +1152,14 @@ function initPostMedia() {
 }
 
 async function loadPosts() {
-  const { posts } = await api('/posts');
   const list = $('#posts-list');
+  let posts;
+  try {
+    ({ posts } = await api('/posts'));
+  } catch (err) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><div class="title">Couldn't load posts</div><div class="subtitle">${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
   if (!posts || posts.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="icon">📸</div><div class="title">No posts yet</div><div class="subtitle">Be the first to share something with Firebase Storage!</div></div>`;
     return;

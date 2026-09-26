@@ -12,12 +12,19 @@ async function requireAuth(req, res, next) {
     const payload = jwt.verify(token, JWT_SECRET);
     req.user = payload; // { id, novaId, displayName }
 
-    // Banned accounts lose access immediately
-    const user = await getUserById(payload.id);
-    if (user?.is_banned) {
-      return res.status(403).json({
-        error: user.ban_reason ? `Account banned: ${user.ban_reason}` : 'Your account has been banned.'
-      });
+    // Banned accounts lose access immediately.
+    // If the Firestore read fails (e.g. quota exhausted) we still allow the
+    // request through — the JWT itself is valid, and blocking here would
+    // silently log users out and make their data look like it was deleted.
+    try {
+      const user = await getUserById(payload.id);
+      if (user?.is_banned) {
+        return res.status(403).json({
+          error: user.ban_reason ? `Account banned: ${user.ban_reason}` : 'Your account has been banned.'
+        });
+      }
+    } catch (banErr) {
+      console.warn('Ban-check read failed, allowing request:', banErr.message);
     }
 
     next();

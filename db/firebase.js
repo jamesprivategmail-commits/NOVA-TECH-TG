@@ -208,11 +208,24 @@ async function createUser(userData) {
   return user;
 }
 
+// Short-lived in-memory cache for user lookups — getUserById is called on
+// every authenticated request (ban check) and once per message sender, so
+// caching dramatically cuts Firestore read usage and avoids quota exhaustion.
+const userCache = new Map();
+const USER_CACHE_TTL = 30_000; // 30 seconds
+
 async function getUserById(id) {
   if (!id) return null;
+  const key = String(id);
+  const cached = userCache.get(key);
+  if (cached && Date.now() - cached.ts < USER_CACHE_TTL) {
+    return cached.user;
+  }
   await ensureInit();
-  const snap = await getDoc(doc(firestoreDb, 'users', String(id)));
-  return snap.exists() ? snap.data() : null;
+  const snap = await getDoc(doc(firestoreDb, 'users', key));
+  const user = snap.exists() ? snap.data() : null;
+  userCache.set(key, { user, ts: Date.now() });
+  return user;
 }
 
 async function getUserByNovaId(novaId) {
@@ -237,7 +250,9 @@ async function updateUser(id, updates) {
   }
   await updateDoc(ref, mapped);
   const updated = await getDoc(ref);
-  return updated.data();
+  const userData = updated.data();
+  userCache.set(String(id), { user: userData, ts: Date.now() });
+  return userData;
 }
 
 async function getAllUsers(search = '', limitCount = 100) {
@@ -483,23 +498,23 @@ async function createMessage(convId, msgData) {
 async function getMessages(convId, { limitCount = 50, beforeTime = null, userId = null } = {}) {
   await ensureInit();
   const colRef = collection(firestoreDb, 'conversations', String(convId), 'messages');
-  const snap = await getDocs(colRef);
+
+  // Use a server-side query with orderBy + limit instead of reading every
+  // message in the conversation — this keeps Firestore read usage proportional
+  // to the page size, not the total message history.
+  let q;
+  if (beforeTime) {
+    q = query(colRef, where('created_at', '<', beforeTime), orderBy('created_at', 'desc'), limit(limitCount));
+  } else {
+    q = query(colRef, orderBy('created_at', 'desc'), limit(limitCount));
+  }
+  const snap = await getDocs(q);
   let msgs = snap.docs.map(d => d.data());
 
-  // Filter hidden messages for current user
+  // Filter hidden messages for current user (client-side — can't query array-not-contains)
   if (userId) {
     msgs = msgs.filter(m => !(m.hidden_by || []).includes(String(userId)));
   }
-
-  // Filter beforeTime if pagination is requested
-  if (beforeTime) {
-    const beforeMs = new Date(beforeTime).getTime();
-    msgs = msgs.filter(m => new Date(m.created_at).getTime() < beforeMs);
-  }
-
-  // Sort by created_at desc for pagination, then take limitCount
-  msgs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  msgs = msgs.slice(0, limitCount);
 
   // Fetch sender details and format
   for (const m of msgs) {
@@ -581,14 +596,16 @@ async function createStatus({ userId, content, bgColor, mediaUrl }) {
 
 async function getActiveStatuses(viewerUserId) {
   await ensureInit();
-  const snap = await getDocs(collection(firestoreDb, 'statuses'));
   const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  // Only read statuses that haven't expired yet — avoids reading expired docs
+  const q = query(collection(firestoreDb, 'statuses'), where('expires_at', '>', nowIso));
+  const snap = await getDocs(q);
   const active = [];
   for (const d of snap.docs) {
     const s = d.data();
-    if (new Date(s.expires_at).getTime() > now) {
-      const author = await getUserById(s.user_id);
-      active.push({
+    const author = await getUserById(s.user_id);
+    active.push({
         id: s.id,
         content: s.content,
         bg_color: s.bg_color,
@@ -602,7 +619,6 @@ async function getActiveStatuses(viewerUserId) {
         is_verified: author?.is_verified || false,
         viewed: viewerUserId ? (s.viewers || []).includes(String(viewerUserId)) : false
       });
-    }
   }
   active.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return active;
@@ -652,7 +668,8 @@ async function createPost({ userId, caption, imageUrl, imageMime }) {
 
 async function getPosts(currentUserId, limitCount = 50) {
   await ensureInit();
-  const snap = await getDocs(collection(firestoreDb, 'posts'));
+  const q = query(collection(firestoreDb, 'posts'), orderBy('created_at', 'desc'), limit(limitCount));
+  const snap = await getDocs(q);
   const posts = [];
   for (const d of snap.docs) {
     const p = d.data();

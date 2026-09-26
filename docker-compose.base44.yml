@@ -1,0 +1,20 @@
+services:
+  app:
+    image: node:22
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - path: /run/base44/app.env
+        required: false
+    # node --watch restarts the server on backend edits; public/ is served statically (refresh to see changes)
+    command: sh -c "npm install --no-audit --no-fund && node --watch-path=server.js --watch-path=routes --watch-path=db --watch-path=middleware --watch-path=sockets server.js"
+    restart: unless-stopped
+
+volumes:
+  node_modules:

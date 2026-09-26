@@ -1,0 +1,9 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/api/health",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {"name": "JWT_SECRET", "description": "Signing key for session tokens. Optional: the code falls back to a hardcoded default, so set a long random value for any real deployment.", "requiredAtBoot": false},
+    {"name": "ADMIN_NOVA_IDS", "description": "Optional comma-separated DARK CHAT IDs to grant admin access.", "requiredAtBoot": false}
+  ]
+}

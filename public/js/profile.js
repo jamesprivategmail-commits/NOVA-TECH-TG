@@ -1,6 +1,6 @@
 // profile.js - own profile screen and profile editing
 import { api } from './api.js';
-import { state, emit, on } from './state.js';
+import { state, emit, on, saveCachedMe } from './state.js';
 import {
   $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy, verifyBadge, fileToDataUrl, renderQrSvg
 } from './ui.js';
@@ -173,6 +173,7 @@ export function openEditProfileSheet() {
         try {
           const res = await api.updateMe(payload);
           state.me = res.user;
+          saveCachedMe(res.user);
           emit('me:updated', res.user);
           closeSheet();
           toast('Profile updated', 'success');

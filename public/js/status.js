@@ -27,6 +27,7 @@ export function initStatus() {
   };
   els.newBtn?.addEventListener('click', openNewStatusSheet);
   on('status:changed', () => renderStatus());
+  on('status:refresh', () => loadStatuses());
   on('conversations:changed', () => { renderChannels(); });
   on('tab:show', (name) => {
     if (name === 'status') {
@@ -68,6 +69,16 @@ function groupByUser() {
   return groups;
 }
 
+function timeUntilExpire(expiresAt, createdAt) {
+  const exp = expiresAt ? new Date(expiresAt).getTime() : (new Date(createdAt).getTime() + 24 * 60 * 60 * 1000);
+  const diff = exp - Date.now();
+  if (diff <= 0) return 'Expiring now';
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  if (hours > 0) return `${hours}h ${mins}m left`;
+  return `${mins}m left`;
+}
+
 function renderStatus() {
   if (!els.list) return;
   const groups = groupByUser();
@@ -75,7 +86,7 @@ function renderStatus() {
     els.list.innerHTML = emptyState({
       iconName: 'camera-plus',
       title: 'No status updates',
-      subtitle: 'Statuses from you and your contacts appear here.',
+      subtitle: 'Statuses from you and your contacts appear here. Statuses automatically delete permanently after 24 hours.',
       actionLabel: 'Add status',
       actionId: 'empty-add-status'
     });
@@ -101,9 +112,63 @@ function renderStatus() {
   html += others.map((g) => ringHtml(g, false)).join('');
   html += '</div>';
 
+  if (own && own.items && own.items.length > 0) {
+    html += `
+      <div class="my-status-section" style="margin:12px 14px 10px;padding:12px 14px;background:var(--card-bg);border:1px solid var(--border);border-radius:14px">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <span style="font-weight:600;font-size:14px">My Status</span>
+            <span class="muted" style="font-size:12px;margin-left:6px">(24h auto-expiry)</span>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="my-status-add-btn" style="height:28px;padding:0 10px;font-size:12px">${icon('plus')} Add</button>
+        </div>
+        ${own.items.map((s) => `
+          <div class="row" style="justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06)">
+            <div class="row" style="gap:10px;align-items:center;cursor:pointer;flex:1;min-width:0" data-view-status-id="${escapeHtml(s.id)}">
+              <div style="width:42px;height:42px;border-radius:10px;background:${escapeHtml(s.bg_color || '#0A84FF')};display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+                ${s.media_url ? (s.media_type === 'video' ? `<video src="${escapeHtml(mediaSrc(s.media_url))}" style="width:100%;height:100%;object-fit:cover" muted></video>` : `<img src="${escapeHtml(mediaSrc(s.media_url))}" alt="" style="width:100%;height:100%;object-fit:cover">`) : `<span style="font-size:11px;color:#fff;padding:2px;text-align:center;overflow:hidden;max-height:36px;line-height:1.2">${escapeHtml((s.content || '').slice(0, 15))}</span>`}
+              </div>
+              <div style="min-width:0;flex:1">
+                <div class="truncate" style="font-size:13px;font-weight:500">${escapeHtml(s.content || (s.media_type === 'video' ? 'Video status' : 'Photo status'))}</div>
+                <div class="muted" style="font-size:11px">${escapeHtml(timeAgo(s.created_at))} · <span style="color:#ff9f0a;font-weight:500">⏱ ${escapeHtml(timeUntilExpire(s.expires_at, s.created_at))}</span></div>
+              </div>
+            </div>
+            <button type="button" class="icon-btn" data-delete-status-id="${escapeHtml(s.id)}" title="Delete status now" aria-label="Delete status now" style="color:var(--danger);margin-left:8px">
+              ${icon('trash')}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
   els.list.innerHTML = html;
   els.list.querySelector('[data-new-status]')?.addEventListener('click', openNewStatusSheet);
+  els.list.querySelector('#my-status-add-btn')?.addEventListener('click', openNewStatusSheet);
   els.list.querySelectorAll('[data-status-user]').forEach((btn) => btn.addEventListener('click', () => openViewerForUser(btn.dataset.statusUser)));
+  els.list.querySelectorAll('[data-view-status-id]').forEach((el) => {
+    el.addEventListener('click', () => openViewerForUser(state.me?.id, el.dataset.viewStatusId));
+  });
+  els.list.querySelectorAll('[data-delete-status-id]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const statusId = btn.dataset.deleteStatusId;
+      const ok = await confirmSheet({
+        title: 'Delete status',
+        message: 'Delete this status now? It will be permanently deleted.',
+        confirmText: 'Delete permanently',
+        danger: true
+      });
+      if (!ok) return;
+      try {
+        await api.deleteStatus(statusId);
+        toast('Status deleted', 'success');
+        await loadStatuses();
+      } catch (err) {
+        toast(err.message || 'Delete failed');
+      }
+    });
+  });
 }
 
 function renderChannels() {

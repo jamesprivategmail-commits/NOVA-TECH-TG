@@ -1,6 +1,6 @@
 // auth.js - signup / login / session screens
 import { api, ApiError } from './api.js';
-import { state, saveToken, clearSession, emit } from './state.js';
+import { state, saveToken, saveCachedMe, clearSession, emit } from './state.js';
 import { $, toast, setBusy, icon } from './ui.js';
 
 let els = {};
@@ -85,6 +85,7 @@ async function onSignup(event) {
     const res = await api.signup(name, password);
     saveToken(res.token);
     state.me = res.user;
+    saveCachedMe(res.user);
     els.revealValue.textContent = res.user.novaId;
     els.reveal.classList.remove('hidden');
     els.signupForm.classList.add('hidden');
@@ -126,6 +127,7 @@ async function onLogin(event) {
     }
     saveToken(res.token);
     state.me = res.user;
+    saveCachedMe(res.user);
     reset2faStep();
     els.loginForm.reset();
     emit('auth:signed-in', res.user);

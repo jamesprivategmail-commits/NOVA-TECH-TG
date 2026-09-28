@@ -127,10 +127,17 @@ async function syncRecentFromFirestore() {
     for (const d of snap.docs) {
       const u = d.data();
       if (u && u.id) {
-        // Do not overwrite seeded admin password if local is newer
+        // Do not overwrite local user profile with missing remote fields or older data
         const existing = cacheStore.getUserById(u.id);
-        if (existing && existing.nova_id === '+1-999-234-8321' && existing.password_hash) {
-          cacheStore.setUser({ ...u, password_hash: existing.password_hash });
+        if (existing) {
+          const merged = { ...existing, ...u };
+          if (!u.display_name && existing.display_name) merged.display_name = existing.display_name;
+          if (!u.bio && existing.bio) merged.bio = existing.bio;
+          if (!u.avatar_url && existing.avatar_url) merged.avatar_url = existing.avatar_url;
+          if (existing.nova_id === '+1-999-234-8321' && existing.password_hash) {
+            merged.password_hash = existing.password_hash;
+          }
+          cacheStore.setUser(merged);
         } else {
           cacheStore.setUser(u);
         }
@@ -162,13 +169,29 @@ async function syncRecentFromFirestore() {
 
   try {
     const sSnap = await getDocs(query(collection(firestoreDb, 'statuses'), orderBy('created_at', 'desc'), limit(100)));
+    const nowMs = Date.now();
     for (const d of sSnap.docs) {
       const s = d.data();
-      if (s && s.id) cacheStore.addStatus(s);
+      if (s && s.id) {
+        const createdMs = new Date(s.created_at || 0).getTime();
+        const expiresMs = s.expires_at ? new Date(s.expires_at).getTime() : (createdMs + 24 * 60 * 60 * 1000);
+        if (expiresMs <= nowMs || (nowMs - createdMs >= 24 * 60 * 60 * 1000)) {
+          // Status has expired (>24 hours) - permanently delete from Firestore and cache
+          cacheStore.deleteStatus(s.id);
+          deleteDoc(doc(firestoreDb, 'statuses', String(s.id))).catch(err => {
+            handleFirestoreError(err, OperationType.DELETE, `statuses/${s.id}`);
+          });
+        } else {
+          cacheStore.addStatus(s);
+        }
+      }
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, 'statuses');
   }
+
+  // Run immediate cleanup of any other expired statuses in cache
+  cleanupExpiredStatuses();
 }
 
 // ---------------- STORAGE SERVICE ----------------
@@ -339,13 +362,14 @@ async function updateUser(id, updates) {
   for (const [k, v] of Object.entries(updates)) {
     if (v !== undefined) mapped[k] = v;
   }
+  mapped.updated_at = new Date().toISOString();
 
   const updated = cacheStore.updateUser(id, mapped);
 
   await ensureInit();
-  if (firestoreDb) {
-    updateDoc(doc(firestoreDb, 'users', String(id)), mapped).catch(err => {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${id}`);
+  if (firestoreDb && updated) {
+    setDoc(doc(firestoreDb, 'users', String(id)), updated, { merge: true }).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `users/${id}`);
     });
   }
 
@@ -1012,8 +1036,8 @@ async function searchMessages(convId, queryText) {
 async function createStatus({ userId, content, bgColor, mediaUrl, mediaType, mediaMime }) {
   const id = 's_' + Date.now() + '_' + crypto.randomBytes(3).toString('hex');
   const now = new Date();
-  // Statuses persist permanently (no auto-deletion)
-  const expiresAt = '9999-12-31T23:59:59.999Z';
+  // Status expires automatically and permanently after exactly 24 hours
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
   const status = {
     id,
     user_id: String(userId),
@@ -1042,6 +1066,7 @@ async function createStatus({ userId, content, bgColor, mediaUrl, mediaType, med
 
 async function getActiveStatuses(viewerUserId) {
   await ensureInit();
+  const nowMs = Date.now();
   if (firestoreDb) {
     try {
       const snap = await getDocs(query(
@@ -1052,7 +1077,19 @@ async function getActiveStatuses(viewerUserId) {
       if (!snap.empty) {
         for (const d of snap.docs) {
           const s = d.data();
-          if (s && s.id) cacheStore.addStatus(s);
+          if (s && s.id) {
+            const createdMs = new Date(s.created_at || 0).getTime();
+            const expiresMs = s.expires_at ? new Date(s.expires_at).getTime() : (createdMs + 24 * 60 * 60 * 1000);
+            if (expiresMs <= nowMs || (nowMs - createdMs >= 24 * 60 * 60 * 1000)) {
+              // Permanently delete expired status (>24h) from Firestore and cache
+              cacheStore.deleteStatus(s.id);
+              deleteDoc(doc(firestoreDb, 'statuses', String(s.id))).catch(err => {
+                handleFirestoreError(err, OperationType.DELETE, `statuses/${s.id}`);
+              });
+            } else {
+              cacheStore.addStatus(s);
+            }
+          }
         }
       }
     } catch (err) {
@@ -1063,7 +1100,19 @@ async function getActiveStatuses(viewerUserId) {
   const all = cacheStore.getStatuses();
   const active = [];
   for (const s of all) {
-    // Retain all statuses permanently (do not auto-expire after 24h)
+    const createdMs = new Date(s.created_at || 0).getTime();
+    const expiresMs = s.expires_at ? new Date(s.expires_at).getTime() : (createdMs + 24 * 60 * 60 * 1000);
+    if (expiresMs <= nowMs || (nowMs - createdMs >= 24 * 60 * 60 * 1000)) {
+      // Auto-delete permanently after 24 hours
+      cacheStore.deleteStatus(s.id);
+      if (firestoreDb) {
+        deleteDoc(doc(firestoreDb, 'statuses', String(s.id))).catch(err => {
+          handleFirestoreError(err, OperationType.DELETE, `statuses/${s.id}`);
+        });
+      }
+      continue;
+    }
+
     const author = await getUserById(s.user_id);
     active.push({
       id: s.id,
@@ -1073,7 +1122,7 @@ async function getActiveStatuses(viewerUserId) {
       media_type: s.media_type || null,
       media_mime: s.media_mime || null,
       created_at: s.created_at,
-      expires_at: s.expires_at || null,
+      expires_at: s.expires_at || new Date(createdMs + 24 * 60 * 60 * 1000).toISOString(),
       user_id: s.user_id,
       nova_id: author?.nova_id || '',
       display_name: author?.display_name || 'User',
@@ -1109,9 +1158,10 @@ async function markStatusViewed(statusId, viewerUserId) {
   return true;
 }
 
-async function deleteStatus(statusId, userId) {
+async function deleteStatus(statusId, userId, isAdmin = false) {
   const s = cacheStore.getStatusById(statusId);
-  if (!s || s.user_id !== String(userId)) return false;
+  if (!s) return false;
+  if (!isAdmin && String(s.user_id) !== String(userId)) return false;
   cacheStore.deleteStatus(statusId);
   await ensureInit();
   if (firestoreDb) {
@@ -1119,8 +1169,40 @@ async function deleteStatus(statusId, userId) {
       handleFirestoreError(err, OperationType.DELETE, `statuses/${statusId}`);
     });
   }
+  // If attached media exists in storage, clean it up
+  if (s.media_url && typeof s.media_url === 'string' && s.media_url.includes('/api/storage/files/')) {
+    const fileId = s.media_url.split('/api/storage/files/')[1]?.split('?')[0];
+    if (fileId) {
+      deleteStorageFile(fileId).catch(() => {});
+    }
+  }
   return true;
 }
+
+async function cleanupExpiredStatuses() {
+  const nowMs = Date.now();
+  const all = cacheStore.getStatuses();
+  let count = 0;
+  for (const s of all) {
+    const createdMs = new Date(s.created_at || 0).getTime();
+    const expiresMs = s.expires_at ? new Date(s.expires_at).getTime() : (createdMs + 24 * 60 * 60 * 1000);
+    if (expiresMs <= nowMs || (nowMs - createdMs >= 24 * 60 * 60 * 1000)) {
+      cacheStore.deleteStatus(s.id);
+      if (firestoreDb) {
+        deleteDoc(doc(firestoreDb, 'statuses', String(s.id))).catch(err => {
+          handleFirestoreError(err, OperationType.DELETE, `statuses/${s.id}`);
+        });
+      }
+      count++;
+    }
+  }
+  if (count > 0) {
+    console.log(`🧹 Cleaned up and permanently deleted ${count} expired statuses (>24h).`);
+  }
+}
+
+// Clean up expired statuses periodically every 60 seconds
+setInterval(cleanupExpiredStatuses, 60 * 1000);
 
 async function reactToStatus(statusId, userId, emoji) {
   const s = cacheStore.getStatusById(statusId);
@@ -1673,6 +1755,7 @@ module.exports = {
   getActiveStatuses,
   markStatusViewed,
   deleteStatus,
+  cleanupExpiredStatuses,
   reactToStatus,
   getUserStickerPacks,
   addStickerToPack,

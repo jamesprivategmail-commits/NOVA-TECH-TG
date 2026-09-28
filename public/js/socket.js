@@ -60,6 +60,12 @@ export function connectSocket() {
     socket.on('call:group:media-state', (payload) => emit('call:group:media-state', payload));
     socket.on('call:group:ended', (payload) => emit('call:group:ended', payload));
     socket.on('call:group:active-updated', (payload) => emit('call:group:active-updated', payload));
+    socket.on('status:feed-updated', () => emit('status:refresh'));
+    socket.on('user:profile-updated', (payload) => {
+      if (payload?.user && state.me && String(payload.user.id) === String(state.me.id)) {
+        emit('me:updated', payload.user);
+      }
+    });
 
     return socket;
   })();

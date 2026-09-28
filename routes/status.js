@@ -49,6 +49,7 @@ router.post('/', async (req, res) => {
       mediaMime: mediaMime || null
     });
 
+    req.app.get('io')?.emit('status:feed-updated', { newStatus: status });
     res.json({ status });
   } catch (err) {
     console.error('Create status error:', err);
@@ -95,8 +96,9 @@ router.post('/:id/react', async (req, res) => {
 // DELETE /api/status/:id
 router.delete('/:id', async (req, res) => {
   try {
-    const ok = await deleteStatus(req.params.id, req.user.id);
+    const ok = await deleteStatus(req.params.id, req.user.id, !!req.user.isAdmin);
     if (!ok) return res.status(404).json({ error: 'Status not found or unauthorized' });
+    req.app.get('io')?.emit('status:feed-updated', { deletedId: req.params.id });
     res.json({ ok: true });
   } catch (err) {
     console.error('Delete status error:', err);

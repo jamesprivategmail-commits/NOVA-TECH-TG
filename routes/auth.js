@@ -135,11 +135,12 @@ router.put('/me', requireAuth, async (req, res) => {
     const { displayName, bio, avatarData, avatarMime } = req.body;
     const updates = {};
 
-    if (displayName !== undefined && displayName.trim()) {
-      updates.display_name = displayName.trim();
+    if (displayName !== undefined) {
+      const trimmed = String(displayName).trim();
+      if (trimmed) updates.display_name = trimmed;
     }
     if (bio !== undefined) {
-      updates.bio = (bio || '').slice(0, 160);
+      updates.bio = String(bio || '').slice(0, 160);
     }
     if (avatarData) {
       // Store avatar in Firebase Storage
@@ -159,7 +160,9 @@ router.put('/me', requireAuth, async (req, res) => {
     }
 
     const updated = await updateUser(req.user.id, updates);
-    res.json({ user: publicUser(updated) });
+    const pub = publicUser(updated);
+    req.app.get('io')?.emit('user:profile-updated', { user: pub });
+    res.json({ user: pub });
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ error: 'Failed to update profile' });

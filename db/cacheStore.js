@@ -12,30 +12,17 @@ const defaultStore = {
     'u_1789899726676_828027': {
       id: 'u_1789899726676_828027',
       nova_id: '+1-999-234-8321',
-      display_name: '𝕾⃟MR DARKHEX𖤍',
-      password_hash: ADMIN_PASSWORD_HASH,
-      avatar_color: '#ff3131',
-      avatar_url: '/api/storage/files/file_1789932298737_a15455bc',
-      avatar_data: '/api/storage/files/file_1789932298737_a15455bc',
-      avatar_mime: 'image/jpeg',
-      bio: 'MR DARKHEX OWNER AND FOUNDER ',
-      is_verified: true,
-      is_banned: false,
-      ban_reason: null,
-      dark_pair_linked: true,
-      created_at: '2026-09-20T10:22:06.676Z',
-      last_seen: new Date().toISOString()
-    },
-    'u_admin_master': {
-      id: 'u_admin_master',
-      nova_id: '+1-999-234-8321',
       display_name: 'DARK CHAT Admin',
       password_hash: ADMIN_PASSWORD_HASH,
       avatar_color: '#ff3131',
       avatar_url: '/assets/logo.jpg',
+      avatar_data: '/assets/logo.jpg',
+      avatar_mime: 'image/jpeg',
       bio: 'Official DARK CHAT Administrator',
       is_verified: true,
       is_banned: false,
+      ban_reason: null,
+      dark_pair_linked: true,
       created_at: '2026-09-20T10:22:06.676Z',
       last_seen: new Date().toISOString()
     },
@@ -71,6 +58,10 @@ function loadStore() {
     if (fs.existsSync(STORE_PATH)) {
       const raw = fs.readFileSync(STORE_PATH, 'utf8');
       const parsed = JSON.parse(raw);
+      // Clean up any stale duplicate u_admin_master that collides with +1-999-234-8321
+      if (parsed.users && parsed.users['u_admin_master']) {
+        delete parsed.users['u_admin_master'];
+      }
       store = {
         users: { ...defaultStore.users, ...(parsed.users || {}) },
         conversations: { ...defaultStore.conversations, ...(parsed.conversations || {}) },
@@ -82,12 +73,9 @@ function loadStore() {
         calls: { ...defaultStore.calls, ...(parsed.calls || {}) },
         storage_files: { ...defaultStore.storage_files, ...(parsed.storage_files || {}) }
       };
-      // Ensure admin passwords are valid
-      if (store.users['u_1789899726676_828027']) {
+      // Ensure admin password is valid for master admin
+      if (store.users['u_1789899726676_828027'] && !store.users['u_1789899726676_828027'].password_hash) {
         store.users['u_1789899726676_828027'].password_hash = ADMIN_PASSWORD_HASH;
-      }
-      if (store.users['u_admin_master']) {
-        store.users['u_admin_master'].password_hash = ADMIN_PASSWORD_HASH;
       }
     } else {
       saveStoreSync();

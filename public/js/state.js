@@ -174,3 +174,8 @@ export function emit(event, detail) {
     try { handler(detail); } catch (err) { console.error('handler error for', event, err); }
   }
 }
+
+// Auto-sync cached profile into localStorage whenever me is updated
+on('me:updated', (user) => {
+  if (user) saveCachedMe(user);
+});

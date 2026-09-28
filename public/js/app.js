@@ -9,7 +9,7 @@ import { initChats, refreshConversations, showChatsLoading, showChatsError, rend
 import { initChat, openConversation, closeConversation } from './chat.js';
 import { initStatus, loadStatuses } from './status.js';
 import { initDiscover, loadDiscover } from './discover.js';
-import { initPosts, loadPosts } from './posts.js';
+import { initPosts, loadPosts, isPostDetailOpen, closePostDetail } from './posts.js';
 import { initProfile, renderProfile } from './profile.js';
 import { initSettings, loadProfileSettings } from './settings.js';
 import { initAdmin, openAdminPanel } from './admin.js';
@@ -116,6 +116,10 @@ function wireChrome() {
     });
   });
   window.addEventListener('popstate', (event) => {
+    if (event.state?.app && isPostDetailOpen()) {
+      closePostDetail();
+      return;
+    }
     if (event.state?.app && state.activeConv) {
       closeConversation();
       return;

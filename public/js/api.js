@@ -156,10 +156,13 @@ export const api = {
   deleteStatus: (id) => request(`/status/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // posts
-  posts: () => request('/posts'),
+  posts: (feed) => request(`/posts${feed ? `?feed=${encodeURIComponent(feed)}` : ''}`),
+  postDetails: (id) => request(`/posts/${encodeURIComponent(id)}`),
   createPost: (payload) => request('/posts', { method: 'POST', body: payload }),
   deletePost: (id) => request(`/posts/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   likePost: (id) => request(`/posts/${encodeURIComponent(id)}/like`, { method: 'POST', body: {} }),
+  repostPost: (id) => request(`/posts/${encodeURIComponent(id)}/repost`, { method: 'POST', body: {} }),
+  bookmarkPost: (id) => request(`/posts/${encodeURIComponent(id)}/bookmark`, { method: 'POST', body: {} }),
   comments: (id) => request(`/posts/${encodeURIComponent(id)}/comments`),
   addComment: (id, content) => request(`/posts/${encodeURIComponent(id)}/comments`, { method: 'POST', body: { content } }),
 
@@ -173,6 +176,8 @@ export const api = {
   // profile
   profileSettings: () => request('/profile/settings'),
   updateProfileSettings: (patch) => request('/profile/settings', { method: 'PUT', body: patch }),
+  userProfile: (id) => request(`/profile/user/${encodeURIComponent(id)}`),
+  followUser: (userId) => request(`/profile/follow/${encodeURIComponent(userId)}`, { method: 'POST', body: {} }),
   changePassword: (currentPassword, newPassword) => request('/profile/change-password', { method: 'POST', body: { currentPassword, newPassword } }),
   deleteAccount: (password) => request('/profile/delete-account', { method: 'POST', body: { password } }),
   toggleStar: (messageId) => request(`/profile/starred/${encodeURIComponent(messageId)}`, { method: 'POST' }),

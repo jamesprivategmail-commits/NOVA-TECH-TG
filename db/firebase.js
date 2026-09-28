@@ -1264,17 +1264,48 @@ async function addStickerToPack(userId, { packId, packName, sticker }) {
 }
 
 // ---------------- POSTS & COMMENTS ----------------
-async function createPost({ userId, caption, imageUrl, imageMime }) {
+async function createPost({ userId, caption, imageUrl, imageMime, mediaItems = [], quotePostId = null }) {
   const id = 'p_' + Date.now() + '_' + crypto.randomBytes(3).toString('hex');
   const now = new Date().toISOString();
+
+  let quotePost = null;
+  if (quotePostId) {
+    const orig = cacheStore.getPostById(quotePostId);
+    if (orig) {
+      const origAuthor = await getUserById(orig.user_id);
+      quotePost = {
+        id: orig.id,
+        user_id: orig.user_id,
+        caption: orig.caption || '',
+        image_url: orig.image_url || orig.image_data || null,
+        media_items: orig.media_items || [],
+        display_name: origAuthor?.display_name || 'User',
+        nova_id: origAuthor?.nova_id || '',
+        avatar_url: origAuthor?.avatar_url || null,
+        avatar_color: origAuthor?.avatar_color || '#0A84FF',
+        is_verified: Boolean(origAuthor?.is_verified),
+        created_at: orig.created_at
+      };
+    }
+  }
+
+  const normalizedMedia = Array.isArray(mediaItems) && mediaItems.length > 0
+    ? mediaItems
+    : (imageUrl ? [{ url: imageUrl, mime: imageMime || 'image/jpeg', type: String(imageMime).startsWith('video/') ? 'video' : 'image' }] : []);
+
   const post = {
     id,
     user_id: String(userId),
     caption: caption ? caption.trim().slice(0, 500) : '',
-    image_url: imageUrl || null,
-    image_data: imageUrl || null,
-    image_mime: imageMime || null,
+    image_url: normalizedMedia[0]?.url || imageUrl || null,
+    image_data: normalizedMedia[0]?.url || imageUrl || null,
+    image_mime: normalizedMedia[0]?.mime || imageMime || null,
+    media_items: normalizedMedia,
+    quote_post_id: quotePostId || null,
+    quote_post: quotePost,
     likes: [],
+    reposts: [],
+    bookmarks: [],
     comment_count: 0,
     created_at: now
   };
@@ -1288,10 +1319,25 @@ async function createPost({ userId, caption, imageUrl, imageMime }) {
     });
   }
 
-  return post;
+  const author = await getUserById(userId);
+  return {
+    ...post,
+    nova_id: author?.nova_id || '',
+    display_name: author?.display_name || 'User',
+    avatar_color: author?.avatar_color || '#0A84FF',
+    avatar_url: author?.avatar_url || null,
+    is_verified: Boolean(author?.is_verified),
+    like_count: 0,
+    liked_by_me: false,
+    repost_count: 0,
+    reposted_by_me: false,
+    bookmark_count: 0,
+    bookmarked_by_me: false,
+    comment_count: 0
+  };
 }
 
-async function getPosts(currentUserId, limitCount = 50) {
+async function getPosts(currentUserId, limitCount = 50, feedType = 'for-you') {
   await ensureInit();
   if (firestoreDb) {
     try {
@@ -1311,30 +1357,143 @@ async function getPosts(currentUserId, limitCount = 50) {
     }
   }
 
+  let followingSet = null;
+  if (feedType === 'following' && currentUserId) {
+    const me = await getUserById(currentUserId);
+    const list = Array.isArray(me?.following) ? me.following.map(String) : [];
+    followingSet = new Set(list);
+    // User always sees their own posts in following feed as well
+    followingSet.add(String(currentUserId));
+  }
+
   const all = cacheStore.getPosts();
   const posts = [];
   for (const p of all) {
+    if (followingSet && !followingSet.has(String(p.user_id))) {
+      continue;
+    }
     const author = await getUserById(p.user_id);
+    let quotePost = p.quote_post || null;
+    if (p.quote_post_id && !quotePost) {
+      const qp = cacheStore.getPostById(p.quote_post_id);
+      if (qp) {
+        const qAuthor = await getUserById(qp.user_id);
+        quotePost = {
+          id: qp.id,
+          user_id: qp.user_id,
+          caption: qp.caption || '',
+          image_url: qp.image_url || qp.image_data || null,
+          media_items: qp.media_items || [],
+          display_name: qAuthor?.display_name || 'User',
+          nova_id: qAuthor?.nova_id || '',
+          avatar_url: qAuthor?.avatar_url || null,
+          avatar_color: qAuthor?.avatar_color || '#0A84FF',
+          is_verified: Boolean(qAuthor?.is_verified),
+          created_at: qp.created_at
+        };
+      }
+    }
+
+    const rawImage = p.image_url || p.image_data;
+    const mediaItems = Array.isArray(p.media_items) && p.media_items.length > 0
+      ? p.media_items
+      : (rawImage ? [{ url: rawImage, mime: p.image_mime || 'image/jpeg', type: String(p.image_mime).startsWith('video/') ? 'video' : 'image' }] : []);
+
     posts.push({
       id: p.id,
       caption: p.caption,
-      image_url: p.image_url || p.image_data,
-      image_data: p.image_data || p.image_url,
+      image_url: rawImage,
+      image_data: rawImage,
       image_mime: p.image_mime,
+      media_items: mediaItems,
       created_at: p.created_at,
       user_id: p.user_id,
       nova_id: author?.nova_id || '',
       display_name: author?.display_name || 'User',
       avatar_color: author?.avatar_color || '#0A84FF',
       avatar_url: author?.avatar_url || null,
-      is_verified: author?.is_verified || false,
+      is_verified: Boolean(author?.is_verified),
       like_count: (p.likes || []).length,
       liked_by_me: currentUserId ? (p.likes || []).includes(String(currentUserId)) : false,
+      repost_count: (p.reposts || []).length,
+      reposted_by_me: currentUserId ? (p.reposts || []).includes(String(currentUserId)) : false,
+      bookmark_count: (p.bookmarks || []).length,
+      bookmarked_by_me: currentUserId ? (p.bookmarks || []).includes(String(currentUserId)) : false,
+      quote_post: quotePost,
+      quote_post_id: p.quote_post_id || null,
       comment_count: p.comment_count || 0
     });
   }
   posts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return posts.slice(0, limitCount);
+}
+
+async function getPostDetails(postId, currentUserId) {
+  await ensureInit();
+  let p = cacheStore.getPostById(postId);
+  if (!p && firestoreDb) {
+    try {
+      const snap = await getDoc(doc(firestoreDb, 'posts', String(postId)));
+      if (snap.exists()) {
+        p = snap.data();
+        cacheStore.addPost(p);
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `posts/${postId}`);
+    }
+  }
+  if (!p) return null;
+  const author = await getUserById(p.user_id);
+  let quotePost = p.quote_post || null;
+  if (p.quote_post_id && !quotePost) {
+    const qp = cacheStore.getPostById(p.quote_post_id);
+    if (qp) {
+      const qAuthor = await getUserById(qp.user_id);
+      quotePost = {
+        id: qp.id,
+        user_id: qp.user_id,
+        caption: qp.caption || '',
+        image_url: qp.image_url || qp.image_data || null,
+        media_items: qp.media_items || [],
+        display_name: qAuthor?.display_name || 'User',
+        nova_id: qAuthor?.nova_id || '',
+        avatar_url: qAuthor?.avatar_url || null,
+        avatar_color: qAuthor?.avatar_color || '#0A84FF',
+        is_verified: Boolean(qAuthor?.is_verified),
+        created_at: qp.created_at
+      };
+    }
+  }
+
+  const rawImage = p.image_url || p.image_data;
+  const mediaItems = Array.isArray(p.media_items) && p.media_items.length > 0
+    ? p.media_items
+    : (rawImage ? [{ url: rawImage, mime: p.image_mime || 'image/jpeg', type: String(p.image_mime).startsWith('video/') ? 'video' : 'image' }] : []);
+
+  return {
+    id: p.id,
+    caption: p.caption,
+    image_url: rawImage,
+    image_data: rawImage,
+    image_mime: p.image_mime,
+    media_items: mediaItems,
+    created_at: p.created_at,
+    user_id: p.user_id,
+    nova_id: author?.nova_id || '',
+    display_name: author?.display_name || 'User',
+    avatar_color: author?.avatar_color || '#0A84FF',
+    avatar_url: author?.avatar_url || null,
+    is_verified: Boolean(author?.is_verified),
+    like_count: (p.likes || []).length,
+    liked_by_me: currentUserId ? (p.likes || []).includes(String(currentUserId)) : false,
+    repost_count: (p.reposts || []).length,
+    reposted_by_me: currentUserId ? (p.reposts || []).includes(String(currentUserId)) : false,
+    bookmark_count: (p.bookmarks || []).length,
+    bookmarked_by_me: currentUserId ? (p.bookmarks || []).includes(String(currentUserId)) : false,
+    quote_post: quotePost,
+    quote_post_id: p.quote_post_id || null,
+    comment_count: p.comment_count || 0
+  };
 }
 
 async function deletePost(postId, userId, allowAdmin = false) {
@@ -1353,7 +1512,7 @@ async function deletePost(postId, userId, allowAdmin = false) {
 
 async function togglePostLike(postId, userId) {
   const p = cacheStore.getPostById(postId);
-  if (!p) return false;
+  if (!p) return null;
   const likes = p.likes || [];
   const uid = String(userId);
   const liked = likes.includes(uid);
@@ -1370,7 +1529,69 @@ async function togglePostLike(postId, userId) {
       handleFirestoreError(err, OperationType.UPDATE, `posts/${postId}`);
     });
   }
-  return !liked;
+  return { liked: !liked, likeCount: nextLikes.length };
+}
+
+async function togglePostRepost(postId, userId) {
+  const p = cacheStore.getPostById(postId);
+  if (!p) return null;
+  const reposts = p.reposts || [];
+  const uid = String(userId);
+  const reposted = reposts.includes(uid);
+  let nextReposts = [];
+  if (reposted) {
+    nextReposts = reposts.filter(id => id !== uid);
+  } else {
+    nextReposts = [...reposts, uid];
+  }
+  cacheStore.updatePost(postId, { reposts: nextReposts });
+  await ensureInit();
+  if (firestoreDb) {
+    updateDoc(doc(firestoreDb, 'posts', String(postId)), { reposts: nextReposts }).catch(err => {
+      handleFirestoreError(err, OperationType.UPDATE, `posts/${postId}`);
+    });
+  }
+  return { reposted: !reposted, repostCount: nextReposts.length };
+}
+
+async function togglePostBookmark(postId, userId) {
+  const p = cacheStore.getPostById(postId);
+  if (!p) return null;
+  const bookmarks = p.bookmarks || [];
+  const uid = String(userId);
+  const bookmarked = bookmarks.includes(uid);
+  let nextBookmarks = [];
+  if (bookmarked) {
+    nextBookmarks = bookmarks.filter(id => id !== uid);
+  } else {
+    nextBookmarks = [...bookmarks, uid];
+  }
+  cacheStore.updatePost(postId, { bookmarks: nextBookmarks });
+  await ensureInit();
+  if (firestoreDb) {
+    updateDoc(doc(firestoreDb, 'posts', String(postId)), { bookmarks: nextBookmarks }).catch(err => {
+      handleFirestoreError(err, OperationType.UPDATE, `posts/${postId}`);
+    });
+  }
+  return { bookmarked: !bookmarked, bookmarkCount: nextBookmarks.length };
+}
+
+async function toggleFollowUser(currentUserId, targetUserId) {
+  const uid = String(currentUserId);
+  const tid = String(targetUserId);
+  if (uid === tid) return { following: false, error: 'Cannot follow yourself' };
+  const user = await getUserById(uid);
+  if (!user) return { following: false };
+  const currentList = Array.isArray(user.following) ? user.following.map(String) : [];
+  const isFollowing = currentList.includes(tid);
+  let nextList;
+  if (isFollowing) {
+    nextList = currentList.filter(id => id !== tid);
+  } else {
+    nextList = [...currentList, tid];
+  }
+  await updateUser(uid, { following: nextList });
+  return { following: !isFollowing, followingCount: nextList.length };
 }
 
 async function addPostComment(postId, { userId, content }) {
@@ -1762,8 +1983,12 @@ module.exports = {
   // Posts & Comments
   createPost,
   getPosts,
+  getPostDetails,
   deletePost,
   togglePostLike,
+  togglePostRepost,
+  togglePostBookmark,
+  toggleFollowUser,
   addPostComment,
   getPostComments,
   // Notifications

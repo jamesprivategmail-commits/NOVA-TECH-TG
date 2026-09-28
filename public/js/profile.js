@@ -186,3 +186,110 @@ export function openEditProfileSheet() {
     }
   });
 }
+
+export async function openUserProfileSheet(userOrId) {
+  const userId = typeof userOrId === 'string' ? userOrId : userOrId?.id;
+  if (!userId) return;
+
+  if (String(userId) === String(state.me?.id)) {
+    closeSheet();
+    emit('tab:show', 'profile');
+    return;
+  }
+
+  let user = typeof userOrId === 'object' && userOrId !== null ? { ...userOrId } : null;
+  openSheet({
+    title: 'User profile',
+    body: `<div class="sheet-pad center stack" id="user-profile-sheet-body">
+      <div class="skeleton" style="width:80px;height:80px;border-radius:50%;margin:0 auto"></div>
+      <div class="skeleton" style="width:160px;height:20px;margin:8px auto"></div>
+    </div>`,
+    async onMount(sheet) {
+      const container = sheet.querySelector('#user-profile-sheet-body');
+      try {
+        const res = await api.userProfile(userId);
+        user = res.user;
+      } catch (e) {
+        // Fallback to passed user object if available
+        if (!user) {
+          container.innerHTML = `<div class="muted">Could not load user details</div>`;
+          return;
+        }
+      }
+
+      const isFollowing = Boolean(user.isFollowing);
+      const acctType = user.accountType || 'personal';
+      const typeBadge = acctType === 'business' ? '<span class="chip" style="background:#0A84FF;color:#fff;font-size:11px">Business 💼</span>'
+        : acctType === 'creator' ? '<span class="chip" style="background:#BF5AF2;color:#fff;font-size:11px">Creator ✨</span>'
+        : '';
+
+      container.innerHTML = `
+        <div class="center" style="margin-bottom:6px">
+          ${avatar({ displayName: user.displayName, avatarUrl: user.avatarUrl, avatarColor: user.avatarColor }, { size: 'lg' })}
+        </div>
+        <div style="font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">
+          ${escapeHtml(user.displayName || 'DARK CHAT User')} ${verifyBadge(user.isVerified)} ${typeBadge}
+        </div>
+        <button type="button" class="profile-id-badge" id="sheet-user-id" title="Tap to copy">
+          <span class="profile-id-label">DARK CHAT ID</span>
+          <span class="profile-id-value">${escapeHtml(user.novaId || '')}</span>
+        </button>
+        ${user.bio ? `<div class="muted" style="font-size:13.5px;max-width:320px;margin:0 auto">${escapeHtml(user.bio)}</div>` : ''}
+        <div class="row" style="justify-content:center;gap:8px;margin-top:10px;width:100%">
+          <button class="btn ${isFollowing ? 'btn-ghost' : 'btn-primary'} grow" id="sheet-follow-btn">
+            ${isFollowing ? 'Following' : `${icon('user-plus')} Follow`}
+          </button>
+          <button class="btn btn-primary grow" id="sheet-msg-btn">
+            ${icon('message')} Message
+          </button>
+        </div>
+      `;
+
+      sheet.querySelector('#sheet-user-id')?.addEventListener('click', () => {
+        if (!user.novaId) return;
+        try {
+          navigator.clipboard.writeText(user.novaId);
+          toast('Copied DARK CHAT ID to clipboard', 'success');
+        } catch {
+          toast(user.novaId);
+        }
+      });
+
+      sheet.querySelector('#sheet-follow-btn')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try {
+          const res = await api.followUser(user.id);
+          user.isFollowing = res.following;
+          btn.className = `btn ${res.following ? 'btn-ghost' : 'btn-primary'} grow`;
+          btn.innerHTML = res.following ? 'Following' : `${icon('user-plus')} Follow`;
+          toast(res.following ? `Following ${user.displayName || 'user'}` : `Unfollowed ${user.displayName || 'user'}`);
+          emit('following:changed', { userId: user.id, isFollowing: res.following });
+        } catch (err) {
+          toast(err.message || 'Could not update follow');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      sheet.querySelector('#sheet-msg-btn')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try {
+          const dmRes = await api.createDm(user.novaId);
+          const convRes = await api.conversations();
+          state.conversations = convRes.conversations || [];
+          emit('conversations:changed');
+          closeSheet();
+          const conv = state.conversations.find((c) => c.id === dmRes.conversationId);
+          if (conv) emit('chat:open', conv);
+          else toast('Chat opened');
+        } catch (err) {
+          toast(err.message || 'Could not start chat');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+  });
+}

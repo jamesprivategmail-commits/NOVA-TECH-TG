@@ -87,6 +87,8 @@
     <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4v-5Z"/><path d="M16 9a4 4 0 0 1 0 6"/></symbol>
     <symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4v-5Z"/><path d="m16 10 5 5M21 10l-5 5"/></symbol>
     <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-quote" viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2 0 4-2 6-2 6h1Zm13 0c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2 0 4-2 6-2 6h1Z"/></symbol>
     <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="m3 3 18 18"/><path d="M8.5 13.5a5 5 0 0 1 6-.8"/><path d="M5 10a10 10 0 0 1 4-2.3M2 7a15 15 0 0 1 4.5-2.5M22 7a15 15 0 0 0-7.5-3.4M19 10a10 10 0 0 0-3.5-2"/><path d="M12 20h.01"/></symbol>
   </defs>
 </svg>
@@ -221,12 +223,41 @@
     </div>
   </section>
 
-  <!-- POSTS / UPDATES -->
-  <section class="screen screen-list" id="screen-posts" data-screen="posts" aria-label="Updates" hidden>
-    <header class="header">
-      <div class="header-left"><div class="header-title">Updates</div></div>
+  <!-- POSTS / UPDATES (DARKCHAT HOME) -->
+  <section class="screen screen-list" id="screen-posts" data-screen="posts" aria-label="DARKCHAT HOME" hidden>
+    <header class="header home-header">
+      <div class="header-left">
+        <div class="header-title">DARKCHAT HOME</div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="home-refresh-btn" aria-label="Refresh feed" title="Refresh">
+          <svg class="icon"><use href="#i-refresh"></use></svg>
+        </button>
+      </div>
     </header>
-    <div class="content scroll" id="posts-list" aria-live="polite"></div>
+    <div class="content scroll home-feed-scroll" id="posts-list" aria-live="polite"></div>
+  </section>
+
+  <!-- POST DETAIL CONVERSATION VIEW -->
+  <section class="screen chat-screen hidden" id="screen-post-detail" data-screen="post-detail" aria-label="Post Conversation">
+    <header class="header post-detail-header">
+      <div class="header-left">
+        <button type="button" class="icon-btn back" id="post-detail-back" aria-label="Back to Updates" title="Back to Updates">
+          <svg class="icon"><use href="#i-arrow-left"></use></svg>
+        </button>
+        <div class="header-title">Post</div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="icon-btn" id="post-detail-share-btn" aria-label="Share post" title="Share post">
+          <svg class="icon"><use href="#i-share"></use></svg>
+        </button>
+      </div>
+    </header>
+    <div class="content scroll post-detail-content" id="post-detail-content" aria-live="polite"></div>
+    <form class="post-detail-reply-bar" id="post-detail-reply-form" autocomplete="off">
+      <input type="text" class="input grow" id="post-detail-reply-input" placeholder="Post your reply..." maxlength="500" autocomplete="off">
+      <button type="submit" class="btn btn-primary btn-sm" id="post-detail-reply-submit">Reply</button>
+    </form>
   </section>
 
   <!-- DISCOVER -->

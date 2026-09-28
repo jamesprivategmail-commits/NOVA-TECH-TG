@@ -1,10 +1,58 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
-const { getUserByNovaId, getUserById, getUserStickerPacks, addStickerToPack, uploadToStorage, getConversationsForUser, getPosts, getActiveStatuses } = require('../db/firebase');
+const {
+  getUserByNovaId,
+  getUserById,
+  getUserStickerPacks,
+  addStickerToPack,
+  uploadToStorage,
+  getConversationsForUser,
+  getPosts,
+  getActiveStatuses,
+  toggleFollowUser
+} = require('../db/firebase');
 const { updateProfileSettings, getProfileSettings, blockUser, unblockUser, changePassword, deleteUserAccount, toggleStarredMessage } = require('../db/profile');
 
 const router = express.Router();
 router.use(requireAuth);
+
+// GET /api/profile/user/:id - public profile view for any user in DARK CHAT
+router.get('/user/:id', async (req, res) => {
+  try {
+    const user = await getUserById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const me = await getUserById(req.user.id);
+    const isFollowing = (me?.following || []).map(String).includes(String(user.id));
+    res.json({
+      user: {
+        id: user.id,
+        novaId: user.nova_id,
+        displayName: user.display_name || 'DARK CHAT User',
+        bio: user.bio || '',
+        avatarUrl: user.avatar_url || null,
+        avatarColor: user.avatar_color || '#0A84FF',
+        isVerified: Boolean(user.is_verified),
+        lastSeen: user.last_seen || null,
+        accountType: user.privacy_settings?.accountType || 'personal',
+        isFollowing
+      }
+    });
+  } catch (err) {
+    console.error('Get user profile error:', err);
+    res.status(500).json({ error: 'Failed to load user profile' });
+  }
+});
+
+// POST /api/profile/follow/:userId - toggle follow status
+router.post('/follow/:userId', async (req, res) => {
+  try {
+    const result = await toggleFollowUser(req.user.id, req.params.userId);
+    res.json(result);
+  } catch (err) {
+    console.error('Follow user error:', err);
+    res.status(500).json({ error: 'Failed to update follow' });
+  }
+});
 
 router.get('/settings', async (req, res) => {
   try {

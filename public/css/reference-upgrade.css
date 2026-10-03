@@ -538,57 +538,65 @@ html, body {
 }
 
 /* ------------------------------------------------------------
-   BOTTOM BUTTONS (THE BOTTOM NAV) - Leave it as it is!
-   Standard full-width messenger bar pinned to bottom edge
+   BOTTOM BUTTONS (THE BOTTOM NAV) - Original Floating Capsule
+   Restored to floating pill capsule with active bubble & smooth movement
    ------------------------------------------------------------ */
 
 .bottom-nav {
   position: fixed !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  max-width: none !important;
-  transform: none !important;
-  height: calc(56px + var(--safe-b)) !important;
-  min-height: calc(56px + var(--safe-b)) !important;
-  padding: 4px 0 calc(4px + var(--safe-b)) !important;
-  background: rgba(10, 10, 12, 0.98) !important;
-  backdrop-filter: blur(14px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 0 !important;
+  left: 14px !important;
+  right: 14px !important;
+  bottom: calc(10px + var(--safe-b, 0px)) !important;
+  margin: 0 auto !important;
+  max-width: 420px !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  padding: 5px 6px !important;
+  background: #08080a !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 999px !important;
   display: flex !important;
-  align-items: stretch !important;
+  align-items: center !important;
   justify-content: space-around !important;
-  box-shadow: none !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
   z-index: 50 !important;
 }
 
 .bottom-nav .nav {
   flex: 1 !important;
+  height: 52px !important;
+  min-height: 52px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 3px !important;
-  color: #71717a !important;
+  color: #7b8895 !important;
   background: transparent !important;
-  border-radius: 0 !important;
+  border-radius: 999px !important;
   border: 0 !important;
-  min-height: 44px !important;
-  padding: 2px 0 !important;
+  padding: 4px 6px !important;
   position: relative !important;
   cursor: pointer !important;
-  transition: color 0.15s ease !important;
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease, transform 0.15s ease !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-.bottom-nav .nav:hover {
-  background: transparent !important;
+.bottom-nav .nav:active {
+  transform: scale(0.95) !important;
+}
+
+.bottom-nav .nav:not(.active):hover {
+  color: #a0aec0 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }
 
 .bottom-nav .nav.active {
   color: #ffffff !important;
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 999px !important;
 }
 
 .bottom-nav .nav .icon {
@@ -597,9 +605,42 @@ html, body {
   color: inherit !important;
 }
 
+.bottom-nav .nav.active .icon {
+  color: #ffffff !important;
+}
+
 .bottom-nav .nav small {
-  font-size: 11px !important;
-  font-weight: 600 !important;
+  font-size: 11.5px !important;
+  font-weight: 550 !important;
+  color: inherit !important;
+  letter-spacing: -0.1px !important;
+  line-height: 1.1 !important;
+}
+
+.bottom-nav .nav.active small {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.bottom-nav .nav-dot {
+  position: absolute !important;
+  top: 6px !important;
+  right: calc(50% - 16px) !important;
+  min-width: 8px !important;
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #ff3b30 !important;
+  color: #ffffff !important;
+}
+
+.bottom-nav .nav-dot:not(:empty) {
+  min-width: 16px !important;
+  height: 16px !important;
+  padding: 0 4px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 16px !important;
+  right: calc(50% - 22px) !important;
 }
 
 /* ------------------------------------------------------------

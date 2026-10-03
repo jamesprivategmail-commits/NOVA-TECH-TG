@@ -32,8 +32,7 @@ export function initChats() {
     search: $('#chats-search'),
     filters: $('#chat-filters'),
     newBtn: $('#new-chat-btn'),
-    meAvatar: $('#me-avatar-btn'),
-    adminBtn: $('#admin-btn'),
+    updatesBtn: $('#header-updates-btn'),
     archiveBackBtn: $('#archive-back-btn')
   };
 
@@ -56,7 +55,7 @@ export function initChats() {
     renderChats();
   });
   els.newBtn?.addEventListener('click', openNewChatSheet);
-  els.meAvatar?.addEventListener('click', () => emit('tab:show', 'profile'));
+  els.updatesBtn?.addEventListener('click', () => emit('tab:show', 'posts'));
 
   on('conversations:changed', () => { renderChats(); updateFilterChips(); updateChatsNavDot(); });
   on('unread:changed', () => { updateFilterChips(); updateChatsNavDot(); });
@@ -233,10 +232,8 @@ export function syncArchiveUi() {
   if (title) title.textContent = isArchived ? 'Archived Chats' : 'DARK CHAT';
   const backBtn = document.getElementById('archive-back-btn');
   const menuBtn = document.getElementById('menu-btn');
-  const meAvatarBtn = document.getElementById('me-avatar-btn');
   if (backBtn) backBtn.classList.toggle('hidden', !isArchived);
   if (menuBtn) menuBtn.classList.toggle('hidden', isArchived);
-  if (meAvatarBtn) meAvatarBtn.classList.toggle('hidden', isArchived);
 }
 
 export function renderChats() {

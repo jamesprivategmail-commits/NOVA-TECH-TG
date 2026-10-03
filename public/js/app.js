@@ -131,10 +131,8 @@ function wireChrome() {
     closeDrawer(); showTab('chats');
     document.querySelector('#chat-filters [data-filter="archived"]')?.click();
   });
-  document.getElementById('header-search-btn')?.addEventListener('click', () => {
-    showTab('chats');
-    document.getElementById('chats-search')?.focus();
-  });
+  document.getElementById('header-updates-btn')?.addEventListener('click', () => showTab('posts'));
+  document.getElementById('posts-back-btn')?.addEventListener('click', () => showTab('chats'));
   const chatsScreen = document.getElementById('screen-chats');
   const archiveChip = document.querySelector('#chat-filters [data-filter="archived"]');
   const allChip = document.querySelector('#chat-filters [data-filter="all"]');

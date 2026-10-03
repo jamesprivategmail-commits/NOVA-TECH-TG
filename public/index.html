@@ -179,26 +179,16 @@
         <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false">
           <svg class="icon"><use href="#i-menu"></use></svg>
         </button>
-        <button class="avatar-btn" id="me-avatar-btn" aria-label="Your profile">
-          <span class="avatar avatar-sm" id="me-avatar"></span>
-        </button>
         <div>
           <div class="header-title">DARK CHAT</div>
-          <div class="header-sub" id="me-id-sub"></div>
         </div>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" id="header-search-btn" aria-label="Search chats" title="Search chats">
-          <svg class="icon"><use href="#i-search"></use></svg>
-        </button>
-        <button class="icon-btn" id="header-more-btn" aria-label="More options" title="More options">
-          <svg class="icon"><use href="#i-more-vertical"></use></svg>
-        </button>
-        <button class="icon-btn" id="admin-btn" aria-label="Admin panel" title="Admin" hidden>
-          <svg class="icon"><use href="#i-shield"></use></svg>
+        <button class="icon-btn" id="header-updates-btn" aria-label="Updates" title="Updates">
+          <svg class="icon"><use href="#i-updates"></use></svg>
         </button>
         <button class="icon-btn" id="new-chat-btn" aria-label="New chat" title="New chat">
-          <svg class="icon"><use href="#i-edit"></use></svg>
+          <svg class="icon"><use href="#i-plus"></use></svg>
         </button>
       </div>
     </header>
@@ -239,10 +229,13 @@
   </section>
 
   <!-- POSTS / UPDATES (DARKCHAT HOME) -->
-  <section class="screen screen-list" id="screen-posts" data-screen="posts" aria-label="DARKCHAT HOME" hidden>
+  <section class="screen screen-list" id="screen-posts" data-screen="posts" aria-label="Updates" hidden>
     <header class="header home-header">
       <div class="header-left">
-        <div class="header-title">DARKCHAT HOME</div>
+        <button type="button" class="icon-btn back" id="posts-back-btn" aria-label="Back to Chats" title="Back to Chats">
+          <svg class="icon"><use href="#i-arrow-left"></use></svg>
+        </button>
+        <div class="header-title">Updates</div>
       </div>
       <div class="header-actions">
         <button class="icon-btn" id="home-refresh-btn" aria-label="Refresh feed" title="Refresh">

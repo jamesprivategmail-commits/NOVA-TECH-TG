@@ -30,6 +30,7 @@ export function initPosts() {
   wireComposer();
   wireRefreshButton();
   wirePostDetail();
+  $('#posts-back-btn')?.addEventListener('click', () => emit('tab:show', 'chats'));
 
   on('me:updated', () => {
     updateComposerAvatar();

@@ -177,17 +177,17 @@ export function renderProfile() {
 
       <!-- 3 ACTION BUTTONS -->
       <div class="profile-actions">
-        <button type="button" class="btn profile-action-btn" id="profile-photo-action" title="Set photo">
-          <span class="profile-action-icon"><svg class="icon"><use href="#i-camera"></use></svg></span>
-          <span class="profile-action-text">Set Photo</span>
+        <button type="button" class="btn profile-action" id="profile-photo-action" title="Set photo">
+          <svg class="icon"><use href="#i-camera"></use></svg>
+          <span>Set Photo</span>
         </button>
-        <button type="button" class="btn profile-action-btn" id="profile-edit-action" title="Edit info">
-          <span class="profile-action-icon"><svg class="icon"><use href="#i-edit"></use></svg></span>
-          <span class="profile-action-text">Edit Info</span>
+        <button type="button" class="btn profile-action" id="profile-edit-action" title="Edit info">
+          <svg class="icon"><use href="#i-edit"></use></svg>
+          <span>Edit Info</span>
         </button>
-        <button type="button" class="btn profile-action-btn" id="profile-settings-action" title="Settings">
-          <span class="profile-action-icon"><svg class="icon"><use href="#i-settings"></use></svg></span>
-          <span class="profile-action-text">Settings</span>
+        <button type="button" class="btn profile-action" id="profile-settings-action" title="Settings">
+          <svg class="icon"><use href="#i-settings"></use></svg>
+          <span>Settings</span>
         </button>
       </div>
     </div>

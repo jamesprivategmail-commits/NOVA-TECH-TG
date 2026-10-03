@@ -136,7 +136,6 @@ function wireChrome() {
     document.getElementById('chats-search')?.focus();
   });
   const chatsScreen = document.getElementById('screen-chats');
-  const archiveBack = document.getElementById('archives-back');
   const archiveChip = document.querySelector('#chat-filters [data-filter="archived"]');
   const allChip = document.querySelector('#chat-filters [data-filter="all"]');
   const setArchiveMode = (active) => {
@@ -151,7 +150,6 @@ function wireChrome() {
   document.getElementById('chats-list')?.addEventListener('click', (event) => {
     if (event.target.closest('#archived-entry')) archiveChip?.click();
   });
-  archiveBack?.addEventListener('click', () => allChip?.click());
   document.getElementById('header-more-btn')?.addEventListener('click', () => menuBtn?.click());
   const syncDrawerProfile = () => {
     const me = state.me;

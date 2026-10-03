@@ -8,11 +8,12 @@ import { openSettingsSheet } from './settings.js';
 import { postHtml, wirePostCards } from './posts.js';
 
 export function initProfile() {
-  on('me:updated', () => renderProfile());
-  on('settings:changed', () => renderProfile());
+  on('me:updated', () => renderProfile(true));
+  on('settings:changed', () => renderProfile(true));
   on('tab:show', (tab) => {
     if (tab === 'profile') {
       renderProfile();
+      renderUserPosts();
       loadUserPosts();
     }
   });
@@ -141,10 +142,18 @@ function renderUserPosts() {
   wirePostCards(container);
 }
 
-export function renderProfile() {
+export function renderProfile(force = false) {
   const me = state.me;
   const content = $('#profile-content');
   if (!me || !content) return;
+
+  const meKey = `${me.id}_${me.displayName}_${me.avatarUrl || me.avatarData || ''}_${me.bio}_${me.isVerified}`;
+  if (!force && content._renderedMeKey === meKey) {
+    renderUserPosts();
+    return;
+  }
+  content._renderedMeKey = meKey;
+
   const cover = me.avatarUrl || me.avatarData || '';
 
   content.innerHTML = `

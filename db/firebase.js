@@ -312,24 +312,55 @@ async function createUser(userData) {
   return user;
 }
 
+const negativeUserCache = new Set();
+
 async function getUserById(id) {
   if (!id) return null;
-  const cached = cacheStore.getUserById(id);
+  const strId = String(id);
+  const cached = cacheStore.getUserById(strId);
   if (cached) return cached;
+  if (negativeUserCache.has(strId)) return null;
 
   await ensureInit();
   if (!firestoreDb) return null;
   try {
-    const snap = await getDoc(doc(firestoreDb, 'users', String(id)));
+    const snap = await getDoc(doc(firestoreDb, 'users', strId));
     if (snap.exists()) {
       const u = snap.data();
       cacheStore.setUser(u);
       return u;
+    } else {
+      negativeUserCache.add(strId);
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.GET, `users/${id}`);
   }
   return null;
+}
+
+async function getUsersByIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return new Map();
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean).map(String)));
+  const map = new Map();
+  const missing = [];
+
+  for (const id of uniqueIds) {
+    const cached = cacheStore.getUserById(id);
+    if (cached) {
+      map.set(id, cached);
+    } else if (!negativeUserCache.has(id)) {
+      missing.push(id);
+    }
+  }
+
+  if (missing.length > 0) {
+    await Promise.all(missing.map(async (id) => {
+      const u = await getUserById(id);
+      if (u) map.set(id, u);
+    }));
+  }
+
+  return map;
 }
 
 async function getUserByNovaId(novaId) {
@@ -630,6 +661,15 @@ async function getConversationsForUser(userId) {
 
   const currentUser = await getUserById(userId);
 
+  const otherDmIds = [];
+  for (const conv of list) {
+    if (conv.type === 'dm') {
+      const otherId = (conv.member_ids || []).find(mid => String(mid) !== String(userId));
+      if (otherId) otherDmIds.push(otherId);
+    }
+  }
+  const dmUsersMap = await getUsersByIds(otherDmIds);
+
   for (const conv of list) {
     conv.role = conv.members?.[userId]?.role || (conv.owner_id === userId ? 'owner' : 'member');
     const memberMeta = conv.members?.[userId] || {};
@@ -652,7 +692,7 @@ async function getConversationsForUser(userId) {
     if (conv.type === 'dm') {
       const otherId = (conv.member_ids || []).find(mid => String(mid) !== String(userId));
       if (otherId) {
-        const other = await getUserById(otherId);
+        const other = dmUsersMap.get(String(otherId));
         if (other) {
           conv.name = other.display_name;
           conv.avatar_color = other.avatar_color;
@@ -767,9 +807,10 @@ async function getConversationMembers(convId) {
   const conv = await getConversationById(convId);
   if (!conv) return [];
   const memberIds = conv.member_ids || [];
+  const usersMap = await getUsersByIds(memberIds);
   const result = [];
   for (const uid of memberIds) {
-    const user = await getUserById(uid);
+    const user = usersMap.get(String(uid));
     if (user) {
       result.push({
         id: user.id,
@@ -915,8 +956,11 @@ async function getMessages(convId, { limitCount = 50, beforeTime = null, userId 
   msgs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   msgs = msgs.slice(0, limitCount);
 
+  const senderIds = msgs.map(m => m.sender_id).filter(Boolean);
+  const sendersMap = await getUsersByIds(senderIds);
+
   for (const m of msgs) {
-    const sender = await getUserById(m.sender_id);
+    const sender = sendersMap.get(String(m.sender_id));
     m.display_name = sender?.display_name || 'Unknown';
     m.avatar_color = sender?.avatar_color || '#0A84FF';
     m.avatar_url = sender?.avatar_url || null;
@@ -1099,6 +1143,10 @@ async function getActiveStatuses(viewerUserId) {
 
   const all = cacheStore.getStatuses();
   const active = [];
+
+  const statusUserIds = all.map(s => s.user_id).filter(Boolean);
+  const statusAuthorsMap = await getUsersByIds(statusUserIds);
+
   for (const s of all) {
     const createdMs = new Date(s.created_at || 0).getTime();
     const expiresMs = s.expires_at ? new Date(s.expires_at).getTime() : (createdMs + 24 * 60 * 60 * 1000);
@@ -1113,7 +1161,7 @@ async function getActiveStatuses(viewerUserId) {
       continue;
     }
 
-    const author = await getUserById(s.user_id);
+    const author = statusAuthorsMap.get(String(s.user_id));
     active.push({
       id: s.id,
       content: s.content,
@@ -1368,16 +1416,30 @@ async function getPosts(currentUserId, limitCount = 50, feedType = 'for-you') {
 
   const all = cacheStore.getPosts();
   const posts = [];
+
+  const neededUserIds = [];
   for (const p of all) {
     if (followingSet && !followingSet.has(String(p.user_id))) {
       continue;
     }
-    const author = await getUserById(p.user_id);
+    if (p.user_id) neededUserIds.push(p.user_id);
+    if (p.quote_post_id && !p.quote_post) {
+      const qp = cacheStore.getPostById(p.quote_post_id);
+      if (qp && qp.user_id) neededUserIds.push(qp.user_id);
+    }
+  }
+  const postAuthorsMap = await getUsersByIds(neededUserIds);
+
+  for (const p of all) {
+    if (followingSet && !followingSet.has(String(p.user_id))) {
+      continue;
+    }
+    const author = postAuthorsMap.get(String(p.user_id));
     let quotePost = p.quote_post || null;
     if (p.quote_post_id && !quotePost) {
       const qp = cacheStore.getPostById(p.quote_post_id);
       if (qp) {
-        const qAuthor = await getUserById(qp.user_id);
+        const qAuthor = postAuthorsMap.get(String(qp.user_id));
         quotePost = {
           id: qp.id,
           user_id: qp.user_id,
@@ -1656,10 +1718,13 @@ async function getPostComments(postId) {
   const comments = cacheStore.getComments(postId);
   const result = [];
   const seenIds = new Set();
+  const commentUserIds = comments.map(c => c.user_id).filter(Boolean);
+  const commentAuthorsMap = await getUsersByIds(commentUserIds);
+
   for (const c of comments) {
     if (seenIds.has(c.id)) continue;
     seenIds.add(c.id);
-    const author = await getUserById(c.user_id);
+    const author = commentAuthorsMap.get(String(c.user_id));
     result.push({
       id: c.id,
       content: c.content,
@@ -1693,10 +1758,13 @@ async function createNotification({ userId, actorId, type, payload = {} }) {
 async function getNotifications(userId, limitCount = 50) {
   const list = cacheStore.getNotifications(userId);
   const result = [];
+  const actorIds = list.map(n => n.actor_id).filter(Boolean);
+  const actorsMap = await getUsersByIds(actorIds);
+
   for (const n of list) {
     let actorName = 'Someone';
     if (n.actor_id) {
-      const actor = await getUserById(n.actor_id);
+      const actor = actorsMap.get(String(n.actor_id));
       if (actor) actorName = actor.display_name;
     }
     result.push({

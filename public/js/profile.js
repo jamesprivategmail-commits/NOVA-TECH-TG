@@ -4,7 +4,7 @@ import { state, emit, on, saveCachedMe } from './state.js';
 import {
   $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy, verifyBadge, fileToDataUrl, renderQrSvg
 } from './ui.js';
-import { settingsGroupHtml, wireSettingsGroup } from './settings.js';
+import { openSettingsSheet } from './settings.js';
 
 export function initProfile() {
   $('#profile-edit-btn')?.addEventListener('click', openEditProfileSheet);
@@ -20,45 +20,45 @@ export function renderProfile() {
   const me = state.me;
   const content = $('#profile-content');
   if (!me || !content) return;
-  const myConvs = state.conversations.length;
-  const myStatuses = state.statuses.filter((s) => String(s.user_id) === String(me.id)).length;
-  const myPosts = state.posts.filter((p) => String(p.user_id) === String(me.id)).length;
-
-  const acctType = state.settings.privacySettings?.accountType || 'personal';
-  const typeBadge = acctType === 'business' ? '<span class="chip" style="background:#0A84FF;color:#fff;font-size:11px">Business 💼</span>'
-    : acctType === 'creator' ? '<span class="chip" style="background:#BF5AF2;color:#fff;font-size:11px">Creator ✨</span>'
-    : '<span class="chip" style="background:var(--card-bg);font-size:11px">Personal</span>';
+  const myPosts = state.posts.filter((p) => String(p.user_id) === String(me.id));
+  const mobile = me.phone || me.phoneNumber || me.mobile || 'Not set';
+  const username = me.username || me.handle || me.novaId || 'Not set';
+  const cover = me.avatarUrl || me.avatarData || '';
 
   content.innerHTML = `
-    <div class="profile-cover"></div>
+    <div class="profile-cover" style="--profile-cover: url('${escapeHtml(cover)}')">
+      <button class="profile-back" id="profile-back" aria-label="Back"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+      <button class="profile-more" aria-label="More options"><svg class="icon"><use href="#i-more-vertical"></use></svg></button>
+    </div>
     <div class="profile-body">
       <div class="profile-photo">${avatar(me, { size: 'lg' })}</div>
-      <div class="profile-name">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)} ${typeBadge}</div>
-      <button type="button" class="profile-id-badge" id="profile-id-badge" title="Tap to copy">
-        <span class="profile-id-label">DARK CHAT ID</span>
-        <span class="profile-id-value">${escapeHtml(me.novaId || '')}</span>
-      </button>
-      ${me.bio ? `<div class="profile-bio">${escapeHtml(me.bio)}</div>` : '<div class="profile-bio muted">No about yet.</div>'}
-      <div class="profile-stats">
-        <div class="stat"><b>${myConvs}</b><span>Chats</span></div>
-        <div class="stat"><b>${myPosts}</b><span>Updates</span></div>
-        <div class="stat"><b>${myStatuses}</b><span>Statuses</span></div>
-      </div>
-      <div class="profile-actions" style="flex-wrap:wrap;gap:8px">
-        <button class="btn btn-primary profile-action" id="profile-edit-action">${icon('edit')} Edit profile</button>
-        <button class="btn btn-ghost profile-action" id="profile-qr">${icon('link')} My QR Code</button>
-        <button class="btn btn-ghost profile-action" id="profile-share">${icon('share')} Share ID</button>
-        <button class="btn btn-ghost profile-action" id="profile-type">${icon('user')} Account type</button>
+      <div class="profile-name">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)}</div>
+      <div class="profile-online">online</div>
+      <div class="profile-actions">
+        <button class="btn profile-action" id="profile-photo-action">${icon('camera')}<span>Set Photo</span></button>
+        <button class="btn profile-action" id="profile-edit-action">${icon('edit')}<span>Edit Info</span></button>
+        <button class="btn profile-action" id="profile-settings-action">${icon('settings')}<span>Settings</span></button>
       </div>
     </div>
-    ${settingsGroupHtml()}
+    <div class="profile-info-card">
+      <div class="profile-info-title"><svg class="icon"><use href="#i-chevron-down"></use></svg><span>Info</span></div>
+      <div class="profile-info-item"><b>${escapeHtml(me.novaId || 'Not set')}</b><small>ID</small></div>
+      <div class="profile-info-item"><b>${escapeHtml(mobile)}</b><small>Mobile</small></div>
+      <div class="profile-info-item"><b>${escapeHtml(username)}</b><small>Username</small></div>
+    </div>
+    <div class="profile-tabs" role="tablist">
+      <button class="profile-tab active" type="button">Posts</button>
+      <button class="profile-tab" type="button">Archived Posts</button>
+    </div>
+    <div class="profile-posts-empty">
+      <h2>${myPosts.length ? `${myPosts.length} post${myPosts.length === 1 ? '' : 's'}` : 'No posts yet...'}</h2>
+      <p>Publish photos and videos to display on your profile page</p>
+    </div>
   `;
-  wireSettingsGroup(content);
+  content.querySelector('#profile-back')?.addEventListener('click', () => emit('tab:show', 'chats'));
+  content.querySelector('#profile-photo-action')?.addEventListener('click', openEditProfileSheet);
   content.querySelector('#profile-edit-action').addEventListener('click', openEditProfileSheet);
-  content.querySelector('#profile-qr').addEventListener('click', openQrSheet);
-  content.querySelector('#profile-share').addEventListener('click', shareId);
-  content.querySelector('#profile-type').addEventListener('click', openAccountTypeSheet);
-  content.querySelector('#profile-id-badge')?.addEventListener('click', shareId);
+  content.querySelector('#profile-settings-action')?.addEventListener('click', openSettingsSheet);
 }
 
 async function shareId() {

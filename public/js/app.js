@@ -120,7 +120,10 @@ function wireChrome() {
   menuBtn?.addEventListener('click', () => drawer?.classList.contains('open') ? closeDrawer() : openDrawer());
   document.getElementById('drawer-scrim')?.addEventListener('click', closeDrawer);
   document.getElementById('drawer-profile-btn')?.addEventListener('click', () => { closeDrawer(); showTab('profile'); });
-  document.getElementById('drawer-settings')?.addEventListener('click', () => { closeDrawer(); document.getElementById('profile-settings-btn')?.click(); });
+  document.getElementById('drawer-settings')?.addEventListener('click', () => {
+    closeDrawer(); showTab('profile');
+    requestAnimationFrame(() => document.getElementById('profile-settings-action')?.click());
+  });
   document.getElementById('drawer-calls')?.addEventListener('click', () => toast('Open a conversation to start a call'));
   document.getElementById('drawer-saved')?.addEventListener('click', () => { closeDrawer(); document.getElementById('new-chat-btn')?.click(); });
   drawer?.querySelectorAll('[data-drawer-tab]').forEach((button) => button.addEventListener('click', () => { closeDrawer(); showTab(button.dataset.drawerTab); }));

@@ -135,9 +135,23 @@ function wireChrome() {
     showTab('chats');
     document.getElementById('chats-search')?.focus();
   });
-  document.getElementById('archived-entry')?.addEventListener('click', () => {
-    document.querySelector('#chat-filters [data-filter="archived"]')?.click();
+  const chatsScreen = document.getElementById('screen-chats');
+  const archiveBack = document.getElementById('archives-back');
+  const archiveChip = document.querySelector('#chat-filters [data-filter="archived"]');
+  const allChip = document.querySelector('#chat-filters [data-filter="all"]');
+  const setArchiveMode = (active) => {
+    chatsScreen?.classList.toggle('archive-mode', active);
+    if (chatsScreen) {
+      const title = chatsScreen.querySelector('.header-title');
+      if (title) title.textContent = active ? 'Archived Chats' : 'DARK CHAT';
+    }
+  };
+  archiveChip?.addEventListener('click', () => setArchiveMode(true));
+  allChip?.addEventListener('click', () => setArchiveMode(false));
+  document.getElementById('chats-list')?.addEventListener('click', (event) => {
+    if (event.target.closest('#archived-entry')) archiveChip?.click();
   });
+  archiveBack?.addEventListener('click', () => allChip?.click());
   document.getElementById('header-more-btn')?.addEventListener('click', () => menuBtn?.click());
   const syncDrawerProfile = () => {
     const me = state.me;

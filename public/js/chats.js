@@ -220,8 +220,12 @@ function conversationRow(conv) {
 export function renderChats() {
   if (!els.list) return;
   const list = filteredConversations();
+  const archiveEntry = state.filter === 'archived' ? '' : `<button class="archived-entry" id="archived-entry" type="button">
+    <span class="archived-entry-icon"><svg class="icon"><use href="#i-archive"></use></svg></span>
+    <span class="archived-entry-copy"><b>Archived Chats</b><small>View archived conversations</small></span>
+  </button>`;
   if (!state.conversations.length) {
-    els.list.innerHTML = emptyState({
+    els.list.innerHTML = archiveEntry + emptyState({
       iconName: 'message',
       title: 'No conversations yet',
       subtitle: 'Start a chat with a friend\'s DARK CHAT ID to get going.',
@@ -234,7 +238,7 @@ export function renderChats() {
   if (!list.length) {
     const archivedEmpty = state.filter === 'archived';
     const unreadEmpty = state.filter === 'unread';
-    els.list.innerHTML = emptyState({
+    els.list.innerHTML = archiveEntry + emptyState({
       iconName: archivedEmpty ? 'bookmark' : (unreadEmpty ? 'message' : 'search'),
       title: archivedEmpty ? 'No archived chats' : (unreadEmpty ? 'No unread chats' : 'Nothing matches'),
       subtitle: archivedEmpty
@@ -243,7 +247,7 @@ export function renderChats() {
     });
     return;
   }
-  els.list.innerHTML = list.map(conversationRow).join('');
+  els.list.innerHTML = archiveEntry + list.map(conversationRow).join('');
   els.list.querySelectorAll('[data-conv]').forEach((row) => {
     row.addEventListener('click', () => {
       const conv = state.conversations.find((c) => c.id === row.dataset.conv);

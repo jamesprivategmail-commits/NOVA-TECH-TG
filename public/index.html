@@ -16,7 +16,7 @@
 <meta property="og:title" content="DARK CHAT">
 <meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, statuses and posts">
 <link rel="stylesheet" href="css/app.css?v=4">
-<link rel="stylesheet" href="css/reference-upgrade.css?v=4">
+<link rel="stylesheet" href="css/reference-upgrade.css?v=5">
 </head>
 <body>
 
@@ -198,6 +198,7 @@
         </button>
       </div>
     </header>
+    <button class="archive-back" id="archives-back" type="button" aria-label="Back to chats"><svg class="icon"><use href="#i-arrow-left"></use></svg><span>Back to Chats</span></button>
     <label class="search" for="chats-search">
       <svg class="icon"><use href="#i-search"></use></svg>
       <input id="chats-search" type="search" placeholder="Search conversations" autocomplete="off">
@@ -208,10 +209,6 @@
       <button class="chip" data-filter="groups" data-label="Groups">Groups</button>
       <button class="chip" data-filter="archived" data-label="Archived">Archived</button>
     </div>
-    <button class="archived-entry" id="archived-entry" type="button">
-      <span class="archived-entry-icon"><svg class="icon"><use href="#i-archive"></use></svg></span>
-      <span class="archived-entry-copy"><b>Archived Chats</b><small>View archived conversations</small></span>
-    </button>
     <div class="content scroll" id="chats-list" aria-live="polite"></div>
   </section>
 

@@ -20,7 +20,6 @@ export function renderProfile() {
   const me = state.me;
   const content = $('#profile-content');
   if (!me || !content) return;
-  const myPosts = state.posts.filter((p) => String(p.user_id) === String(me.id));
   const cover = me.avatarUrl || me.avatarData || '';
 
   content.innerHTML = `
@@ -46,7 +45,7 @@ export function renderProfile() {
       <button class="profile-tab active" type="button">Posts</button>
     </div>
     <div class="profile-posts-empty">
-      <h2>${myPosts.length ? `${myPosts.length} post${myPosts.length === 1 ? '' : 's'}` : 'No posts yet...'}</h2>
+      <h2>No posts yet...</h2>
       <p>Publish photos and videos to display on your profile page</p>
     </div>
   `;

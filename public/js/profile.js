@@ -21,8 +21,6 @@ export function renderProfile() {
   const content = $('#profile-content');
   if (!me || !content) return;
   const myPosts = state.posts.filter((p) => String(p.user_id) === String(me.id));
-  const mobile = me.phone || me.phoneNumber || me.mobile || 'Not set';
-  const username = me.username || me.handle || me.novaId || 'Not set';
   const cover = me.avatarUrl || me.avatarData || '';
 
   content.innerHTML = `
@@ -43,12 +41,9 @@ export function renderProfile() {
     <div class="profile-info-card">
       <div class="profile-info-title"><svg class="icon"><use href="#i-chevron-down"></use></svg><span>Info</span></div>
       <div class="profile-info-item"><b>${escapeHtml(me.novaId || 'Not set')}</b><small>ID</small></div>
-      <div class="profile-info-item"><b>${escapeHtml(mobile)}</b><small>Mobile</small></div>
-      <div class="profile-info-item"><b>${escapeHtml(username)}</b><small>Username</small></div>
     </div>
     <div class="profile-tabs" role="tablist">
       <button class="profile-tab active" type="button">Posts</button>
-      <button class="profile-tab" type="button">Archived Posts</button>
     </div>
     <div class="profile-posts-empty">
       <h2>${myPosts.length ? `${myPosts.length} post${myPosts.length === 1 ? '' : 's'}` : 'No posts yet...'}</h2>

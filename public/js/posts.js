@@ -252,8 +252,10 @@ async function onPost(e) {
     if (res.post) {
       state.posts = [res.post, ...(state.posts || []).filter((p) => p.id !== res.post.id)];
       renderPosts();
+      emit('posts:updated');
     } else {
-      loadPosts();
+      await loadPosts();
+      emit('posts:updated');
     }
   } catch (err) {
     toast(err.message || 'Could not post');
@@ -303,7 +305,7 @@ function renderPosts() {
   wirePostCards(feed);
 }
 
-function wirePostCards(container) {
+export function wirePostCards(container) {
   // Author profile click
   container.querySelectorAll('[data-author-profile]').forEach((el) => {
     el.addEventListener('click', (e) => {
@@ -406,7 +408,7 @@ function wirePostCards(container) {
   });
 }
 
-function postHtml(p) {
+export function postHtml(p) {
   const own = String(p.user_id) === String(state.me?.id) || (p.nova_id && String(p.nova_id).toUpperCase() === String(state.me?.novaId || '').toUpperCase());
   const canDelete = own || Boolean(state.me?.isAdmin || state.me?.is_admin);
 

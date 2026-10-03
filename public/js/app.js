@@ -145,8 +145,13 @@ function wireChrome() {
       if (title) title.textContent = active ? 'Archived Chats' : 'DARK CHAT';
     }
   };
+  const unreadChip = document.querySelector('#chat-filters [data-filter="unread"]');
+  const groupsChip = document.querySelector('#chat-filters [data-filter="groups"]');
   archiveChip?.addEventListener('click', () => setArchiveMode(true));
   allChip?.addEventListener('click', () => setArchiveMode(false));
+  unreadChip?.addEventListener('click', () => setArchiveMode(false));
+  groupsChip?.addEventListener('click', () => setArchiveMode(false));
+  document.getElementById('archive-back-btn')?.addEventListener('click', () => allChip?.click());
   document.getElementById('chats-list')?.addEventListener('click', (event) => {
     if (event.target.closest('#archived-entry')) archiveChip?.click();
   });

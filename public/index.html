@@ -66,6 +66,7 @@
     <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5S3.5 15 3.5 9.2A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8C20.5 15 12 20.5 12 20.5Z"/></symbol>
     <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z"/></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-4-6 4v-17Z"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v4M8 3h8l-1 7 3 3v2H6v-2l3-3-1-7Z"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 6.5h16M9 6.5V4h6v2.5M6.5 6.5 7.5 21h9l1-14.5"/><path d="M10.5 10v7M13.5 10v7"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m13.5 6.5 3 3"/></symbol>
@@ -172,6 +173,9 @@
   <section class="screen screen-list active" id="screen-chats" data-screen="chats" aria-label="Chats">
     <header class="header">
       <div class="header-left">
+        <button class="icon-btn back-btn hidden" id="archive-back-btn" aria-label="Back to all chats" title="Back to all chats">
+          <svg class="icon"><use href="#i-arrow-left"></use></svg>
+        </button>
         <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false">
           <svg class="icon"><use href="#i-menu"></use></svg>
         </button>
@@ -286,19 +290,6 @@
 
   <!-- PROFILE -->
   <section class="screen screen-list" id="screen-profile" data-screen="profile" aria-label="Profile" hidden>
-    <header class="header">
-      <div class="header-left">
-        <button class="icon-btn" id="profile-edit-btn" aria-label="Edit profile" title="Edit profile">
-          <svg class="icon"><use href="#i-edit"></use></svg>
-        </button>
-        <div class="header-title">Profile</div>
-      </div>
-      <div class="header-actions">
-        <button class="icon-btn" id="profile-settings-btn" aria-label="Settings" title="Settings">
-          <svg class="icon"><use href="#i-settings"></use></svg>
-        </button>
-      </div>
-    </header>
     <div class="content scroll" id="profile-content"></div>
   </section>
 

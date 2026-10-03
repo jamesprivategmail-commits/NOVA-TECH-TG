@@ -83,7 +83,7 @@ export function applyThemePreferences() {
   if (fontSize === 'small') document.body.classList.add('font-small');
   if (fontSize === 'large') document.body.classList.add('font-large');
 
-  document.documentElement.style.setProperty('--blue', '#f2f2f2');
+  document.documentElement.style.setProperty('--blue', '#ffffff');
 }
 
 export function settingsGroupHtml() {

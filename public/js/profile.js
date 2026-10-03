@@ -5,15 +5,140 @@ import {
   $, avatar, icon, escapeHtml, toast, openSheet, closeSheet, confirmSheet, setBusy, verifyBadge, fileToDataUrl, renderQrSvg
 } from './ui.js';
 import { openSettingsSheet } from './settings.js';
+import { postHtml, wirePostCards } from './posts.js';
 
 export function initProfile() {
-  $('#profile-edit-btn')?.addEventListener('click', openEditProfileSheet);
-  on('me:updated', renderProfile);
-  on('settings:changed', renderProfile);
-  on('tab:show', (tab) => { if (tab === 'profile') renderProfile(); });
+  on('me:updated', () => renderProfile());
+  on('settings:changed', () => renderProfile());
+  on('tab:show', (tab) => {
+    if (tab === 'profile') {
+      renderProfile();
+      loadUserPosts();
+    }
+  });
+  on('posts:updated', () => {
+    const screen = $('#screen-profile');
+    if (screen && !screen.hidden) {
+      renderUserPosts();
+    }
+  });
   on('admin:open', () => emit('admin:open-panel'));
   on('profile:edit', openEditProfileSheet);
-  renderProfile();
+  on('profile:photo', triggerPhotoPicker);
+}
+
+let fileInputEl = null;
+
+function getPhotoInput() {
+  if (!fileInputEl) {
+    fileInputEl = document.createElement('input');
+    fileInputEl.type = 'file';
+    fileInputEl.accept = 'image/*';
+    fileInputEl.className = 'hidden';
+    document.body.appendChild(fileInputEl);
+    fileInputEl.addEventListener('change', onPhotoSelected);
+  }
+  return fileInputEl;
+}
+
+function triggerPhotoPicker() {
+  const input = getPhotoInput();
+  input.value = '';
+  input.click();
+}
+
+async function onPhotoSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) {
+    toast('Image too large (maximum size is 8MB)');
+    return;
+  }
+  try {
+    const dataUrl = await fileToDataUrl(file);
+    const mime = file.type || 'image/jpeg';
+    openPhotoPreviewSheet(dataUrl, mime);
+  } catch {
+    toast('Could not read selected photo');
+  }
+}
+
+function openPhotoPreviewSheet(dataUrl, mime) {
+  openSheet({
+    title: 'Profile Photo Preview',
+    body: `<div class="sheet-pad stack" style="align-items:center;text-align:center">
+      <div class="photo-crop-preview" style="width:140px;height:140px;border-radius:50%;overflow:hidden;margin:12px auto;border:3px solid rgba(255,255,255,0.2);box-shadow:0 8px 24px rgba(0,0,0,0.5)">
+        <img src="${escapeHtml(dataUrl)}" alt="Preview" style="width:100%;height:100%;object-fit:cover">
+      </div>
+      <p class="muted" style="font-size:13px;max-width:280px">This photo will appear on your profile, chat list, and messages.</p>
+    </div>`,
+    footer: `<div class="sheet-pad row" style="gap:10px">
+      <button class="btn btn-ghost grow" id="photo-preview-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary grow" id="photo-preview-save" type="button">Save Photo</button>
+    </div>`,
+    onMount(sheet) {
+      sheet.querySelector('#photo-preview-cancel')?.addEventListener('click', closeSheet);
+      sheet.querySelector('#photo-preview-save')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        setBusy(btn, true, 'Saving...');
+        try {
+          const res = await api.updateMe({ avatarData: dataUrl, avatarMime: mime });
+          state.me = res.user;
+          saveCachedMe(res.user);
+          emit('me:updated', res.user);
+          closeSheet();
+          toast('Profile photo updated!', 'success');
+        } catch (err) {
+          toast(err.message || 'Could not save profile photo');
+        } finally {
+          setBusy(btn, false);
+        }
+      });
+    }
+  });
+}
+
+function getMyPosts() {
+  const me = state.me;
+  if (!me) return [];
+  const myId = String(me.id);
+  const myNovaId = String(me.novaId || '').toUpperCase();
+  return (state.posts || []).filter((p) => {
+    if (p.user_id && String(p.user_id) === myId) return true;
+    if (p.author_id && String(p.author_id) === myId) return true;
+    if (p.nova_id && String(p.nova_id).toUpperCase() === myNovaId) return true;
+    return false;
+  });
+}
+
+async function loadUserPosts() {
+  try {
+    const res = await api.posts();
+    state.posts = res.posts || [];
+    renderUserPosts();
+  } catch {
+    renderUserPosts();
+  }
+}
+
+function renderUserPosts() {
+  const container = $('#profile-posts-list');
+  if (!container) return;
+  const myPosts = getMyPosts();
+
+  if (!myPosts.length) {
+    container.innerHTML = `
+      <div class="profile-posts-empty">
+        <div class="empty-icon"><svg class="icon"><use href="#i-updates"></use></svg></div>
+        <h3>No posts yet</h3>
+        <p>Posts you publish in Updates will appear here on your profile page.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = myPosts.map(postHtml).join('');
+  wirePostCards(container);
 }
 
 export function renderProfile() {
@@ -23,102 +148,163 @@ export function renderProfile() {
   const cover = me.avatarUrl || me.avatarData || '';
 
   content.innerHTML = `
-    <div class="profile-cover" style="--profile-cover: url('${escapeHtml(cover)}')">
-      <button class="profile-back" id="profile-back" aria-label="Back"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
-      <button class="profile-more" aria-label="More options"><svg class="icon"><use href="#i-more-vertical"></use></svg></button>
-    </div>
-    <div class="profile-body">
-      <div class="profile-photo">${avatar(me, { size: 'lg' })}</div>
-      <div class="profile-name">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)}</div>
-      <div class="profile-online">online</div>
-      <div class="profile-actions">
-        <button class="btn profile-action" id="profile-photo-action">${icon('camera')}<span>Set Photo</span></button>
-        <button class="btn profile-action" id="profile-edit-action">${icon('edit')}<span>Edit Info</span></button>
-        <button class="btn profile-action" id="profile-settings-action">${icon('settings')}<span>Settings</span></button>
+    <!-- 1. HEADER IMAGE: max 35% height (max 280px), object-fit cover, dark gradient -->
+    <div class="profile-header-wrap">
+      <div class="profile-cover-box">
+        ${cover ? `<img src="${escapeHtml(cover)}" alt="Cover" class="profile-cover-img">` : `<div class="profile-cover-fallback"></div>`}
+        <div class="profile-cover-gradient" aria-hidden="true"></div>
+        <button class="profile-nav-btn profile-back" id="profile-back" aria-label="Back to chats" title="Back to chats">
+          <svg class="icon"><use href="#i-arrow-left"></use></svg>
+        </button>
+        <button class="profile-nav-btn profile-more" id="profile-more" aria-label="More options" title="More options">
+          <svg class="icon"><use href="#i-more-vertical"></use></svg>
+        </button>
       </div>
     </div>
+
+    <!-- 2. NORMAL LAYOUT FLOW: name, status, and 3 action buttons below image (no overlap) -->
+    <div class="profile-body">
+      <div class="profile-avatar-row">
+        <div class="profile-photo-circle">
+          ${avatar(me, { size: 'lg' })}
+        </div>
+      </div>
+      <div class="profile-meta">
+        <h1 class="profile-name">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)}</h1>
+        <div class="profile-online">online</div>
+        ${me.bio ? `<div class="profile-bio">${escapeHtml(me.bio)}</div>` : ''}
+      </div>
+
+      <!-- 3 ACTION BUTTONS -->
+      <div class="profile-actions">
+        <button type="button" class="btn profile-action-btn" id="profile-photo-action" title="Set photo">
+          <span class="profile-action-icon"><svg class="icon"><use href="#i-camera"></use></svg></span>
+          <span class="profile-action-text">Set Photo</span>
+        </button>
+        <button type="button" class="btn profile-action-btn" id="profile-edit-action" title="Edit info">
+          <span class="profile-action-icon"><svg class="icon"><use href="#i-edit"></use></svg></span>
+          <span class="profile-action-text">Edit Info</span>
+        </button>
+        <button type="button" class="btn profile-action-btn" id="profile-settings-action" title="Settings">
+          <span class="profile-action-icon"><svg class="icon"><use href="#i-settings"></use></svg></span>
+          <span class="profile-action-text">Settings</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- INFO CARD -->
     <div class="profile-info-card">
-      <div class="profile-info-title"><svg class="icon"><use href="#i-chevron-down"></use></svg><span>Info</span></div>
-      <div class="profile-info-item"><b>${escapeHtml(me.novaId || 'Not set')}</b><small>ID</small></div>
+      <div class="profile-info-title">
+        <svg class="icon"><use href="#i-chevron-down"></use></svg>
+        <span>Account Info</span>
+      </div>
+      <button type="button" class="profile-info-item-btn" id="profile-copy-id" title="Tap to copy DARK CHAT ID">
+        <div class="profile-info-item-left">
+          <b>${escapeHtml(me.novaId || 'Not set')}</b>
+          <small>DARK CHAT ID (tap to copy)</small>
+        </div>
+        <svg class="icon info-copy-icon"><use href="#i-link"></use></svg>
+      </button>
+      ${me.bio ? `
+      <div class="profile-info-item">
+        <b>${escapeHtml(me.bio)}</b>
+        <small>About / Bio</small>
+      </div>` : ''}
     </div>
-    <div class="profile-tabs" role="tablist">
-      <button class="profile-tab active" type="button">Posts</button>
+
+    <!-- POSTS SECTION (Only user's own posts) -->
+    <div class="profile-tabs-bar">
+      <div class="profile-tabs" role="tablist">
+        <button class="profile-tab active" type="button">Posts</button>
+      </div>
     </div>
-    <div class="profile-posts-empty">
-      <h2>No posts yet...</h2>
-      <p>Publish photos and videos to display on your profile page</p>
-    </div>
+    <div class="profile-posts-list" id="profile-posts-list"></div>
   `;
-  content.querySelector('#profile-back')?.addEventListener('click', () => emit('tab:show', 'chats'));
-  content.querySelector('#profile-photo-action')?.addEventListener('click', openEditProfileSheet);
-  content.querySelector('#profile-edit-action').addEventListener('click', openEditProfileSheet);
+
+  // Wire up every single button to work cleanly
+  content.querySelector('#profile-back')?.addEventListener('click', () => {
+    emit('tab:show', 'chats');
+  });
+
+  content.querySelector('#profile-more')?.addEventListener('click', openProfileMoreMenu);
+
+  content.querySelector('#profile-photo-action')?.addEventListener('click', triggerPhotoPicker);
+
+  content.querySelector('#profile-edit-action')?.addEventListener('click', openEditProfileSheet);
+
   content.querySelector('#profile-settings-action')?.addEventListener('click', openSettingsSheet);
-}
 
-async function shareId() {
-  const id = state.me?.novaId || '';
-  try { await navigator.clipboard.writeText(id); toast('DARK CHAT ID copied', 'success'); }
-  catch { toast(id); }
-}
-
-export function openQrSheet() {
-  const me = state.me;
-  if (!me) return;
-  const qrSvg = renderQrSvg(`darkchat://user/${me.novaId}`, 220);
-  openSheet({
-    title: 'My DARK CHAT QR',
-    body: `<div class="sheet-pad center stack" style="align-items:center;text-align:center">
-      <div style="margin:12px auto">${qrSvg}</div>
-      <div class="profile-name" style="font-size:18px">${escapeHtml(me.displayName || 'You')} ${verifyBadge(me.isVerified)}</div>
-      <div class="muted" style="font-size:13px">${escapeHtml(me.novaId || '')}</div>
-      <div class="muted" style="font-size:12px;max-width:280px">Friends can scan this QR code or use your DARK CHAT ID to message you directly.</div>
-    </div>`,
-    footer: `<div class="sheet-pad stack">
-      <button class="btn btn-primary btn-block" id="qr-copy-link">${icon('link')} Copy Profile Link</button>
-      <button class="btn btn-ghost btn-block" id="qr-copy-id">${icon('check')} Copy ID: ${escapeHtml(me.novaId || '')}</button>
-    </div>`,
-    onMount(sheet) {
-      sheet.querySelector('#qr-copy-link')?.addEventListener('click', async () => {
-        const link = `${window.location.origin}/#user=${encodeURIComponent(me.novaId)}`;
-        try { await navigator.clipboard.writeText(link); toast('Profile link copied!', 'success'); }
-        catch { toast(link); }
-      });
-      sheet.querySelector('#qr-copy-id')?.addEventListener('click', () => shareId());
+  content.querySelector('#profile-copy-id')?.addEventListener('click', async () => {
+    const id = me.novaId || '';
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      toast('DARK CHAT ID copied to clipboard', 'success');
+    } catch {
+      toast(id);
     }
   });
+
+  renderUserPosts();
 }
 
-export function openAccountTypeSheet() {
-  const current = state.settings.privacySettings?.accountType || 'personal';
+function openProfileMoreMenu() {
+  const me = state.me;
+  if (!me) return;
+
   openSheet({
-    title: 'Account Type',
-    body: `<div class="sheet-pad stack">
-      <div class="option ${current === 'personal' ? 'selected' : ''}" data-type="personal" style="cursor:pointer;border:1px solid var(--border);border-radius:12px;padding:12px">
-        <span class="option-icon">${icon('user')}</span>
-        <span class="option-copy"><b>Personal Account</b><small>Standard messaging, status stories, and updates for private chats with friends and family.</small></span>
-      </div>
-      <div class="option ${current === 'business' ? 'selected' : ''}" data-type="business" style="cursor:pointer;border:1px solid var(--border);border-radius:12px;padding:12px">
-        <span class="option-icon">${icon('shield')}</span>
-        <span class="option-copy"><b>Business Account 💼</b><small>Connect with customers, automated greeting, quick replies, catalog showcase, and business hours.</small></span>
-      </div>
-      <div class="option ${current === 'creator' ? 'selected' : ''}" data-type="creator" style="cursor:pointer;border:1px solid var(--border);border-radius:12px;padding:12px">
-        <span class="option-icon">${icon('status')}</span>
-        <span class="option-copy"><b>Creator Account ✨</b><small>Public channel features, audience updates, creator verification badge, and analytics.</small></span>
-      </div>
+    title: 'Profile Options',
+    body: `<div class="sheet-pad stack" style="gap:4px">
+      <button class="setting" id="more-edit-info" type="button">
+        <span class="setting-icon">${icon('edit')}</span>
+        <span class="setting-copy">Edit Info<small>Update display name, bio, and profile details</small></span>
+        <span class="chevron">${icon('chevron-right')}</span>
+      </button>
+      <button class="setting" id="more-settings" type="button">
+        <span class="setting-icon">${icon('settings')}</span>
+        <span class="setting-copy">Settings<small>Privacy, notifications, chat wallpaper, and security</small></span>
+        <span class="chevron">${icon('chevron-right')}</span>
+      </button>
+      <button class="setting" id="more-share" type="button">
+        <span class="setting-icon">${icon('share')}</span>
+        <span class="setting-copy">Share Profile<small>Copy DARK CHAT ID and link for friends</small></span>
+        <span class="chevron">${icon('chevron-right')}</span>
+      </button>
+      <button class="setting" id="more-logout" type="button" style="color:var(--danger)">
+        <span class="setting-icon" style="color:var(--danger)">${icon('logout')}</span>
+        <span class="setting-copy">Log Out<small style="color:var(--danger)">Sign out of DARK CHAT on this device</small></span>
+        <span class="chevron">${icon('chevron-right')}</span>
+      </button>
     </div>`,
     onMount(sheet) {
-      sheet.querySelectorAll('[data-type]').forEach((btn) => btn.addEventListener('click', async () => {
-        const chosen = btn.dataset.type;
+      sheet.querySelector('#more-edit-info')?.addEventListener('click', () => {
+        closeSheet();
+        openEditProfileSheet();
+      });
+      sheet.querySelector('#more-settings')?.addEventListener('click', () => {
+        closeSheet();
+        openSettingsSheet();
+      });
+      sheet.querySelector('#more-share')?.addEventListener('click', async () => {
+        closeSheet();
+        const link = `${window.location.origin}/#user=${encodeURIComponent(me.novaId)}`;
         try {
-          await api.updateProfileSettings({ accountType: chosen });
-          state.settings.privacySettings = { ...(state.settings.privacySettings || {}), accountType: chosen };
-          closeSheet();
-          toast(`Account switched to ${chosen.toUpperCase()}`, 'success');
-          renderProfile();
-        } catch (err) {
-          toast(err.message || 'Could not update account type');
+          await navigator.clipboard.writeText(link);
+          toast('Profile link copied to clipboard!', 'success');
+        } catch {
+          toast(me.novaId || link);
         }
-      }));
+      });
+      sheet.querySelector('#more-logout')?.addEventListener('click', async () => {
+        closeSheet();
+        const ok = await confirmSheet({
+          title: 'Log out',
+          message: 'Log out of DARK CHAT on this device?',
+          confirmText: 'Log out',
+          danger: true
+        });
+        if (ok) emit('auth:logout');
+      });
     }
   });
 }
@@ -128,41 +314,83 @@ export function openEditProfileSheet() {
   if (!me) return;
   let avatarData = null;
   let avatarMime = null;
+
   openSheet({
-    title: 'Edit profile',
-    body: `<div class="sheet-pad">
+    title: 'Edit Profile Info',
+    body: `<div class="sheet-pad stack" style="gap:14px">
       <div id="edit-error" class="alert alert-error hidden"></div>
-      <div class="center stack">${avatar(me, { size: 'lg' })}</div>
-      <label class="field"><span class="field-label">Profile photo</span>
-        <input class="input" type="file" id="edit-avatar" accept="image/*"></label>
-      <label class="field"><span class="field-label">Display name</span>
-        <input class="input" id="edit-name" maxlength="60" value="${escapeHtml(me.displayName || '')}"></label>
-      <label class="field"><span class="field-label">About / Bio</span>
-        <textarea class="textarea" id="edit-bio" maxlength="160" placeholder="Tell people about yourself">${escapeHtml(me.bio || '')}</textarea></label>
-      <div class="muted" style="font-size:13px">DARK CHAT ID: ${escapeHtml(me.novaId || '')}</div>
+      <div class="center stack" style="align-items:center;margin:6px 0">
+        <div id="edit-avatar-preview" style="cursor:pointer" title="Tap to change photo">
+          ${avatar(me, { size: 'lg' })}
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="edit-change-photo-btn" style="margin-top:6px">
+          ${icon('camera')} Change Photo
+        </button>
+        <input class="hidden" type="file" id="edit-avatar-input" accept="image/*">
+      </div>
+      <label class="field">
+        <span class="field-label">Display name</span>
+        <input class="input" id="edit-name" maxlength="60" value="${escapeHtml(me.displayName || '')}" placeholder="What should people call you?" required autocomplete="off">
+      </label>
+      <label class="field">
+        <span class="field-label">About / Bio</span>
+        <textarea class="textarea" id="edit-bio" maxlength="160" rows="3" placeholder="Tell people about yourself">${escapeHtml(me.bio || '')}</textarea>
+      </label>
+      <label class="field">
+        <span class="field-label">DARK CHAT ID (Permanent)</span>
+        <input class="input" id="edit-id" value="${escapeHtml(me.novaId || '')}" readonly style="opacity:0.75;cursor:default">
+      </label>
     </div>`,
-    footer: `<div class="sheet-pad"><button class="btn btn-primary btn-block" id="edit-save">Save changes</button></div>`,
+    footer: `<div class="sheet-pad row" style="gap:10px">
+      <button class="btn btn-ghost grow" id="edit-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary grow" id="edit-save" type="button">Save Changes</button>
+    </div>`,
     onMount(sheet) {
-      sheet.querySelector('#edit-avatar').addEventListener('change', async (e) => {
+      const fileInput = sheet.querySelector('#edit-avatar-input');
+      sheet.querySelector('#edit-change-photo-btn')?.addEventListener('click', () => fileInput?.click());
+      sheet.querySelector('#edit-avatar-preview')?.addEventListener('click', () => fileInput?.click());
+
+      fileInput?.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 8 * 1024 * 1024) { toast('Image too large (max 8MB)'); e.target.value = ''; return; }
+        if (file.size > 8 * 1024 * 1024) {
+          toast('Image too large (max 8MB)');
+          e.target.value = '';
+          return;
+        }
         try {
           avatarData = await fileToDataUrl(file);
           avatarMime = file.type || 'image/jpeg';
-          sheet.querySelector('.center').innerHTML = avatar({ displayName: me.displayName, avatarData }, { size: 'lg' });
-        } catch { toast('Could not read image'); }
+          const preview = sheet.querySelector('#edit-avatar-preview');
+          if (preview) {
+            preview.innerHTML = `<img src="${escapeHtml(avatarData)}" alt="Avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--text)">`;
+          }
+        } catch {
+          toast('Could not read image');
+        }
       });
-      sheet.querySelector('#edit-save').addEventListener('click', async (e) => {
+
+      sheet.querySelector('#edit-cancel')?.addEventListener('click', closeSheet);
+
+      sheet.querySelector('#edit-save')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         const name = sheet.querySelector('#edit-name').value.trim();
         const bio = sheet.querySelector('#edit-bio').value;
         const errBox = sheet.querySelector('#edit-error');
-        const fail = (m) => { errBox.textContent = m; errBox.classList.remove('hidden'); };
+        const fail = (m) => {
+          errBox.textContent = m;
+          errBox.classList.remove('hidden');
+        };
         errBox.classList.add('hidden');
+
         if (!name) return fail('Display name cannot be empty');
+
         const payload = { displayName: name, bio };
-        if (avatarData) { payload.avatarData = avatarData; payload.avatarMime = avatarMime; }
+        if (avatarData) {
+          payload.avatarData = avatarData;
+          payload.avatarMime = avatarMime;
+        }
+
         setBusy(btn, true, 'Saving...');
         try {
           const res = await api.updateMe(payload);
@@ -193,7 +421,7 @@ export async function openUserProfileSheet(userOrId) {
 
   let user = typeof userOrId === 'object' && userOrId !== null ? { ...userOrId } : null;
   openSheet({
-    title: 'User profile',
+    title: 'User Profile',
     body: `<div class="sheet-pad center stack" id="user-profile-sheet-body">
       <div class="skeleton" style="width:80px;height:80px;border-radius:50%;margin:0 auto"></div>
       <div class="skeleton" style="width:160px;height:20px;margin:8px auto"></div>
@@ -203,8 +431,7 @@ export async function openUserProfileSheet(userOrId) {
       try {
         const res = await api.userProfile(userId);
         user = res.user;
-      } catch (e) {
-        // Fallback to passed user object if available
+      } catch {
         if (!user) {
           container.innerHTML = `<div class="muted">Could not load user details</div>`;
           return;
@@ -213,8 +440,8 @@ export async function openUserProfileSheet(userOrId) {
 
       const isFollowing = Boolean(user.isFollowing);
       const acctType = user.accountType || 'personal';
-      const typeBadge = acctType === 'business' ? '<span class="chip" style="background:#0A84FF;color:#fff;font-size:11px">Business 💼</span>'
-        : acctType === 'creator' ? '<span class="chip" style="background:#BF5AF2;color:#fff;font-size:11px">Creator ✨</span>'
+      const typeBadge = acctType === 'business' ? '<span class="chip" style="background:#202020;color:#fff;font-size:11px">Business 💼</span>'
+        : acctType === 'creator' ? '<span class="chip" style="background:#202020;color:#fff;font-size:11px">Creator ✨</span>'
         : '';
 
       container.innerHTML = `

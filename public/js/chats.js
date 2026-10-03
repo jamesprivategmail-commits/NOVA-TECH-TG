@@ -33,7 +33,8 @@ export function initChats() {
     filters: $('#chat-filters'),
     newBtn: $('#new-chat-btn'),
     meAvatar: $('#me-avatar-btn'),
-    adminBtn: $('#admin-btn')
+    adminBtn: $('#admin-btn'),
+    archiveBackBtn: $('#archive-back-btn')
   };
 
   els.search?.addEventListener('input', () => {
@@ -45,6 +46,13 @@ export function initChats() {
     if (!chip) return;
     state.filter = chip.dataset.filter;
     els.filters.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === chip));
+    syncArchiveUi();
+    renderChats();
+  });
+  els.archiveBackBtn?.addEventListener('click', () => {
+    state.filter = 'all';
+    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'all'));
+    syncArchiveUi();
     renderChats();
   });
   els.newBtn?.addEventListener('click', openNewChatSheet);
@@ -217,15 +225,38 @@ function conversationRow(conv) {
   </button>`;
 }
 
+export function syncArchiveUi() {
+  const isArchived = state.filter === 'archived';
+  const chatsScreen = document.getElementById('screen-chats');
+  chatsScreen?.classList.toggle('archive-mode', isArchived);
+  const title = chatsScreen?.querySelector('.header-title');
+  if (title) title.textContent = isArchived ? 'Archived Chats' : 'DARK CHAT';
+  const backBtn = document.getElementById('archive-back-btn');
+  const menuBtn = document.getElementById('menu-btn');
+  const meAvatarBtn = document.getElementById('me-avatar-btn');
+  if (backBtn) backBtn.classList.toggle('hidden', !isArchived);
+  if (menuBtn) menuBtn.classList.toggle('hidden', isArchived);
+  if (meAvatarBtn) meAvatarBtn.classList.toggle('hidden', isArchived);
+}
+
 export function renderChats() {
   if (!els.list) return;
+  syncArchiveUi();
   const list = filteredConversations();
-  const archiveEntry = state.filter === 'archived' ? '' : `<button class="archived-entry" id="archived-entry" type="button">
+  const isArchived = state.filter === 'archived';
+  const archiveEntry = isArchived ? '' : `<button class="archived-entry" id="archived-entry" type="button">
     <span class="archived-entry-icon"><svg class="icon"><use href="#i-archive"></use></svg></span>
     <span class="archived-entry-copy"><b>Archived Chats</b><small>View archived conversations</small></span>
   </button>`;
+  const archiveBackBanner = isArchived ? `<div class="archive-header-banner">
+    <button class="archive-back-inline" id="archive-back-inline" type="button">
+      <svg class="icon"><use href="#i-arrow-left"></use></svg>
+      <span>Back to All Chats</span>
+    </button>
+  </div>` : '';
+
   if (!state.conversations.length) {
-    els.list.innerHTML = archiveEntry + emptyState({
+    els.list.innerHTML = archiveBackBanner + archiveEntry + emptyState({
       iconName: 'message',
       title: 'No conversations yet',
       subtitle: 'Start a chat with a friend\'s DARK CHAT ID to get going.',
@@ -233,21 +264,24 @@ export function renderChats() {
       actionId: 'empty-new-chat'
     });
     $('#empty-new-chat')?.addEventListener('click', openNewChatSheet);
+    wireArchiveButtons();
     return;
   }
   if (!list.length) {
     const archivedEmpty = state.filter === 'archived';
     const unreadEmpty = state.filter === 'unread';
-    els.list.innerHTML = archiveEntry + emptyState({
+    els.list.innerHTML = archiveBackBanner + archiveEntry + emptyState({
       iconName: archivedEmpty ? 'bookmark' : (unreadEmpty ? 'message' : 'search'),
       title: archivedEmpty ? 'No archived chats' : (unreadEmpty ? 'No unread chats' : 'Nothing matches'),
       subtitle: archivedEmpty
         ? 'Archive a chat from its options menu to hide it from the main list.'
         : (unreadEmpty ? 'You are all caught up.' : 'Try a different search or filter.')
     });
+    wireArchiveButtons();
     return;
   }
-  els.list.innerHTML = archiveEntry + list.map(conversationRow).join('');
+  els.list.innerHTML = archiveBackBanner + archiveEntry + list.map(conversationRow).join('');
+  wireArchiveButtons();
   els.list.querySelectorAll('[data-conv]').forEach((row) => {
     row.addEventListener('click', () => {
       const conv = state.conversations.find((c) => c.id === row.dataset.conv);
@@ -255,6 +289,21 @@ export function renderChats() {
     });
   });
   updatePresenceDots();
+}
+
+function wireArchiveButtons() {
+  els.list?.querySelector('#archived-entry')?.addEventListener('click', () => {
+    state.filter = 'archived';
+    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'archived'));
+    syncArchiveUi();
+    renderChats();
+  });
+  els.list?.querySelector('#archive-back-inline')?.addEventListener('click', () => {
+    state.filter = 'all';
+    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'all'));
+    syncArchiveUi();
+    renderChats();
+  });
 }
 
 export function showChatsLoading() {

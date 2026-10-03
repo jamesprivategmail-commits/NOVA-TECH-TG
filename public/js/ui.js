@@ -173,10 +173,20 @@ export function openSheet({ title = '', body = '', footer = '', onMount = null, 
   if (!overlay || !sheet) return null;
   sheet.innerHTML = `
     <div class="handle" aria-hidden="true"></div>
-    ${title ? `<div class="sheet-title">${title}</div>` : ''}
+    ${title ? `<div class="sheet-title-row">
+      <button type="button" class="sheet-back-btn" id="sheet-close-btn" aria-label="Back" title="Back">
+        <svg class="icon"><use href="#i-arrow-left"></use></svg>
+      </button>
+      <div class="sheet-title">${title}</div>
+      <button type="button" class="sheet-back-btn" id="sheet-close-x" aria-label="Close" title="Close">
+        <svg class="icon"><use href="#i-x"></use></svg>
+      </button>
+    </div>` : ''}
     <div class="sheet-body" id="sheet-body">${body}</div>
     ${footer ? `<div class="sheet-foot" id="sheet-foot">${footer}</div>` : ''}
   `;
+  sheet.querySelector('#sheet-close-btn')?.addEventListener('click', closeSheet);
+  sheet.querySelector('#sheet-close-x')?.addEventListener('click', closeSheet);
   overlay.hidden = false;
   overlayHandler = (event) => { if (event.target === overlay) closeSheet(); };
   overlay.addEventListener('click', overlayHandler);

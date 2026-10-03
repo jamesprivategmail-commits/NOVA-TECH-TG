@@ -231,9 +231,7 @@ export function syncArchiveUi() {
   const title = chatsScreen?.querySelector('.header-title');
   if (title) title.textContent = isArchived ? 'Archived Chats' : 'DARK CHAT';
   const backBtn = document.getElementById('archive-back-btn');
-  const menuBtn = document.getElementById('menu-btn');
   if (backBtn) backBtn.classList.toggle('hidden', !isArchived);
-  if (menuBtn) menuBtn.classList.toggle('hidden', isArchived);
 }
 
 export function renderChats() {
@@ -291,7 +289,7 @@ export function renderChats() {
 function wireArchiveButtons() {
   els.list?.querySelector('#archived-entry')?.addEventListener('click', () => {
     state.filter = 'archived';
-    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'archived'));
+    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
     syncArchiveUi();
     renderChats();
   });

@@ -16,6 +16,7 @@ import { initAdmin, openAdminPanel } from './admin.js';
 import { initNotifications, refreshUnread } from './notifications.js';
 import { initCalls } from './calls.js';
 import { initViewport } from './viewport.js';
+import { applyActiveWallpaper } from './wallpaper.js';
 
 const SCREENS = {
   chats: '#screen-chats',
@@ -98,9 +99,11 @@ async function onSignedIn() {
   // Fast background sync of chats, unread badges, and profile settings
   Promise.allSettled([
     loadConversations(),
-    loadProfileSettings(),
+    loadProfileSettings().then(() => applyActiveWallpaper()),
     refreshUnread()
   ]);
+  applyActiveWallpaper();
+  on('wallpaper:changed', () => applyActiveWallpaper());
 }
 
 function wireChrome() {
@@ -127,31 +130,39 @@ function wireChrome() {
   document.getElementById('drawer-calls')?.addEventListener('click', () => toast('Open a conversation to start a call'));
   document.getElementById('drawer-saved')?.addEventListener('click', () => { closeDrawer(); document.getElementById('new-chat-btn')?.click(); });
   drawer?.querySelectorAll('[data-drawer-tab]').forEach((button) => button.addEventListener('click', () => { closeDrawer(); showTab(button.dataset.drawerTab); }));
-  drawer?.querySelector('[data-drawer-filter]')?.addEventListener('click', () => {
-    closeDrawer(); showTab('chats');
-    document.querySelector('#chat-filters [data-filter="archived"]')?.click();
-  });
   document.getElementById('header-updates-btn')?.addEventListener('click', () => showTab('posts'));
   document.getElementById('posts-back-btn')?.addEventListener('click', () => showTab('chats'));
   const chatsScreen = document.getElementById('screen-chats');
-  const archiveChip = document.querySelector('#chat-filters [data-filter="archived"]');
   const allChip = document.querySelector('#chat-filters [data-filter="all"]');
+  const unreadChip = document.querySelector('#chat-filters [data-filter="unread"]');
+  const groupsChip = document.querySelector('#chat-filters [data-filter="groups"]');
+
   const setArchiveMode = (active) => {
+    state.filter = active ? 'archived' : 'all';
     chatsScreen?.classList.toggle('archive-mode', active);
     if (chatsScreen) {
       const title = chatsScreen.querySelector('.header-title');
       if (title) title.textContent = active ? 'Archived Chats' : 'DARK CHAT';
     }
+    const backBtn = document.getElementById('archive-back-btn');
+    if (backBtn) backBtn.classList.toggle('hidden', !active);
+    document.querySelectorAll('#chat-filters .chip').forEach((c) => {
+      c.classList.toggle('active', !active && c.dataset.filter === 'all');
+    });
+    renderChats();
   };
-  const unreadChip = document.querySelector('#chat-filters [data-filter="unread"]');
-  const groupsChip = document.querySelector('#chat-filters [data-filter="groups"]');
-  archiveChip?.addEventListener('click', () => setArchiveMode(true));
+
   allChip?.addEventListener('click', () => setArchiveMode(false));
   unreadChip?.addEventListener('click', () => setArchiveMode(false));
   groupsChip?.addEventListener('click', () => setArchiveMode(false));
-  document.getElementById('archive-back-btn')?.addEventListener('click', () => allChip?.click());
+  document.getElementById('archive-back-btn')?.addEventListener('click', () => setArchiveMode(false));
   document.getElementById('chats-list')?.addEventListener('click', (event) => {
-    if (event.target.closest('#archived-entry')) archiveChip?.click();
+    if (event.target.closest('#archived-entry')) setArchiveMode(true);
+  });
+  drawer?.querySelector('[data-drawer-filter]')?.addEventListener('click', () => {
+    closeDrawer();
+    showTab('chats');
+    setArchiveMode(true);
   });
   document.getElementById('header-more-btn')?.addEventListener('click', () => menuBtn?.click());
   const syncDrawerProfile = () => {

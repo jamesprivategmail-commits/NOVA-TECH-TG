@@ -29,7 +29,7 @@ html, body {
   background: #000000 !important;
 }
 
-.screen, .screen-list, .chat-screen {
+.screen, .screen-list {
   background: #000000 !important;
   color: #ffffff;
 }
@@ -387,7 +387,29 @@ html, body {
    ------------------------------------------------------------ */
 
 .chat-screen {
-  background: #000000 !important;
+  background: transparent !important;
+  position: relative !important;
+}
+
+#chat-wallpaper {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  transition: background 0.25s ease, opacity 0.25s ease;
+}
+
+.chat-wallpaper.has-wallpaper::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+  pointer-events: none !important;
 }
 
 .chat-header {
@@ -452,7 +474,9 @@ html, body {
 
 .messages {
   padding: 10px 10px;
-  background: #000000 !important;
+  background: transparent !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 .message .bubble {

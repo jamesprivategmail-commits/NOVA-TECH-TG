@@ -203,7 +203,7 @@ body { font-size: 15px; letter-spacing: .005em; }
 #screen-chats .header { min-height: calc(82px + var(--safe-t)); padding: calc(26px + var(--safe-t)) 20px 12px; align-items: center; }
 #screen-chats .header-left > .menu-btn, #screen-chats .header-left > .avatar-btn, #screen-chats .header-sub { display: none; }
 #screen-chats .header-left > div { margin: 0; }
-#screen-chats .header-title { font-size: 28px; font-weight: 760; letter-spacing: -.8px; }
+#screen-chats .header-title { font-size: 19.6px; font-weight: 760; letter-spacing: -.8px; }
 #screen-chats .header-actions { margin-left: auto; }
 #screen-chats .header-actions > * { display: none !important; }
 #screen-chats .header-actions > #header-more-btn { display: inline-flex !important; width: 40px; height: 40px; }

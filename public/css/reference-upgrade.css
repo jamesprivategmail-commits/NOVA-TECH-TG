@@ -351,3 +351,71 @@ body, html { background: #000; color: #fff; font-weight: 500; }
 #screen-chats.archive-mode .archive-back { display: inline-flex; }
 #screen-chats.archive-mode .archived-entry { display: none; }
 #screen-chats.archive-mode .search { margin-top: 4px; }
+
+/* Persistent black mode: layout is reference-inspired, but all UI chrome stays black/graphite/white. */
+:root {
+  --bg: #000;
+  --surface: #080808;
+  --surface2: #111;
+  --surface3: #1b1b1b;
+  --text: #fff;
+  --muted: #969696;
+  --dim: #686868;
+  --line: rgba(255,255,255,.12);
+  --blue: #f2f2f2;
+  --red: #d7d7d7;
+  --green: #d0d0d0;
+}
+html, body, .app, .screen, .screen-list, .chat-screen { background: #000 !important; color: #fff; }
+.header, .chat-header, .composer, .bottom-nav, .sheet, .drawer-panel { background: #080808 !important; }
+.search, .composer-input-row, .field input, .field textarea, .input, .textarea { background: #161616 !important; color: #fff; }
+.search .icon, .header .icon-btn, .chat-header-actions .icon-btn, .chat-header .back { color: #eee !important; }
+#screen-chats .search { background: #161616 !important; }
+.archived-entry-icon, .profile-info-card, #screen-profile .profile-action, .drawer-row-icon, .pinned-bar { background: #181818 !important; color: #fff !important; }
+.archived-entry-copy small, .chat-preview, .chat-time, .chat-user-state, .profile-online, .profile-info-item small, .profile-posts-empty p { color: #8e8e8e !important; }
+.unread, .pill, .chip, .chip.active, .btn-primary, #new-chat-btn, .profile-tab.active, .bottom-nav .nav.active, .drawer-camera { background: #202020 !important; color: #fff !important; border-color: #666 !important; }
+.bottom-nav .nav.active { background: #1c1c1c !important; color: #fff !important; }
+#screen-profile .profile-action:first-child { background: #181818 !important; color: #fff !important; }
+#screen-profile .profile-tab.active { background: #252525 !important; color: #fff !important; border: 1px solid #666 !important; }
+.profile-info-title, .profile-info-title span, .archive-back, .profile-tab, .drawer-section-label { color: #fff !important; }
+.profile-info-title .icon { color: #fff !important; }
+.pinned-bar { border-left-color: #888 !important; }
+.message.own .bubble { background: #292929 !important; color: #fff !important; }
+.message:not(.own) .bubble { background: #151515 !important; color: #fff !important; }
+.composer-icon-btn:active, .chat-header-actions .icon-btn:active, .chat-header .back:active { background: #242424 !important; color: #fff !important; }
+.drawer-row-icon.blue, .drawer-row-icon.pink, .drawer-row-icon.yellow, .drawer-row-icon.orange, .drawer-row-icon.green, .drawer-row-icon.purple, .drawer-row-icon.cyan { background: #242424 !important; border: 1px solid #555; }
+.profile-back, .profile-more { background: rgba(0,0,0,.55) !important; }
+
+/* Persistent black mode: reference layout, but all Dark Chat UI chrome stays black/graphite/white. */
+:root {
+  --bg: #000;
+  --surface: #080808;
+  --surface2: #111;
+  --surface3: #1b1b1b;
+  --text: #fff;
+  --muted: #969696;
+  --dim: #686868;
+  --line: rgba(255,255,255,.12);
+  --blue: #f2f2f2;
+  --red: #d7d7d7;
+  --green: #d0d0d0;
+}
+html, body, .app, .screen, .screen-list, .chat-screen { background: #000 !important; color: #fff; }
+.header, .chat-header, .composer, .bottom-nav, .sheet, .drawer-panel { background: #080808 !important; }
+.search, .composer-input-row, .field input, .field textarea, .input, .textarea { background: #161616 !important; color: #fff; }
+.search .icon, .header .icon-btn, .chat-header-actions .icon-btn, .chat-header .back { color: #eee !important; }
+#screen-chats .search { background: #161616 !important; }
+.archived-entry-icon, .profile-info-card, #screen-profile .profile-action, .drawer-row-icon, .pinned-bar { background: #181818 !important; color: #fff !important; }
+.archived-entry-copy small, .chat-preview, .chat-time, .chat-user-state, .profile-online, .profile-info-item small, .profile-posts-empty p { color: #8e8e8e !important; }
+.unread, .pill, .chip, .chip.active, .btn-primary, #new-chat-btn, .profile-tab.active, .bottom-nav .nav.active, .drawer-camera { background: #202020 !important; color: #fff !important; border-color: #666 !important; }
+.bottom-nav .nav.active { background: #1c1c1c !important; color: #fff !important; }
+#screen-profile .profile-action:first-child { background: #181818 !important; color: #fff !important; }
+#screen-profile .profile-tab.active { background: #252525 !important; color: #fff !important; border: 1px solid #666 !important; }
+.profile-info-title, .profile-info-title span, .archive-back, .profile-tab, .drawer-section-label { color: #fff !important; }
+.profile-info-title .icon { color: #fff !important; }
+.pinned-bar { border-left-color: #888 !important; }
+.message.own .bubble { background: #292929 !important; color: #fff !important; }
+.message:not(.own) .bubble { background: #151515 !important; color: #fff !important; }
+.composer-icon-btn:active, .chat-header-actions .icon-btn:active, .chat-header .back:active { background: #242424 !important; color: #fff !important; }
+.drawer-row-icon.blue, .drawer-row-icon.pink, .drawer-row-icon.yellow, .drawer-row-icon.orange, .drawer-row-icon.green, .drawer-row-icon.purple, .drawer-row-icon.cyan { background: #242424 !important; border: 1px solid #555; }
+.profile-back, .profile-more { background: rgba(0,0,0,.55) !important; }

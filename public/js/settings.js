@@ -75,23 +75,15 @@ const ACCENT_COLORS = [
 
 export function applyThemePreferences() {
   const s = state.settings?.privacySettings || {};
-  const theme = s.theme || 'dark';
-  const accent = s.accentColor || '#3da9ff';
   const fontSize = s.fontSize || 'normal';
 
-  if (theme === 'light') {
-    document.body.classList.add('theme-light');
-  } else {
-    document.body.classList.remove('theme-light');
-  }
+  document.body.classList.remove('theme-light');
 
   document.body.classList.remove('font-small', 'font-large');
   if (fontSize === 'small') document.body.classList.add('font-small');
   if (fontSize === 'large') document.body.classList.add('font-large');
 
-  if (accent) {
-    document.documentElement.style.setProperty('--blue', accent);
-  }
+  document.documentElement.style.setProperty('--blue', '#f2f2f2');
 }
 
 export function settingsGroupHtml() {

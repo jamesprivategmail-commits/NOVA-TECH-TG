@@ -105,6 +105,49 @@ async function onSignedIn() {
 
 function wireChrome() {
   const appUrl = location.href.split('#')[0];
+  const drawer = document.getElementById('side-drawer');
+  const menuBtn = document.getElementById('menu-btn');
+  const closeDrawer = () => {
+    drawer?.classList.remove('open');
+    drawer?.setAttribute('aria-hidden', 'true');
+    menuBtn?.setAttribute('aria-expanded', 'false');
+  };
+  const openDrawer = () => {
+    drawer?.classList.add('open');
+    drawer?.setAttribute('aria-hidden', 'false');
+    menuBtn?.setAttribute('aria-expanded', 'true');
+  };
+  menuBtn?.addEventListener('click', () => drawer?.classList.contains('open') ? closeDrawer() : openDrawer());
+  document.getElementById('drawer-scrim')?.addEventListener('click', closeDrawer);
+  document.getElementById('drawer-profile-btn')?.addEventListener('click', () => { closeDrawer(); showTab('profile'); });
+  document.getElementById('drawer-settings')?.addEventListener('click', () => { closeDrawer(); document.getElementById('profile-settings-btn')?.click(); });
+  document.getElementById('drawer-calls')?.addEventListener('click', () => toast('Open a conversation to start a call'));
+  document.getElementById('drawer-saved')?.addEventListener('click', () => { closeDrawer(); document.getElementById('new-chat-btn')?.click(); });
+  drawer?.querySelectorAll('[data-drawer-tab]').forEach((button) => button.addEventListener('click', () => { closeDrawer(); showTab(button.dataset.drawerTab); }));
+  drawer?.querySelector('[data-drawer-filter]')?.addEventListener('click', () => {
+    closeDrawer(); showTab('chats');
+    document.querySelector('#chat-filters [data-filter="archived"]')?.click();
+  });
+  document.getElementById('header-search-btn')?.addEventListener('click', () => {
+    showTab('chats');
+    document.getElementById('chats-search')?.focus();
+  });
+  document.getElementById('archived-entry')?.addEventListener('click', () => {
+    document.querySelector('#chat-filters [data-filter="archived"]')?.click();
+  });
+  document.getElementById('header-more-btn')?.addEventListener('click', () => menuBtn?.click());
+  const syncDrawerProfile = () => {
+    const me = state.me;
+    if (!me) return;
+    const avatarEl = document.getElementById('drawer-avatar');
+    if (avatarEl) { avatarEl.textContent = (me.displayName || 'DARK').slice(0, 2).toUpperCase(); avatarEl.style.background = me.avatarColor || '#2488ff'; }
+    const name = document.getElementById('drawer-name');
+    const handle = document.getElementById('drawer-handle');
+    if (name) name.textContent = me.displayName || 'DARK CHAT';
+    if (handle) handle.textContent = me.novaId || '';
+  };
+  on('me:updated', syncDrawerProfile);
+  syncDrawerProfile();
   // Keep an in-app history entry so the first browser Back action is handled by the SPA.
   history.replaceState({ app: true, tab: currentTab, chat: false }, '', `${appUrl}#chats`);
   history.pushState({ app: true, tab: currentTab, chat: false }, '', `${appUrl}#chats`);

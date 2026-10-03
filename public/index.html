@@ -16,6 +16,7 @@
 <meta property="og:title" content="DARK CHAT">
 <meta property="og:description" content="Real-time messaging platform with DMs, groups, channels, statuses and posts">
 <link rel="stylesheet" href="css/app.css?v=4">
+<link rel="stylesheet" href="css/reference-upgrade.css?v=1">
 </head>
 <body>
 
@@ -24,6 +25,7 @@
 <!-- ============================================================= -->
 <svg class="sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute">
   <defs>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
@@ -170,6 +172,9 @@
   <section class="screen screen-list active" id="screen-chats" data-screen="chats" aria-label="Chats">
     <header class="header">
       <div class="header-left">
+        <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false">
+          <svg class="icon"><use href="#i-menu"></use></svg>
+        </button>
         <button class="avatar-btn" id="me-avatar-btn" aria-label="Your profile">
           <span class="avatar avatar-sm" id="me-avatar"></span>
         </button>
@@ -179,11 +184,17 @@
         </div>
       </div>
       <div class="header-actions">
+        <button class="icon-btn" id="header-search-btn" aria-label="Search chats" title="Search chats">
+          <svg class="icon"><use href="#i-search"></use></svg>
+        </button>
+        <button class="icon-btn" id="header-more-btn" aria-label="More options" title="More options">
+          <svg class="icon"><use href="#i-more-vertical"></use></svg>
+        </button>
         <button class="icon-btn" id="admin-btn" aria-label="Admin panel" title="Admin" hidden>
           <svg class="icon"><use href="#i-shield"></use></svg>
         </button>
         <button class="icon-btn" id="new-chat-btn" aria-label="New chat" title="New chat">
-          <svg class="icon"><use href="#i-plus"></use></svg>
+          <svg class="icon"><use href="#i-edit"></use></svg>
         </button>
       </div>
     </header>
@@ -197,6 +208,10 @@
       <button class="chip" data-filter="groups" data-label="Groups">Groups</button>
       <button class="chip" data-filter="archived" data-label="Archived">Archived</button>
     </div>
+    <button class="archived-entry" id="archived-entry" type="button">
+      <span class="archived-entry-icon"><svg class="icon"><use href="#i-archive"></use></svg></span>
+      <span class="archived-entry-copy"><b>Archived Chats</b><small>View archived conversations</small></span>
+    </button>
     <div class="content scroll" id="chats-list" aria-live="polite"></div>
   </section>
 
@@ -486,14 +501,34 @@
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav" aria-label="Primary">
-    <button class="nav active" data-tab="chats"><svg class="icon"><use href="#i-message-dot"></use></svg><small>Chats</small><span class="nav-dot hidden" id="nav-dot-chats"></span></button>
     <button class="nav" data-tab="status"><svg class="icon"><use href="#i-status"></use></svg><small>Status</small></button>
-    <button class="nav" data-tab="posts"><svg class="icon"><use href="#i-updates"></use></svg><small>Updates</small></button>
-    <button class="nav" data-tab="discover"><svg class="icon"><use href="#i-compass"></use></svg><small>Discover</small></button>
-    <button class="nav" data-tab="profile"><svg class="icon"><use href="#i-user"></use></svg><small>Profile</small></button>
+    <button class="nav" data-tab="discover"><svg class="icon"><use href="#i-users"></use></svg><small>Contacts</small></button>
+    <button class="nav active" data-tab="chats"><svg class="icon"><use href="#i-message-dot"></use></svg><small>Chats</small><span class="nav-dot hidden" id="nav-dot-chats"></span></button>
+    <button class="nav" data-tab="profile"><svg class="icon"><use href="#i-settings"></use></svg><small>Settings</small></button>
   </nav>
 </div>
-
+<aside class="side-drawer" id="side-drawer" aria-label="Account menu" aria-hidden="true">
+  <div class="drawer-scrim" id="drawer-scrim"></div>
+  <div class="drawer-panel">
+    <div class="drawer-profile" id="drawer-profile-btn">
+      <div class="drawer-avatar-wrap"><span class="avatar avatar-lg" id="drawer-avatar"></span><span class="drawer-camera"><svg class="icon"><use href="#i-camera"></use></svg></span></div>
+      <div class="drawer-name" id="drawer-name">DARK CHAT</div>
+      <div class="drawer-handle" id="drawer-handle"></div>
+    </div>
+    <div class="drawer-group"><span class="drawer-section-label">Shortcuts</span>
+      <button class="drawer-row" data-drawer-tab="profile"><span class="drawer-row-icon pink"><svg class="icon"><use href="#i-user"></use></svg></span><span>My Profile</span></button>
+      <button class="drawer-row" id="drawer-saved"><span class="drawer-row-icon blue"><svg class="icon"><use href="#i-bookmark"></use></svg></span><span>Saved Messages</span></button>
+      <button class="drawer-row" data-drawer-filter="archived"><span class="drawer-row-icon yellow"><svg class="icon"><use href="#i-bookmark"></use></svg></span><span>Archived Chats</span></button>
+      <button class="drawer-row" data-drawer-tab="discover"><span class="drawer-row-icon orange"><svg class="icon"><use href="#i-users"></use></svg></span><span>Contacts</span></button>
+      <button class="drawer-row" id="drawer-calls"><span class="drawer-row-icon green"><svg class="icon"><use href="#i-phone"></use></svg></span><span>Calls</span></button>
+    </div>
+    <div class="drawer-group"><span class="drawer-section-label">Dark Chat</span>
+      <button class="drawer-row" data-drawer-tab="status"><span class="drawer-row-icon cyan"><svg class="icon"><use href="#i-status"></use></svg></span><span>Status</span></button>
+      <button class="drawer-row" data-drawer-tab="posts"><span class="drawer-row-icon purple"><svg class="icon"><use href="#i-updates"></use></svg></span><span>Updates</span></button>
+    </div>
+    <button class="drawer-settings" id="drawer-settings"><svg class="icon"><use href="#i-settings"></use></svg><span>Settings</span></button>
+  </div>
+</aside>
 <!-- ============================================================= -->
 <!-- OVERLAYS                                                      -->
 <!-- ============================================================= -->

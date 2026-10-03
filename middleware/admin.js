@@ -3,18 +3,28 @@
 //   ADMIN_NOVA_IDS=NOVA-401022
 // Anyone whose account has one of these DARK CHAT IDs gets admin powers. No database flag needed.
 
+function normalizeId(id) {
+  return String(id || '').trim().toUpperCase().replace(/[\s-]/g, '');
+}
+
 function getAdminIds() {
   const envIds = (process.env.ADMIN_NOVA_IDS || '')
     .split(',')
     .map(s => s.trim().toUpperCase())
     .filter(Boolean);
-  const defaultAdmins = ['+1-999-234-8321'];
+  const defaultAdmins = ['+44 7700 900123', '+447700900123', '+1-999-234-8321'];
   return Array.from(new Set([...envIds, ...defaultAdmins]));
 }
 
 function isAdminNovaId(novaId) {
   if (!novaId) return false;
-  return getAdminIds().includes(novaId.trim().toUpperCase());
+  const adminIds = getAdminIds();
+  const clean = String(novaId).trim().toUpperCase();
+  const normalized = normalizeId(novaId);
+  return adminIds.some(adminId => {
+    const adminClean = String(adminId).trim().toUpperCase();
+    return adminClean === clean || normalizeId(adminClean) === normalized;
+  });
 }
 
 function requireAdmin(req, res, next) {

@@ -136,7 +136,7 @@
       <div id="login-credentials" class="stack">
         <label class="field">
           <span class="field-label">DARK CHAT ID</span>
-          <input type="text" id="login-novaid" placeholder="+1-626-715-0000" required autocomplete="off">
+          <input type="text" id="login-novaid" placeholder="+44 7700 900123" required autocomplete="off">
         </label>
         <label class="field">
           <span class="field-label">Password</span>
@@ -181,6 +181,9 @@
         </div>
       </div>
       <div class="header-actions">
+        <button class="icon-btn hidden" id="admin-btn" aria-label="Admin panel" title="Admin panel">
+          <svg class="icon"><use href="#i-shield"></use></svg>
+        </button>
         <button class="icon-btn" id="header-updates-btn" aria-label="Updates" title="Updates">
           <svg class="icon"><use href="#i-updates"></use></svg>
         </button>
@@ -492,6 +495,7 @@
       <div class="drawer-handle" id="drawer-handle"></div>
     </div>
     <div class="drawer-group"><span class="drawer-section-label">Shortcuts</span>
+      <button class="drawer-row hidden" id="drawer-admin"><span class="drawer-row-icon red"><svg class="icon"><use href="#i-shield"></use></svg></span><span>Admin Panel</span></button>
       <button class="drawer-row" data-drawer-tab="profile"><span class="drawer-row-icon pink"><svg class="icon"><use href="#i-user"></use></svg></span><span>My Profile</span></button>
       <button class="drawer-row" id="drawer-saved"><span class="drawer-row-icon blue"><svg class="icon"><use href="#i-bookmark"></use></svg></span><span>Saved Messages</span></button>
       <button class="drawer-row" data-drawer-filter="archived"><span class="drawer-row-icon yellow"><svg class="icon"><use href="#i-bookmark"></use></svg></span><span>Archived Chats</span></button>

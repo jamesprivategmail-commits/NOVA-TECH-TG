@@ -87,9 +87,9 @@ export function joinConversation(conversationId) {
 
 export function sendMessage({ conversationId, content, media, replyToId, statusReply, clientMessageId }) {
   return new Promise((resolve) => {
-    if (!socket) return resolve({ error: 'Not connected' });
+    if (!socket || !socket.connected) return resolve({ error: 'Socket not connected' });
     let settled = false;
-    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 15000);
+    const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ error: 'Send timed out' }); } }, 2000);
     socket.emit('message:send', { conversationId, content, media, replyToId, statusReply, clientMessageId }, (ack) => {
       if (settled) return;
       settled = true;

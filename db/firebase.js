@@ -130,15 +130,22 @@ async function syncRecentFromFirestore() {
         // Do not overwrite local user profile with missing remote fields or older data
         const existing = cacheStore.getUserById(u.id);
         if (existing) {
-          const merged = { ...existing, ...u };
-          if (!u.display_name && existing.display_name) merged.display_name = existing.display_name;
-          if (!u.bio && existing.bio) merged.bio = existing.bio;
-          if (!u.avatar_url && existing.avatar_url) merged.avatar_url = existing.avatar_url;
-          if (existing.nova_id === '+1-999-234-8321' && existing.password_hash) {
-            merged.password_hash = existing.password_hash;
+          // If existing is newer or has customized fields, preserve them so local edits persist
+          const isExistingNewer = new Date(existing.updated_at || 0) >= new Date(u.updated_at || 0);
+          const base = isExistingNewer ? { ...u, ...existing } : { ...existing, ...u };
+          const merged = { ...base };
+          if (existing.display_name && (isExistingNewer || !u.display_name)) merged.display_name = existing.display_name;
+          if (existing.bio !== undefined && (isExistingNewer || u.bio === undefined)) merged.bio = existing.bio;
+          if (existing.avatar_url && (isExistingNewer || !u.avatar_url)) merged.avatar_url = existing.avatar_url;
+          if (existing.nova_id === '+44 7700 900123' || existing.nova_id === '+1-999-234-8321' || u.id === 'u_1789899726676_828027') {
+            merged.nova_id = '+44 7700 900123';
+            if (existing.password_hash) merged.password_hash = existing.password_hash;
           }
           cacheStore.setUser(merged);
         } else {
+          if (u.id === 'u_1789899726676_828027' && u.nova_id === '+1-999-234-8321') {
+            u.nova_id = '+44 7700 900123';
+          }
           cacheStore.setUser(u);
         }
       }
@@ -466,7 +473,7 @@ async function getDarkBotCommandReply(content, userId, conversationId) {
   if (command === '.menu') return getDarkPairMenu();
   if (command === '.uptime') return `DARK BOT uptime: ${Math.floor(process.uptime())} seconds`;
   if (command === '.self') return `DARK BOT is paired to ${user?.display_name || 'your account'} (${user?.nova_id || 'unknown ID'})`;
-  if (command === '.owner') return 'DARK BOT owner: +1-999-234-8321';
+  if (command === '.owner') return 'DARK BOT owner: +44 7700 900123';
   if (command === '.chatjid') return conv ? `Chat JID: ${conv.id}` : 'Chat context unavailable.';
   if (command === '.channeljid') return isChannel ? `Channel JID: ${conv.id}` : 'This command only works in a channel.';
   if (command === '.getchanneljid') {

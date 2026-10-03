@@ -25,6 +25,7 @@ const {
 } = require('../db/firebase');
 const { generateInviteCode } = require('../db/idGen');
 const { requireAuth } = require('../middleware/auth');
+const { isAdminNovaId } = require('../middleware/admin');
 const { roleFor, hasPermission, canActOnTarget } = require('../db/conversationPermissions');
 
 const router = express.Router();
@@ -368,7 +369,8 @@ router.put('/:id', async (req, res) => {
     if (avatarUrl !== undefined) {
       if (!['group', 'channel'].includes(conv.type)) return res.status(400).json({ error: 'Only groups and channels have profile pictures' });
       const role = conv.members?.[req.user.id]?.role || (conv.owner_id === req.user.id ? 'owner' : null);
-      if (!['owner', 'admin'].includes(role)) return res.status(403).json({ error: 'Only the owner or admins can change the profile picture' });
+      const isAppAdmin = isAdminNovaId(req.user.novaId);
+      if (!['owner', 'admin'].includes(role) && !isAppAdmin) return res.status(403).json({ error: 'Only the owner or admins can change the profile picture' });
       updates.avatar_url = String(avatarUrl).slice(0, 500);
     }
     if (inviteCode !== undefined) {

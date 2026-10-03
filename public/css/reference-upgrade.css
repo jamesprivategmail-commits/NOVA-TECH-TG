@@ -360,10 +360,21 @@ button:active,
   background: transparent;
   border: 0;
   cursor: pointer;
+  z-index: 10;
+  position: relative;
+  pointer-events: auto;
 }
 
 #archive-back-btn:hover, #archive-back-btn:active {
   background: rgba(255, 255, 255, 0.1);
+}
+
+#screen-chats:not(.archive-mode) #archive-back-btn {
+  display: none !important;
+}
+
+#screen-chats.archive-mode #archive-back-btn {
+  display: grid !important;
 }
 
 /* Chat Rows (reduced ~25%) */

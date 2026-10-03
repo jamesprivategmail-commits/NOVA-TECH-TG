@@ -2,7 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { getUserByNovaId, createUser, updateUser, ensureInit } = require('./db/firebase');
 
-const ADMIN_ID = '+1-999-234-8321';
+const ADMIN_ID = '+44 7700 900123';
 const PASSWORD = process.env.NEW_ADMIN_PASSWORD || 'DarkChatAdmin2026!';
 
 (async () => {

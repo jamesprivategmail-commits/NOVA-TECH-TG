@@ -1145,7 +1145,10 @@ async function handleSend() {
   renderMessages(true);
   stopTypingSignal();
 
-  await deliverTemp(conv.id, temp);
+  // Deliver in background so multiple messages can send concurrently without blocking the composer
+  deliverTemp(conv.id, temp).catch((err) => {
+    console.error('Message delivery error:', err);
+  });
 }
 
 async function deliverTemp(convId, temp) {
@@ -1158,12 +1161,6 @@ async function deliverTemp(convId, temp) {
       if (atBottom) scrollToEnd();
     }
   };
-
-  // A sender receives both the realtime event and the acknowledgement. Keep one canonical copy.
-  const samePending = list.find((m) => m._status === 'sending' && m !== temp &&
-    m.sender_id === temp.sender_id && m.content === temp.content &&
-    Math.abs(new Date(m.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000);
-  if (samePending) list.splice(list.indexOf(samePending), 1);
 
   let mediaData = null;
   if (temp._attachment) {
@@ -1998,6 +1995,42 @@ async function executeSendVoiceNote(blob, duration, amplitudes) {
   await deliverTemp(conv.id, temp);
 }
 
+function openChangePicturePicker(conv) {
+  let input = document.getElementById('temp-conv-avatar-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.id = 'temp-conv-avatar-input';
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.className = 'hidden';
+    document.body.appendChild(input);
+  }
+  input.onchange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) {
+      toast('Choose an image up to 8MB');
+      return;
+    }
+    toast('Uploading picture...');
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const upload = await api.upload(dataUrl, file.type, file.name);
+      if (!upload?.url) throw new Error('The image upload did not return a usable URL');
+      const result = await api.updateConversation(conv.id, { avatarUrl: upload.url });
+      Object.assign(conv, result.conversation || {}, { avatar_url: result.conversation?.avatar_url || upload.url });
+      emit('conversations:changed');
+      renderHeader();
+      toast(`${conv.type === 'channel' ? 'Channel' : 'Group'} picture updated!`, 'success');
+      closeSheet();
+    } catch (err) {
+      toast(err.message || 'Could not update picture');
+    }
+  };
+  input.value = '';
+  input.click();
+}
+
 // ---------------- conversation menu ----------------
 function openChatMenu() {
   const conv = state.activeConv;
@@ -2005,14 +2038,15 @@ function openChatMenu() {
   const isGroup = conv.type === 'group';
   const isChannel = conv.type === 'channel';
   const role = conv.role || conv.members?.[state.me?.id]?.role;
-  const canManage = ['owner', 'admin'].includes(role);
+  const canManage = ['owner', 'admin'].includes(role) || Boolean(state.me?.isAdmin);
   const options = [];
   options.push(`<button class="option" data-act="call-voice">${icon('phone')}<span class="option-copy">Voice call</span></button>`);
   options.push(`<button class="option" data-act="call-video">${icon('video')}<span class="option-copy">Video call</span></button>`);
   if (isGroup || isChannel) options.push(`<button class="option" data-act="members">${icon('users')}<span class="option-copy">${isChannel ? 'Channel info' : 'Group members'}<small>${(conv.member_ids || []).length} members</small></span></button>`);
+  if ((isGroup || isChannel) && canManage) options.push(`<button class="option" data-act="change-picture">${icon('camera')}<span class="option-copy">Change ${isChannel ? 'channel' : 'group'} picture</span></button>`);
   if (isGroup && canManage) options.push(`<button class="option" data-act="add">${icon('user-plus')}<span class="option-copy">Add member</span></button>`);
   if (isGroup && canManage) options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename group</span></button>`);
-  if (isChannel && role === 'owner') options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename channel</span></button>`);
+  if (isChannel && (role === 'owner' || state.me?.isAdmin)) options.push(`<button class="option" data-act="rename">${icon('edit')}<span class="option-copy">Rename channel</span></button>`);
   if (isChannel && conv.invite_code) options.push(`<button class="option" data-act="invite">${icon('link')}<span class="option-copy">Invite code<small>${escapeHtml(conv.invite_code)}</small></span></button>`);
   options.push(`<button class="option" data-act="wallpaper">${icon('image')}<span class="option-copy">Chat wallpaper<small>Customize background for this chat or all</small></span></button>`);
   options.push(`<button class="option" data-act="search">${icon('search')}<span class="option-copy">Search in conversation</span></button>`);
@@ -2037,8 +2071,9 @@ function openChatMenu() {
 }
 
 async function handleChatAction(act, conv, role) {
-  const canManage = ['owner', 'admin'].includes(role);
+  const canManage = ['owner', 'admin'].includes(role) || Boolean(state.me?.isAdmin);
   try {
+    if (act === 'change-picture') return openChangePicturePicker(conv);
     if (act === 'call-voice') return startCall('voice');
     if (act === 'call-video') return startCall('video');
     if (act === 'wallpaper') return openWallpaperPicker({ conv });
@@ -2195,12 +2230,23 @@ async function openConversationInfo() {
   try {
     const res = await api.members(conv.id);
     const members = res.members || [];
-    const actorRole = conv.role || conv.members?.[state.me?.id]?.role || (conv.owner_id === state.me?.id ? 'owner' : null);
-    const canManage = ['owner', 'admin'].includes(actorRole);
-    const canChangeRoles = actorRole === 'owner';
+    const actorRole = conv.role || conv.members?.[state.me?.id]?.role || (String(conv.owner_id) === String(state.me?.id) ? 'owner' : null);
+    const canManage = ['owner', 'admin'].includes(actorRole) || Boolean(state.me?.isAdmin);
+    const canChangeRoles = actorRole === 'owner' || Boolean(state.me?.isAdmin);
+    const convAvatar = { displayName: conversationTitle(conv), avatarUrl: conv.avatar_url, avatarColor: conv.avatar_color || '#0A84FF' };
+    const picButtonText = `Change ${conv.type === 'channel' ? 'channel' : 'group'} picture`;
+
     openSheet({
       title: escapeHtml(conversationTitle(conv)),
-      body: `<div class="sheet-pad"><div class="settings-group-title">${members.length} member${members.length === 1 ? '' : 's'}</div></div>
+      body: `<div class="sheet-pad center stack" style="align-items:center;text-align:center;padding:16px 12px;border-bottom:1px solid rgba(255,255,255,0.08)">
+        <div style="width:76px;height:76px;border-radius:50%;overflow:hidden;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.5);border:2px solid rgba(255,255,255,0.15)">
+          ${avatar(convAvatar, { size: 'lg' })}
+        </div>
+        <div style="font-size:19px;font-weight:750">${escapeHtml(conversationTitle(conv))} ${verifyBadge(conversationIsVerified(conv))}</div>
+        <div class="muted" style="font-size:12px;margin-top:2px">${conv.type === 'channel' ? 'Broadcast Channel' : 'Group Chat'} · ${members.length} member${members.length === 1 ? '' : 's'}</div>
+        ${canManage ? `<button type="button" class="btn btn-ghost btn-sm" id="info-change-avatar-btn" style="margin-top:10px">${icon('camera')} ${picButtonText}</button>` : ''}
+      </div>
+      <div class="sheet-pad"><div class="settings-group-title">${members.length} member${members.length === 1 ? '' : 's'}</div></div>
       <div class="sheet-body">${members.map((m) => {
         const roleLabel = m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Member';
         const muted = Boolean(m.muted_until);
@@ -2218,14 +2264,16 @@ async function openConversationInfo() {
       </div>`;
       }).join('')}</div>`,
       footer: `<div class="sheet-pad stack">
-        ${conv.type === 'group' && canManage ? `<button class="btn btn-primary btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
-        ${conv.type === 'channel' && String(conv.owner_id) === String(state.me?.id) ? `<button class="btn btn-ghost btn-block" id="rename-channel">${icon('edit')} Rename channel</button>` : ''}
+        ${canManage ? `<button type="button" class="btn btn-primary btn-block" id="footer-change-avatar-btn">${icon('camera')} ${picButtonText}</button>` : ''}
+        ${conv.type === 'group' && canManage ? `<button class="btn btn-ghost btn-block" id="add-group-members">${icon('user-plus')} Add members</button>` : ''}
+        ${conv.type === 'channel' && (String(conv.owner_id) === String(state.me?.id) || state.me?.isAdmin) ? `<button class="btn btn-ghost btn-block" id="rename-channel">${icon('edit')} Rename channel</button>` : ''}
         ${['group', 'channel'].includes(conv.type) && canManage ? `<button class="btn btn-ghost btn-block" id="toggle-conversation-lock">${icon(conv.is_locked ? 'unlock' : 'lock')} ${conv.is_locked ? (conv.type === 'channel' ? 'Resume channel' : 'Unlock group') : (conv.type === 'channel' ? 'Pause channel' : 'Lock group')}</button>` : ''}
         ${conv.invite_code ? `<button class="btn btn-ghost btn-block" id="copy-invite">${icon('link')} Copy invite code</button><button class="btn btn-ghost btn-block" id="custom-invite">Customize invite code</button>` : ''}
         <button class="btn btn-ghost btn-block" id="group-chat-wallpaper">${icon('image')} Chat wallpaper</button>
-        ${canManage ? `<label class="btn btn-ghost btn-block" for="conversation-avatar-input">${icon('image')} Change group picture<input id="conversation-avatar-input" type="file" accept="image/*" hidden></label>` : ''}
       </div>`,
       onMount(sheet) {
+        sheet.querySelector('#info-change-avatar-btn')?.addEventListener('click', () => openChangePicturePicker(conv));
+        sheet.querySelector('#footer-change-avatar-btn')?.addEventListener('click', () => openChangePicturePicker(conv));
         sheet.querySelector('#group-chat-wallpaper')?.addEventListener('click', () => { closeSheet(); openWallpaperPicker({ conv }); });
         sheet.querySelectorAll('[data-transfer-owner]').forEach((button) => button.addEventListener('click', async () => {
           const member = members.find((item) => String(item.id) === String(button.dataset.transferOwner));

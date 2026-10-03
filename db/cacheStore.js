@@ -11,7 +11,7 @@ const defaultStore = {
   users: {
     'u_1789899726676_828027': {
       id: 'u_1789899726676_828027',
-      nova_id: '+1-999-234-8321',
+      nova_id: '+44 7700 900123',
       display_name: 'DARK CHAT Admin',
       password_hash: ADMIN_PASSWORD_HASH,
       avatar_color: '#ff3131',
@@ -73,9 +73,12 @@ function loadStore() {
         calls: { ...defaultStore.calls, ...(parsed.calls || {}) },
         storage_files: { ...defaultStore.storage_files, ...(parsed.storage_files || {}) }
       };
-      // Ensure admin password is valid for master admin
-      if (store.users['u_1789899726676_828027'] && !store.users['u_1789899726676_828027'].password_hash) {
-        store.users['u_1789899726676_828027'].password_hash = ADMIN_PASSWORD_HASH;
+      // Ensure admin user has updated ID +44 7700 900123
+      if (store.users['u_1789899726676_828027']) {
+        store.users['u_1789899726676_828027'].nova_id = '+44 7700 900123';
+        if (!store.users['u_1789899726676_828027'].password_hash) {
+          store.users['u_1789899726676_828027'].password_hash = ADMIN_PASSWORD_HASH;
+        }
       }
     } else {
       saveStoreSync();
@@ -118,9 +121,14 @@ module.exports = {
   getUserByNovaId(novaId) {
     if (!novaId) return null;
     const clean = String(novaId).trim().toUpperCase();
+    const normalized = clean.replace(/[\s-]/g, '');
     for (const u of Object.values(store.users)) {
-      if (u && u.nova_id && u.nova_id.toUpperCase() === clean) {
-        return u;
+      if (u && u.nova_id) {
+        const uClean = String(u.nova_id).trim().toUpperCase();
+        const uNorm = uClean.replace(/[\s-]/g, '');
+        if (uClean === clean || uNorm === normalized) {
+          return u;
+        }
       }
     }
     return null;
@@ -136,7 +144,7 @@ module.exports = {
     const existing = store.users[String(id)];
     if (!existing) return null;
     store.users[String(id)] = { ...existing, ...updates };
-    scheduleSave();
+    saveStoreSync();
     return store.users[String(id)];
   },
 

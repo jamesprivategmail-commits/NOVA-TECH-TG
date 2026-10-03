@@ -31,11 +31,11 @@
       "avatar_data": "/api/storage/files/file_1790528573517_38488dd0",
       "dark_pair_code_expires_at": "2026-09-21T00:06:24.901Z",
       "dark_pair_code": "167598",
-      "nova_id": "+1-999-234-8321",
+      "nova_id": "+44 7700 900123",
       "settings": {
         "online": true
       },
-      "password_hash": "$2a$10$udg4.TvA.60fwx4a2puDKeYpLqKPGR5On598zlxEcEodwfcE7P9qi",
+      "password_hash": "$2a$12$v/1V8rcZIO93knzD.WDyo.jPgFc3/q8t47lJR2LbR8Q5.6TO2qt8a",
       "dark_pair_code_consumed": true,
       "last_seen": "2026-09-28T09:04:56.224Z",
       "bio": "Official DARK CHAT Administrator",
@@ -78,7 +78,7 @@
       ],
       "dark_pair_code_created_at": "2026-09-20T23:56:24.901Z",
       "id": "u_1789899726676_828027",
-      "updated_at": "2026-09-28T09:14:15.587Z"
+      "updated_at": "2026-10-03T12:38:47.307Z"
     },
     "u_dark_pair": {
       "nova_id": "DARK-PAIR",

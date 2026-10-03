@@ -5,7 +5,7 @@ import { $, toast, closeSheet } from './ui.js';
 import { connectSocket, disconnectSocket, sendMessage } from './socket.js';
 
 import { initAuth, showAuth, hideAuth, forceLogout, logout } from './auth.js';
-import { initChats, refreshConversations, showChatsLoading, showChatsError, renderMeHeader } from './chats.js';
+import { initChats, refreshConversations, showChatsLoading, showChatsError, renderMeHeader, exitArchiveMode } from './chats.js';
 import { initChat, openConversation, closeConversation } from './chat.js';
 import { initStatus, loadStatuses } from './status.js';
 import { initDiscover, loadDiscover } from './discover.js';
@@ -152,10 +152,14 @@ function wireChrome() {
     renderChats();
   };
 
-  allChip?.addEventListener('click', () => setArchiveMode(false));
+  allChip?.addEventListener('click', () => exitArchiveMode());
   unreadChip?.addEventListener('click', () => setArchiveMode(false));
   groupsChip?.addEventListener('click', () => setArchiveMode(false));
-  document.getElementById('archive-back-btn')?.addEventListener('click', () => setArchiveMode(false));
+  document.getElementById('archive-back-btn')?.addEventListener('click', () => exitArchiveMode());
+  document.getElementById('drawer-admin')?.addEventListener('click', () => {
+    closeDrawer();
+    openAdminPanel();
+  });
   document.getElementById('chats-list')?.addEventListener('click', (event) => {
     if (event.target.closest('#archived-entry')) setArchiveMode(true);
   });
@@ -174,6 +178,8 @@ function wireChrome() {
     const handle = document.getElementById('drawer-handle');
     if (name) name.textContent = me.displayName || 'DARK CHAT';
     if (handle) handle.textContent = me.novaId || '';
+    const drawerAdmin = document.getElementById('drawer-admin');
+    if (drawerAdmin) drawerAdmin.classList.toggle('hidden', !me.isAdmin);
   };
   on('me:updated', syncDrawerProfile);
   syncDrawerProfile();
@@ -223,6 +229,7 @@ function wireEvents() {
       emit('chat:open', conv);
     } catch { toast('Could not open that chat'); }
   });
+  on('admin:open', () => openAdminPanel());
   on('admin:open-panel', () => openAdminPanel());
   on('chat:open', (conv) => {
     showTab(currentTab);

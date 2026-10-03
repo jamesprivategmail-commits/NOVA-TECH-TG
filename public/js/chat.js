@@ -825,6 +825,7 @@ export function renderMessages(scrollToBottom = false) {
   const list = (state.messages[conv.id] || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   if (!list.length) {
     els.messages.innerHTML = emptyState({ iconName: 'message', title: 'No messages yet', subtitle: 'Say hello to start the conversation.' });
+    els.messages._renderedHtml = '';
     renderPinned(list);
     return;
   }
@@ -836,24 +837,27 @@ export function renderMessages(scrollToBottom = false) {
     if (day !== lastDay) { html += `<div class="day">${escapeHtml(day)}</div>`; lastDay = day; }
     html += messageHtml(msg, i, list);
   });
-  els.messages.innerHTML = html;
-  const older = $('#load-older');
-  if (older) older.addEventListener('click', loadOlder);
-  els.messages.querySelectorAll('[data-save-sticker]').forEach((node) => {
-    node.addEventListener('contextmenu', async (e) => {
-      e.preventDefault();
-      try {
-        await saveSentStickerToPack({
-          url: node.dataset.stickerUrl,
-          mime: node.dataset.stickerMime,
-          type: node.dataset.stickerType
-        });
-      } catch (err) {
-        toast(err.message || 'Could not save sticker');
-      }
+  if (els.messages._renderedHtml !== html) {
+    els.messages.innerHTML = html;
+    els.messages._renderedHtml = html;
+    const older = $('#load-older');
+    if (older) older.addEventListener('click', loadOlder);
+    els.messages.querySelectorAll('[data-save-sticker]').forEach((node) => {
+      node.addEventListener('contextmenu', async (e) => {
+        e.preventDefault();
+        try {
+          await saveSentStickerToPack({
+            url: node.dataset.stickerUrl,
+            mime: node.dataset.stickerMime,
+            type: node.dataset.stickerType
+          });
+        } catch (err) {
+          toast(err.message || 'Could not save sticker');
+        }
+      });
+      node.title = 'Long-press / right-click to save to a pack';
     });
-    node.title = 'Long-press / right-click to save to a pack';
-  });
+  }
   renderPinned(list);
   VoiceAudioManager.syncCurrentUI();
   if (scrollToBottom) scrollToEnd();

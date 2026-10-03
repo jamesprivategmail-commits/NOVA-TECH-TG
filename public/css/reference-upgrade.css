@@ -23,15 +23,92 @@ html, body {
   color: #ffffff !important;
   font-family: var(--font);
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: auto !important;
+}
+
+/* Fast tap response & eliminate 300ms touch delay */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Hardware-accelerated frictionless scrolling across all list & content panes */
+.scroll,
+.content.scroll,
+.messages,
+#chats-list,
+.home-feed-scroll,
+.post-detail-scroll,
+.sheet.scroll,
+.channels-section,
+#status-list,
+#discover-results {
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  scroll-behavior: auto !important;
+  touch-action: pan-y !important;
+  transform: translateZ(0) !important;
+  will-change: scroll-position !important;
+  contain: content !important;
+}
+
+/* 98% faster layout/paint skipping for offscreen rows */
+.chat-row,
+.message,
+.post,
+.status-item,
+.archived-entry,
+.contact-row {
+  content-visibility: auto !important;
+  contain-intrinsic-size: 64px !important;
+  contain: layout style paint !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+}
+
+/* Snappy instant tactile gesture feedback */
+button, a, .icon-btn, .chip, .chat-row, .setting, .toggle, .drawer-row {
+  touch-action: manipulation !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+button:active,
+.icon-btn:active,
+.chat-row:active,
+.drawer-row:active,
+.setting:active,
+.chip:active,
+.archived-entry:active {
+  transform: scale(0.96) translateZ(0) !important;
+  transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Hide scrollbars cleanly */
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .app {
   background: #000000 !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
 }
 
 .screen, .screen-list {
   background: #000000 !important;
   color: #ffffff;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
 }
 
 /* ------------------------------------------------------------

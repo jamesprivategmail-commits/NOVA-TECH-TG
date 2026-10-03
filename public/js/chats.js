@@ -275,14 +275,18 @@ export function renderChats() {
     wireArchiveButtons();
     return;
   }
-  els.list.innerHTML = archiveBackBanner + archiveEntry + list.map(conversationRow).join('');
-  wireArchiveButtons();
-  els.list.querySelectorAll('[data-conv]').forEach((row) => {
-    row.addEventListener('click', () => {
-      const conv = state.conversations.find((c) => c.id === row.dataset.conv);
-      if (conv) emit('chat:open', conv);
+  const nextHtml = archiveBackBanner + archiveEntry + list.map(conversationRow).join('');
+  if (els.list._renderedHtml !== nextHtml) {
+    els.list.innerHTML = nextHtml;
+    els.list._renderedHtml = nextHtml;
+    wireArchiveButtons();
+    els.list.querySelectorAll('[data-conv]').forEach((row) => {
+      row.addEventListener('click', () => {
+        const conv = state.conversations.find((c) => c.id === row.dataset.conv);
+        if (conv) emit('chat:open', conv);
+      });
     });
-  });
+  }
   updatePresenceDots();
 }
 
